@@ -2040,7 +2040,7 @@ function AdminPanel() {
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { setActiveTab('org'); setIsSidebarOpen(false); }}>
-                <Building size={18} /> White-Label SaaS
+                <Building size={18} /> Ajustes y Planes
               </button>
             </li>
             <li>

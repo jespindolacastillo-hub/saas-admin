@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { tenantConfig } from '../../config/tenant';
 import { Save, Upload, Palette, Building, Crown, Zap, CheckCircle2 } from 'lucide-react';
 import { PLAN_LIMITS } from '../../config/planLimits';

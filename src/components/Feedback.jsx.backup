@@ -1,0 +1,346 @@
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Send, CheckCircle2, Loader } from 'lucide-react';
+
+const Feedback = () => {
+    const [searchParams] = useSearchParams();
+
+    // URL Params
+    const [storeId] = useState(searchParams.get('t') || '');
+    const [areaId] = useState(searchParams.get('a') || '');
+    const [qrId] = useState(searchParams.get('id_qr') || '');
+
+    // Form State
+    const [rating, setRating] = useState(0);
+    const [pregunta2Respuesta, setPregunta2Respuesta] = useState('');
+
+    // Question State
+    const [questionData, setQuestionData] = useState(null);
+    const [loadingQuestion, setLoadingQuestion] = useState(true);
+
+    // UI State
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [error, setError] = useState('');
+
+    // Load question from database
+    useEffect(() => {
+        const loadQuestion = async () => {
+            if (!areaId) {
+                setLoadingQuestion(false);
+                return;
+            }
+
+            try {
+                const { data, error: fetchError } = await supabase
+                    .from('Area_Preguntas')
+                    .select('*')
+                    .eq('area_id', areaId)
+                    .eq('numero_pregunta', 2)
+                    .eq('activa', true)
+                    .single();
+
+                if (fetchError) {
+                    // Si no hay pregunta en BD, usar fallback
+                    console.warn('No question found for area:', areaId);
+                    setQuestionData({
+                        texto_pregunta: '¿El servicio cumplió con tus expectativas?',
+                        tipo_respuesta: 'si_no'
+                    });
+                } else {
+                    setQuestionData(data);
+                }
+            } catch (err) {
+                console.error('Error loading question:', err);
+                // Fallback question
+                setQuestionData({
+                    texto_pregunta: '¿El servicio cumplió con tus expectativas?',
+                    tipo_respuesta: 'si_no'
+                });
+            } finally {
+                setLoadingQuestion(false);
+            }
+        };
+
+        loadQuestion();
+    }, [areaId]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (rating === 0) {
+            setError('Por favor selecciona una calificación');
+            return;
+        }
+
+        setSubmitting(true);
+        setError('');
+
+        try {
+            const { error: insertError } = await supabase
+                .from('Feedback')
+                .insert([
+                    {
+                        tienda_id: storeId,
+                        area_id: areaId,
+                        satisfaccion: rating,
+                        calidad_info: pregunta2Respuesta, // Respuesta a pregunta dinámica
+                        id_qr: qrId
+                    }
+                ]);
+
+            if (insertError) throw insertError;
+
+            setSubmitted(true);
+        } catch (err) {
+            console.error('Error submitting feedback:', err);
+            setError(err.message || 'Ocurrió un error al enviar tu respuesta.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (submitted) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#f8fafc',
+                padding: '20px'
+            }}>
+                <div className="card" style={{
+                    maxWidth: '500px',
+                    width: '100%',
+                    textAlign: 'center',
+                    padding: '3rem 2rem'
+                }}>
+                    <div style={{
+                        width: '80px',
+                        height: '80px',
+                        background: '#dcfce7',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1.5rem auto'
+                    }}>
+                        <CheckCircle2 size={40} color="#166534" />
+                    </div>
+                    <h2 style={{ fontFamily: 'Outfit', fontSize: '1.5rem', marginBottom: '0.5rem' }}>¡Gracias por tu opinión!</h2>
+                    <p style={{ color: 'var(--text-muted)' }}>Tus comentarios nos ayudan a mejorar nuestro servicio.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)',
+            padding: '20px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }}>
+            <div className="card" style={{ maxWidth: '500px', width: '100%' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <img src="/logo.png" alt="Price Shoes" style={{ maxWidth: '120px', marginBottom: '1.5rem' }} />
+                    <h1 style={{ fontFamily: 'Outfit', fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.5rem' }}>
+                        Tu opinión es importante
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        Califica tu experiencia en:
+                    </p>
+                    <div style={{
+                        marginTop: '0.5rem',
+                        display: 'inline-block',
+                        padding: '4px 12px',
+                        background: '#f1f5f9',
+                        borderRadius: '20px',
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        color: '#475569'
+                    }}>
+                        {storeId && areaId ? `${storeId} • ${areaId}` : 'Servicio General'}
+                    </div>
+                </div>
+
+                <form onSubmit={handleSubmit}>
+                    {/* Pregunta 1: Calificación del trato y amabilidad (Universal) */}
+                    <div style={{ marginBottom: '2rem' }}>
+                        <label style={{
+                            display: 'block',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            marginBottom: '1rem',
+                            color: '#334155',
+                            textAlign: 'center'
+                        }}>
+                            ¿Cómo calificaría el trato y amabilidad de la persona que le atendió hoy?
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                            {[
+                                { score: 1, icon: '😠', label: 'Mal' },
+                                { score: 2, icon: '😕', label: 'Regular' },
+                                { score: 3, icon: '😐', label: 'Bien' },
+                                { score: 4, icon: '🙂', label: 'Muy Bien' },
+                                { score: 5, icon: '😍', label: 'Excelente' }
+                            ].map((emoji) => (
+                                <button
+                                    key={emoji.score}
+                                    type="button"
+                                    onClick={() => setRating(emoji.score)}
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        padding: '12px 2px',
+                                        height: '100%',
+                                        background: rating === emoji.score ? '#f0f9ff' : '#ffffff',
+                                        border: rating === emoji.score ? '2px solid #0ea5e9' : '1px solid #e2e8f0',
+                                        borderRadius: '12px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        boxShadow: rating === emoji.score ? '0 10px 15px -3px rgba(14, 165, 233, 0.1)' : '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                                        transform: rating === emoji.score ? 'translateY(-2px)' : 'none'
+                                    }}
+                                >
+                                    <span style={{
+                                        fontSize: '1.8rem',
+                                        marginBottom: '0.5rem',
+                                        lineHeight: '1',
+                                        filter: rating && rating !== emoji.score ? 'grayscale(100%) opacity(0.4)' : 'none',
+                                        transition: 'filter 0.2s'
+                                    }}>
+                                        {emoji.icon}
+                                    </span>
+                                    <span style={{
+                                        fontSize: '0.6rem',
+                                        fontWeight: '700',
+                                        color: rating === emoji.score ? '#0284c7' : '#64748b',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.02em',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        maxWidth: '100%'
+                                    }}>
+                                        {emoji.label}
+                                    </span>
+                                </button>
+                    {/* Pregunta 2: Dinámica por área */ }
+                    {
+                                    loadingQuestion?(
+                        <div style = {{
+                                            marginBottom: '1.5rem',
+                                            textAlign: 'center',
+                                            padding: '2rem',
+                                            color: '#64748b'
+                        }} >
+                            <Loader size={24} className="spin" style={{ margin: '0 auto' }} />
+                            <p style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>Cargando pregunta...</p>
+                        </div>
+                        ) : questionData ? (
+                        <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                            <label style={{
+                                display: 'block',
+                                fontSize: '0.9rem',
+                                fontWeight: '600',
+                                marginBottom: '0.75rem',
+                                color: '#334155'
+                            }}>
+                                {questionData.texto_pregunta}
+                            </label>
+                            {questionData.tipo_respuesta === 'si_no' && (
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+                                    {['Sí', 'No'].map((opt) => (
+                                        <button
+                                            key={opt}
+                                            type="button"
+                                            onClick={() => setPregunta2Respuesta(opt)}
+                                            style={{
+                                                padding: '0.6rem 1.5rem',
+                                                borderRadius: '20px',
+                                                border: pregunta2Respuesta === opt ? '2px solid var(--primary)' : '1px solid #cbd5e1',
+                                                background: pregunta2Respuesta === opt ? '#eff6ff' : 'white',
+                                                color: pregunta2Respuesta === opt ? 'var(--primary)' : '#64748b',
+                                                fontWeight: pregunta2Respuesta === opt ? '700' : '500',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                minWidth: '80px'
+                                            }}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : null}
+
+                        <style>{`
+                        @keyframes spin {
+                            from { transform: rotate(0deg); }
+                            to { transform: rotate(360deg); }
+                        }
+                        .spin {
+                            animation: spin 1s linear infinite;
+                        }
+                    `}</style>
+
+                        {error && (
+                            <div style={{
+                                marginBottom: '1rem',
+                                padding: '0.75rem',
+                                background: '#fee2e2',
+                                color: '#dc2626',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem',
+                                textAlign: 'center'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            style={{
+                                width: '100%',
+                                padding: '1rem',
+                                background: 'var(--primary)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontSize: '1rem',
+                                fontWeight: '600',
+                                cursor: submitting ? 'not-allowed' : 'pointer',
+                                opacity: submitting ? 0.7 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                transition: 'background 0.2s'
+                            }}
+                        >
+                            {submitting ? 'Enviando...' : (
+                                <>
+                                    Enviar Calificación <Send size={18} />
+                                </>
+                            )}
+                        </button>
+                </form>
+            </div>
+
+            <div style={{ marginTop: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>
+                <p>Price Shoes © {new Date().getFullYear()}</p>
+            </div>
+        </div>
+    );
+};
+
+export default Feedback;

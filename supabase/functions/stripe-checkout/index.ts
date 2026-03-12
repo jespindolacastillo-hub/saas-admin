@@ -33,7 +33,7 @@ serve(async (req) => {
       customer_email: user_email,
       line_items: [
         {
-          price: 'price_1R6m76RQUjor4yYOcUo9T97l', // REEMPLAZAR con el Price ID real de tu Dashboard de Stripe
+          price: 'price_1TAFFvQUjor4yYOnrWxAVRTw',
           quantity: 1,
         },
       ],

@@ -3,6 +3,7 @@ import { tenantConfig } from '../../config/tenant';
 import { Save, Upload, Palette, Building, Crown, Zap, CheckCircle2 } from 'lucide-react';
 import { PLAN_LIMITS } from '../../config/planLimits';
 import { supabase } from '../../lib/supabase';
+import { loadStripe } from '@stripe/stripe-js';
 
 const OrganizationSettings = () => {
     const [config, setConfig] = useState(tenantConfig);
@@ -58,6 +59,34 @@ const OrganizationSettings = () => {
             window.location.reload();
         } catch (err) {
             alert('Error al guardar: ' + err.message);
+        }
+    };
+
+    const handleUpgrade = async () => {
+        try {
+            const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+            if (!stripeKey) throw new Error('Stripe Publishable Key missing');
+            
+            const stripe = await loadStripe(stripeKey);
+            
+            // Call Supabase Edge Function to create Checkout Session
+            const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+                body: { 
+                    tenant_id: tenantConfig.id,
+                    plan: 'growth',
+                    user_email: (await supabase.auth.getUser()).data.user?.email
+                }
+            });
+
+            if (error) throw error;
+            if (data?.url) {
+                window.location.href = data.url;
+            } else {
+                throw new Error('No checkout URL returned from server');
+            }
+        } catch (err) {
+            console.error('Stripe Error:', err);
+            alert('Error al iniciar pago: ' + err.message);
         }
     };
 
@@ -156,7 +185,7 @@ const OrganizationSettings = () => {
                     justifyContent: 'center',
                     gap: '8px'
                   }}
-                  onClick={() => alert('Simulación: Redirigiendo a Stripe para Upgrade al Plan Growth ($49/mes)...')}
+                  onClick={handleUpgrade}
                 >
                     <Zap size={18} /> Mejorar mi Plan
                 </button>

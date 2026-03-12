@@ -15,8 +15,7 @@ const Auth = ({ onLogin }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
 
     const validateDomain = (email) => {
-        const domain = email.split('@')[1];
-        return domain && tenantConfig.allowedDomains.some(d => domain.includes(d));
+        return true; // Allow all domains for the initial setup
     };
 
     const handleAuth = async (e) => {
@@ -206,7 +205,7 @@ const Auth = ({ onLogin }) => {
                             <input
                                 type="email"
                                 required
-                                placeholder="usuario@empresa.com"
+                                placeholder="tu-correo@ejemplo.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}

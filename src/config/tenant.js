@@ -6,8 +6,8 @@ export const tenantConfig = {
     name: parsed.name || 'SaaS Platform',
     logoUrl: parsed.logoUrl || '/logo.png',
     primaryColor: parsed.primaryColor || '#2563eb',
-    allowedDomains: ['priceshoes.com', 'priceshoes.mx', 'saas.com', 'gmail.com'],
-    supportEmail: 'admin@saas.com',
+    allowedDomains: ['*'], // Allow all domains for now
+    supportEmail: 'admin@saas-platform.com',
     feedbackUrl: import.meta.env.VITE_FEEDBACK_URL || 'http://localhost:5174/feedback'
 };
 

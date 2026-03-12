@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
 import { tenantConfig } from '../config/tenant';
+import { PLAN_LIMITS } from '../config/planLimits';
 
 /**
  * StoreService: Gestión de tiendas y su relación con las áreas.
@@ -37,6 +37,19 @@ export const StoreService = {
      */
     async saveStore(storeData, selectedAreasSet) {
         const isNew = !storeData.id;
+
+        if (isNew) {
+            const { count } = await supabase
+                .from('Tiendas_Catalogo')
+                .select('*', { count: 'exact', head: true })
+                .eq('tenant_id', tenantConfig.id);
+            
+            const limit = PLAN_LIMITS[tenantConfig.plan]?.maxStores || 0;
+            if (count >= limit) {
+                throw new Error(`Tu plan (${PLAN_LIMITS[tenantConfig.plan]?.name}) permite máximo ${limit} sucursales. Sube de plan para añadir más.`);
+            }
+        }
+
         const id = isNew
             ? storeData.nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
             : storeData.id;

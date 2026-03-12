@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
 import { tenantConfig } from '../../config/tenant';
-import { Save, Upload, Palette, Building } from 'lucide-react';
+import { Save, Upload, Palette, Building, Crown, Zap, CheckCircle2 } from 'lucide-react';
+import { PLAN_LIMITS } from '../../config/planLimits';
+import { supabase } from '../../lib/supabase';
 
 const OrganizationSettings = () => {
     const [config, setConfig] = useState(tenantConfig);
@@ -31,17 +32,35 @@ const OrganizationSettings = () => {
         }
     };
 
-    const handleSave = () => {
-        localStorage.setItem('saas_tenant_config', JSON.stringify(config));
-        
-        // Update CSS variable for primary color dynamically
-        if (config.primaryColor) {
-            document.documentElement.style.setProperty('--primary', config.primaryColor);
+    const handleSave = async () => {
+        try {
+            // Update in Supabase
+            const { error } = await supabase
+                .from('tenants')
+                .update({
+                    name: config.name,
+                    logo_url: config.logoUrl,
+                    primary_color: config.primaryColor
+                })
+                .eq('id', tenantConfig.id);
+
+            if (error) throw error;
+
+            localStorage.setItem('saas_tenant_config', JSON.stringify(config));
+            
+            // Update CSS variable for primary color dynamically
+            if (config.primaryColor) {
+                document.documentElement.style.setProperty('--primary', config.primaryColor);
+            }
+            
+            alert('Configuración guardada exitosamente.');
+            window.location.reload();
+        } catch (err) {
+            alert('Error al guardar: ' + err.message);
         }
-        
-        alert('Configuración guardada localmente. En una app real, esto se guardaría en la tabla "tenants" de la base de datos.');
-        window.location.reload();
     };
+
+    const currentPlanLimit = PLAN_LIMITS[config.plan] || PLAN_LIMITS.starter;
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -84,6 +103,62 @@ const OrganizationSettings = () => {
                     </div>
 
                 </div>
+            </div>
+
+            <div className="card shadow-sm" style={{ maxWidth: '600px', marginTop: '2rem', border: '1px solid #e0e7ff', background: 'linear-gradient(to bottom right, #ffffff, #f5f7ff)' }}>
+                <header style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <h2 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', fontWeight: '700', color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Crown size={20} color="#6366f1" /> Mi Plan Actual
+                        </h2>
+                        <p style={{ color: '#6366f1', fontSize: '0.8rem', fontWeight: '600' }}>Plan {currentPlanLimit.name}</p>
+                    </div>
+                    {config.plan === 'starter' && (
+                        <div style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '700' }}>
+                            GRATIS
+                        </div>
+                    )}
+                </header>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>SUCURSALES</p>
+                        <p style={{ fontSize: '1.2rem', fontWeight: '700' }}>{currentPlanLimit.maxStores === 999 ? '∞' : currentPlanLimit.maxStores}</p>
+                    </div>
+                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>ÁREAS / CATÁLOGO</p>
+                        <p style={{ fontSize: '1.2rem', fontWeight: '700' }}>{currentPlanLimit.maxAreas === 999 ? '∞' : currentPlanLimit.maxAreas}</p>
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: currentPlanLimit.customBranding ? '#059669' : '#94a3b8' }}>
+                        <CheckCircle2 size={16} /> Branding Personalizado
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: currentPlanLimit.prioritySupport ? '#059669' : '#94a3b8' }}>
+                        <CheckCircle2 size={16} /> Soporte Prioritario
+                    </div>
+                </div>
+
+                <button 
+                  className="btn" 
+                  style={{ 
+                    width: '100%', 
+                    background: 'linear-gradient(45deg, #4f46e5, #7c3aed)', 
+                    color: 'white', 
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                  onClick={() => alert('Simulación: Redirigiendo a Stripe para Upgrade al Plan Growth ($49/mes)...')}
+                >
+                    <Zap size={18} /> Mejorar mi Plan
+                </button>
             </div>
         </div>
     );

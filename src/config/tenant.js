@@ -6,6 +6,8 @@ export const tenantConfig = {
     name: parsed.name || 'SaaS Platform',
     logoUrl: parsed.logoUrl || '/logo.png',
     primaryColor: parsed.primaryColor || '#2563eb',
+    plan: parsed.plan || 'starter',
+    subscriptionStatus: parsed.subscriptionStatus || 'active',
     allowedDomains: ['*'], // Allow all domains for now
     supportEmail: 'admin@saas-platform.com',
     feedbackUrl: import.meta.env.VITE_FEEDBACK_URL || 'http://localhost:5174/feedback'

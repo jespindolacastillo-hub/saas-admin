@@ -1958,6 +1958,29 @@ function AdminPanel() {
   useEffect(() => {
     if (session) {
       fetchNotifications();
+      
+      // Fetch Tenant Data (Monetization Step 1)
+      const fetchTenantData = async () => {
+        const { data } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', tenantConfig.id)
+          .single();
+        
+        if (data) {
+          const updatedConfig = {
+            ...tenantConfig,
+            name: data.name,
+            logoUrl: data.logo_url,
+            primaryColor: data.primary_color,
+            plan: data.plan,
+            subscriptionStatus: data.subscription_status
+          };
+          localStorage.setItem('saas_tenant_config', JSON.stringify(updatedConfig));
+        }
+      };
+      fetchTenantData();
+
       // Suscribirse a nuevas notificaciones en tiempo real
       const channel = supabase
         .channel('schema-db-changes')

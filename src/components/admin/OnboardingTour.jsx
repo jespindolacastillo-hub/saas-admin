@@ -47,59 +47,66 @@ const OnboardingTour = ({ onFinish }) => {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-500">
-            <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-500 border border-slate-100">
+        <div className="modal-overlay">
+            <div className="modal-container">
                 <div className="relative p-8">
                     <button 
                         onClick={handleFinish}
                         className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
                     >
                         <X size={20} />
                     </button>
 
                     <div className="flex flex-col items-center text-center mt-4">
-                        <div className="mb-6 transform transition-all duration-700 scale-110">
-                            {steps[step].icon}
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                            <div className={`tour-icon-box ${step === 0 ? 'tour-bg-blue' : step === 1 ? 'tour-bg-purple' : step === 2 ? 'tour-bg-emerald' : 'tour-bg-amber'}`}>
+                                {steps[step].icon}
+                            </div>
                         </div>
                         
                         <h2 className="text-2xl font-extrabold text-slate-800 mb-3 tracking-tight font-outfit">
                             {steps[step].title}
                         </h2>
-                        <p className="text-slate-500 leading-relaxed max-w-[280px]">
+                        <p className="text-slate-500 leading-relaxed" style={{ maxWidth: '280px', margin: '0 auto' }}>
                             {steps[step].desc}
                         </p>
                     </div>
 
                     <div className="mt-10 flex flex-col gap-4">
-                        <div className="flex justify-center gap-2 mb-2">
+                        <div className="tour-step-pills">
                             {steps.map((_, i) => (
                                 <div 
                                     key={i} 
-                                    className={`h-1.5 rounded-full transition-all duration-500 ${step === i ? 'w-8 bg-blue-600' : 'w-2 bg-slate-200'}`}
+                                    className={`tour-step-pill ${step === i ? 'active' : 'inactive'}`}
                                 />
                             ))}
                         </div>
 
-                        {step < steps.length - 1 ? (
-                            <button 
-                                onClick={() => setStep(step + 1)}
-                                className="w-full h-14 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/25 active:scale-95 transition-all"
-                            >
-                                {t('onboarding.next')} <ChevronRight size={20} />
-                            </button>
-                        ) : (
-                            <button 
-                                onClick={handleFinish}
-                                className="w-full h-14 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-black hover:shadow-lg hover:shadow-slate-500/25 active:scale-95 transition-all"
-                            >
-                                {t('onboarding.finish')} <Check size={20} />
-                            </button>
-                        )}
+                        <div style={{ marginTop: '2rem' }}>
+                            {step < steps.length - 1 ? (
+                                <button 
+                                    onClick={() => setStep(step + 1)}
+                                    className="btn btn-primary"
+                                    style={{ width: '100%', height: '54px', borderRadius: '16px', fontSize: '1rem' }}
+                                >
+                                    {t('onboarding.next')} <ChevronRight size={20} />
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={handleFinish}
+                                    className="btn btn-dark"
+                                    style={{ width: '100%', height: '54px', borderRadius: '16px', fontSize: '1rem', background: '#0f172a', color: 'white' }}
+                                >
+                                    {t('onboarding.finish')} <Check size={20} />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
                 
-                <div className="bg-slate-50 px-8 py-4 border-t border-slate-100 text-center">
-                    <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                <div style={{ background: '#f8fafc', padding: '1rem', borderTop: '1px solid #f1f5f9', textAlign: 'center' }}>
+                    <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.1em', color: '#94a3b8' }}>
                         Powered by Antigravity AI
                     </span>
                 </div>

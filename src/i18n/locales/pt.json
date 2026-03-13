@@ -225,6 +225,8 @@
   },
   "common": {
     "all": "Todas",
+    "sentiment": "Sentimento",
+    "origin": "Origem",
     "all_stores": "Todas as Lojas",
     "all_areas": "Todas as Áreas",
     "all_sentiments": "Sentimento: Todos",

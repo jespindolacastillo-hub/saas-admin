@@ -848,3 +848,76 @@ body.is-snapshot-mode .snapshot-mode-overlay {
   font-size: 0.7rem;
   text-transform: uppercase;
 }
+/* ========================================
+   MODAL & OVERLAY SYSTEM
+   ======================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1.5rem;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 32px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+}
+
+.tour-step-pills {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.tour-step-pill {
+  height: 6px;
+  border-radius: 100px;
+  background: #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.tour-step-pill.active {
+  width: 32px;
+  background: var(--primary);
+}
+
+.tour-step-pill.inactive {
+  width: 8px;
+}
+
+.tour-icon-box {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.tour-bg-blue { background-color: #eff6ff; color: #2563eb; }
+.tour-bg-purple { background-color: #f5f3ff; color: #8b5cf6; }
+.tour-bg-emerald { background-color: #ecfdf5; color: #10b981; }
+.tour-bg-amber { background-color: #fffbeb; color: #d97706; }
+
+.text-slate-500 { color: #64748b; }
+.text-slate-800 { color: #1e293b; }
+.text-2xl { font-size: 1.5rem; }
+.font-extrabold { font-weight: 800; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 0.75rem; }
+.mt-4 { margin-top: 1rem; }
+.p-8 { padding: 2.5rem; }
+.text-center { text-align: center; }

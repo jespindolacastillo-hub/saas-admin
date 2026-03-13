@@ -224,6 +224,8 @@
   },
   "common": {
     "all": "All",
+    "sentiment": "Sentiment",
+    "origin": "Origin",
     "all_stores": "All Stores",
     "all_areas": "All Areas",
     "all_sentiments": "Sentiment: All",

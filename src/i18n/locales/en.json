@@ -307,7 +307,17 @@
     "no_data_title": "Ready to Analyze",
     "no_data_desc": "Start sharing your QR codes with customers to see real-time insights here.",
     "next": "Next",
-    "finish": "Get Started"
+    "finish": "Get Started",
+    "setup": {
+      "title": "Launch Checklist",
+      "subtitle": "3 steps to start your data-driven era.",
+      "step1_title": "Brand Identity",
+      "step1_desc": "Upload logo and set colors.",
+      "step2_title": "Network Map",
+      "step2_desc": "Add stores and service areas.",
+      "step3_title": "QR Activation",
+      "step3_desc": "Generate and print your codes."
+    }
   },
   "questions": {
     "loading": "Loading questions...",

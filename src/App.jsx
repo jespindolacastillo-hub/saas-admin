@@ -32,6 +32,7 @@ import BackupManager from './components/admin/BackupManager';
 import KpiManager from './components/admin/KpiManager';
 import IssueManagement from './components/admin/IssueManagement';
 import { getSampleData } from './utils/sampleData';
+import SetupChecklist from './components/admin/SetupChecklist';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
 const calculateNPS = (data) => {
@@ -516,24 +517,17 @@ const Dashboard = ({
     );
   }
 
-  if (!rawData || rawData.length === 0) {
+  if (!loading && !isDemoMode && rawData.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
-        <div className="w-24 h-24 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
-          <Award size={48} />
-        </div>
-        <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">
-          {t('menu.welcome_first')}
-        </h2>
-        <p className="text-slate-500 max-w-sm mb-8">
-          {t('menu.no_data_desc')}
-        </p>
-        <div className="flex gap-4">
-          <button onClick={() => navigate('/qr')} className="btn btn-primary h-12 px-8 rounded-2xl">
-            {t('menu.create_first_qr', 'Crear mi primer QR')}
-          </button>
-          <button onClick={() => setIsDemoMode(true)} className="btn btn-secondary h-12 px-8 rounded-2xl border-dashed border-2">
-            <TrendingUp size={18} /> {t('menu.start_demo')}
+      <div className="flex flex-col items-center justify-center min-h-[60vh] py-12">
+        <SetupChecklist storesCount={stores.length} areasCount={areas.length} />
+        <div style={{ marginTop: '2rem' }}>
+          <button
+            onClick={() => setIsDemoMode(true)}
+            className="btn btn-primary btn-lg animate-pulse"
+            style={{ padding: '1.2rem 3rem', borderRadius: '16px', fontWeight: '900', fontSize: '1.1rem', boxShadow: '0 10px 25px rgba(37, 99, 235, 0.3)' }}
+          >
+            <TrendingUp size={22} style={{ marginRight: '8px' }} /> {t('menu.start_demo')}
           </button>
         </div>
       </div>
@@ -2106,6 +2100,7 @@ function AdminPanel() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setSession(null);
   };
 
   if (!session) {

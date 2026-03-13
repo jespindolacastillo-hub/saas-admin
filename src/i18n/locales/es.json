@@ -302,7 +302,17 @@
     "step3_title": "Analiza Datos",
     "step3_desc": "Mira el NPS en tiempo real en tu Dashboard.",
     "next": "Siguiente",
-    "finish": "Empezar"
+    "finish": "Empezar",
+    "setup": {
+      "title": "Lista de Despegue",
+      "subtitle": "3 pasos para iniciar tu era de datos.",
+      "step1_title": "Identidad de Marca",
+      "step1_desc": "Sube tu logo y define tus colores.",
+      "step2_title": "Mapa de Red",
+      "step2_desc": "Agrega sucursales y áreas.",
+      "step3_title": "Activación QR",
+      "step3_desc": "Genera e imprime tus códigos."
+    }
   },
   "questions": {
     "loading": "Cargando preguntas...",

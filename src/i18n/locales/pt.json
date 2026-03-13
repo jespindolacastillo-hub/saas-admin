@@ -307,7 +307,17 @@
     "step3_title": "Analise Dados",
     "step3_desc": "Veja o NPS em tempo real no seu Dashboard.",
     "next": "Próximo",
-    "finish": "Começar"
+    "finish": "Começar",
+    "setup": {
+      "title": "Lista de Decolagem",
+      "subtitle": "3 passos para iniciar sua era de dados.",
+      "step1_title": "Identidade da Marca",
+      "step1_desc": "Suba seu logo e defina suas cores.",
+      "step2_title": "Mapa da Rede",
+      "step2_desc": "Adicione lojas e áreas de serviço.",
+      "step3_title": "Ativação QR",
+      "step3_desc": "Gere e imprima seus códigos."
+    }
   },
   "questions": {
     "loading": "Carregando perguntas...",

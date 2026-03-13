@@ -112,7 +112,7 @@ const Dashboard = ({
 
   useEffect(() => {
     const fetchMetas = async () => {
-      if (!tenant?.id) return;
+      if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
       const { data } = await supabase.from('Metas_KPI').select('*').eq('tenant_id', tenant.id);
       if (data) setMetas(data);
     };
@@ -1796,7 +1796,7 @@ const AuditTrail = () => {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      if (!tenant?.id) return;
+      if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
       const { data } = await supabase.from('Auditoria').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(50);
       if (data) setLogs(data);
       setLoading(false);
@@ -1980,7 +1980,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 
   const fetchIssues = async () => {
     setIssuesLoading(true);
-    if (!tenant?.id) return;
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
     let query = supabase.from('Issues').select('*').eq('tenant_id', tenant.id);
     if (filters.store !== 'Todas') query = query.eq('tienda_id', filters.store);
     if (filters.area !== 'Todas') query = query.eq('area_id', filters.area);
@@ -2003,7 +2003,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
   };
 
   const refreshData = async () => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
     try {
       setLoading(true);
       setFetchError(null);
@@ -2137,7 +2137,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
   }, [session]);
 
   const fetchNotifications = async () => {
-    if (!tenant?.id) return;
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
     const { data } = await supabase
       .from('Alerts')
       .select('*')

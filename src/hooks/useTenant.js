@@ -26,9 +26,9 @@ export const useTenant = () => {
       // 2. Resolve tenant_id from database (Usuarios Table)
       const { data: userData, error: userError } = await supabase
         .from('Usuarios')
-        .select('tenant_id, tenants(*)')
+        .select('tenant_id')
         .eq('email', user.email)
-        .single();
+        .maybeSingle();
 
       if (userError) {
         console.warn('User identity not found in Usuarios table. Falling back to default.');

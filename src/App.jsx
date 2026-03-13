@@ -1078,6 +1078,51 @@ const Dashboard = ({
       </div>
 
 
+      {/* Daily Feedback Volume Chart - USER REQUESTED ANALYTICS */}
+      <div className="card" style={{ marginBottom: '1.5rem', minHeight: '350px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div>
+            <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+              {t('dashboard.volume_chart_title', 'Daily Feedback Volume')}
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>
+              {t('dashboard.volume_chart_desc', 'Number of responses received per day')}
+            </p>
+          </div>
+          <div style={{ background: '#ecfdf5', padding: '10px', borderRadius: '12px' }}>
+            <TrendingUp size={20} color="#10b981" />
+          </div>
+        </div>
+        <div style={{ height: '260px', width: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fill: '#94a3b8', fontSize: 10}} 
+              />
+              <YAxis 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{fill: '#94a3b8', fontSize: 10}} 
+              />
+              <Tooltip 
+                cursor={{fill: '#f8fafc', radius: 10}}
+                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '12px' }}
+              />
+              <Bar 
+                dataKey="total" 
+                fill="var(--primary)" 
+                radius={[8, 8, 0, 0]} 
+                barSize={40}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Trend & Table Grid - Fixed Height for Professional Alignment */}
       <div style={{
         display: 'grid',

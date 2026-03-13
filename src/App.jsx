@@ -2161,7 +2161,7 @@ function AdminPanel() {
         <div style={{ padding: '0 0.5rem', marginBottom: '2rem' }}>
           <img src={tenantConfig.logoUrl} alt={tenantConfig.name} style={{ maxWidth: '130px', objectFit: 'contain' }} />
         </div>
-        <nav style={{ flex: 1 }}>
+        <nav style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <ul className="nav-links">
             <li>
               <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>
@@ -2236,7 +2236,7 @@ function AdminPanel() {
           </ul>
         </nav>
 
-        <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+        <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', flexShrink: 0, marginTop: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
             <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 'bold' }}>
               {session?.user?.email?.substring(0, 2).toUpperCase()}

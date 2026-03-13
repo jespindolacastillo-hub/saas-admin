@@ -34,6 +34,7 @@ import IssueManagement from './components/admin/IssueManagement';
 import { getSampleData } from './utils/sampleData';
 import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
+import { useTenant } from './hooks/useTenant';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
 const calculateNPS = (data) => {
@@ -111,7 +112,8 @@ const Dashboard = ({
 
   useEffect(() => {
     const fetchMetas = async () => {
-      const { data } = await supabase.from('Metas_KPI').select('*').eq('tenant_id', tenantConfig.id);
+      if (!tenant?.id) return;
+      const { data } = await supabase.from('Metas_KPI').select('*').eq('tenant_id', tenant.id);
       if (data) setMetas(data);
     };
     fetchMetas();
@@ -511,9 +513,18 @@ const Dashboard = ({
           <button onClick={() => window.open('https://app.supabase.com', '_blank')} className="btn btn-primary">
             Ir a Supabase SQL Editor
           </button>
+          <button
+            onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+            }}
+            className="btn btn-danger"
+          >
+            Resetear Todo (Nueva Sesión)
+          </button>
         </div>
         <p className="text-xs text-slate-400 mt-8">
-          Nota: Ejecuta el script <code>db_fix_tenant_id.sql</code> para solucionar esto.
+          Nota: Ejecuta los scripts <code>db_force_uuids.sql</code> y <code>fix_rls_policies.sql</code> en el editor SQL para solucionar problemas de estructura o permisos.
         </p>
       </div>
     );
@@ -1103,25 +1114,25 @@ const Dashboard = ({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#94a3b8', fontSize: 10}} 
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{fill: '#94a3b8', fontSize: 10}}
               />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#94a3b8', fontSize: 10}} 
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{fill: '#94a3b8', fontSize: 10}}
               />
-              <Tooltip 
+              <Tooltip
                 cursor={{fill: '#f8fafc', radius: 10}}
                 contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '12px' }}
               />
-              <Bar 
-                dataKey="total" 
-                fill="var(--primary)" 
-                radius={[8, 8, 0, 0]} 
+              <Bar
+                dataKey="total"
+                fill="var(--primary)"
+                radius={[8, 8, 0, 0]}
                 barSize={40}
               />
             </BarChart>
@@ -1302,7 +1313,6 @@ const QRGenerator = () => {
   const { t } = useTranslation();
   const [stores, setStores] = useState([]);
   const [areas, setAreas] = useState([]);
-  const [tiendaAreas, setTiendaAreas] = useState([]);
   const [selectedStore, setSelectedStore] = useState('');
   const [selectedArea, setSelectedArea] = useState('');
   const [loading, setLoading] = useState(true);
@@ -1314,15 +1324,13 @@ const QRGenerator = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [storesRes, areasRes, tiendaAreasRes] = await Promise.all([
-      supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenantConfig.id).order('nombre'),
-      supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenantConfig.id).order('orden'),
-      supabase.from('Tienda_Areas').select('*, Tiendas_Catalogo(tenant_id)').eq('Tiendas_Catalogo.tenant_id', tenantConfig.id)
+    const [storesRes, areasRes] = await Promise.all([
+      supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant.id).order('nombre'),
+      supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant.id).order('orden')
     ]);
 
     if (storesRes.data) setStores(storesRes.data);
     if (areasRes.data) setAreas(areasRes.data);
-    if (tiendaAreasRes.data) setTiendaAreas(tiendaAreasRes.data);
     setLoading(false);
   };
 
@@ -1334,8 +1342,9 @@ const QRGenerator = () => {
 
   const activeAreas = useMemo(() => {
     if (!selectedStore) return [];
-    return tiendaAreas.filter(ta => ta.tienda_id === selectedStore && ta.activa);
-  }, [selectedStore, tiendaAreas]);
+    // Filter areas directly by tienda_id
+    return areas.filter(area => area.tienda_id === selectedStore);
+  }, [selectedStore, areas]);
 
   const downloadQR = (id) => {
     const svg = document.getElementById(id);
@@ -1403,7 +1412,7 @@ const QRGenerator = () => {
     // Generate QR codes HTML
     let qrCodesHTML = '';
     activeAreas.forEach((ta, index) => {
-      const qrUrl = getQRUrl(selectedStore, ta.area_id);
+      const qrUrl = getQRUrl(selectedStore, ta.id); // Use ta.id for area_id
       const isLastOnPage = (index + 1) % itemsPerPage === 0;
       const pageBreak = isLastOnPage && index < activeAreas.length - 1 ? 'page-break-after: always;' : '';
 
@@ -1412,7 +1421,7 @@ const QRGenerator = () => {
           <div class="qr-container">
             <svg id="qr-${index}" width="${config.qrSize}" height="${config.qrSize}"></svg>
           </div>
-          <div class="qr-label">${ta.Areas_Catalogo.nombre}</div>
+          <div class="qr-label">${ta.nombre}</div>
           <div class="qr-store">${storeName}</div>
         </div>
       `;
@@ -1477,13 +1486,13 @@ const QRGenerator = () => {
           </div>
           <script>
             ${activeAreas.map((ta, index) => `
-              QRCode.toCanvas(document.getElementById('qr-${index}'), '${getQRUrl(selectedStore, ta.area_id)}', {
+              QRCode.toCanvas(document.getElementById('qr-${index}'), '${getQRUrl(selectedStore, ta.id)}', { // Use ta.id for area_id
                 width: ${config.qrSize},
                 margin: 2,
                 errorCorrectionLevel: 'H'
               });
             `).join('\n')}
-            
+
             // Auto print after QR codes are generated
             setTimeout(() => {
               window.print();
@@ -1540,8 +1549,8 @@ const QRGenerator = () => {
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', opacity: selectedStore ? 1 : 0.5 }}
               >
                 <option value="">{t('qr.select_area_placeholder')}</option>
-                {activeAreas.map(ta => (
-                  <option key={ta.area_id} value={ta.area_id}>{ta.Areas_Catalogo.nombre}</option>
+                {activeAreas.map(area => (
+                  <option key={area.id} value={area.id}>{area.nombre}</option>
                 ))}
               </select>
             </div>
@@ -1632,22 +1641,22 @@ const QRGenerator = () => {
 
           {selectedStore ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
-              {activeAreas.map(ta => (
-                <div key={ta.area_id} className="card" style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc' }}>
+              {activeAreas.map(area => (
+                <div key={area.id} className="card" style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc' }}>
                   <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', display: 'inline-block', marginBottom: '1rem' }}>
                     <QRCodeSVG
-                      id={`batch-qr-${ta.area_id}`}
-                      value={getQRUrl(selectedStore, ta.area_id)}
+                      id={`batch-qr-${area.id}`}
+                      value={getQRUrl(selectedStore, area.id)}
                       size={120}
                       level="H"
                       includeMargin={true}
                     />
                   </div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>{ta.Areas_Catalogo.nombre}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>{area.nombre}</div>
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ width: '100%' }}
-                    onClick={() => downloadQR(`batch-qr-${ta.area_id}`)}
+                    onClick={() => downloadQR(`batch-qr-${area.id}`)}
                   >
                     {t('qr.download')}
                   </button>
@@ -1784,7 +1793,8 @@ const AuditTrail = () => {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      const { data } = await supabase.from('Auditoria').select('*').eq('tenant_id', tenantConfig.id).order('created_at', { ascending: false }).limit(50);
+      if (!tenant?.id) return;
+      const { data } = await supabase.from('Auditoria').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(50);
       if (data) setLogs(data);
       setLoading(false);
     };
@@ -1913,12 +1923,11 @@ const AuditTrail = () => {
   );
 };
 
-function AdminPanel() {
+function AdminPanel({ tenant }) { // Use 'tenant' directly from props
   const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const [session, setSession] = useState(null);
-  
+
   // Map path to activeTab
   const pathMap = {
     '/ajustes': 'org',
@@ -1935,7 +1944,7 @@ function AdminPanel() {
   };
 
   const activeTab = pathMap[pathname] || 'dash';
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1944,6 +1953,7 @@ function AdminPanel() {
 
 
   // Shared Filtering State
+  const { tenant, loading: tenantLoading, refresh: syncTenant } = useTenant();
   const [rawData, setRawData] = useState([]);
   const [stores, setStores] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -1967,7 +1977,8 @@ function AdminPanel() {
 
   const fetchIssues = async () => {
     setIssuesLoading(true);
-    let query = supabase.from('Issues').select('*').eq('tenant_id', tenantConfig.id);
+    if (!tenant?.id) return;
+    let query = supabase.from('Issues').select('*').eq('tenant_id', tenant.id);
     if (filters.store !== 'Todas') query = query.eq('tienda_id', filters.store);
     if (filters.area !== 'Todas') query = query.eq('area_id', filters.area);
     const { data } = await query.order('fecha_reporte', { ascending: false });
@@ -1989,23 +2000,25 @@ function AdminPanel() {
   };
 
   const refreshData = async () => {
+    if (!tenant?.id) return;
     try {
       setLoading(true);
       setFetchError(null);
 
-      const [feedbackRes, storesRes, areasRes] = await Promise.all([
-        supabase.from('Feedback').select('*').eq('tenant_id', tenantConfig.id).order('created_at', { ascending: false }),
-        supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenantConfig.id),
-        supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenantConfig.id)
+      // Simple, direct fetch with current tenant
+      const [fRes, sRes, aRes] = await Promise.all([
+        supabase.from('Feedback').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }),
+        supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant.id),
+        supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant.id)
       ]);
 
-      if (feedbackRes.error) throw feedbackRes.error;
-      if (storesRes.error) throw storesRes.error;
-      if (areasRes.error) throw areasRes.error;
+      if (fRes.error) throw fRes.error;
+      if (sRes.error) throw sRes.error;
+      if (aRes.error) throw aRes.error;
 
-      setRawData(feedbackRes.data || []);
-      setStores(storesRes.data || []);
-      setAreas(areasRes.data || []);
+      setRawData(fRes.data || []);
+      setStores(sRes.data || []);
+      setAreas(aRes.data || []);
     } catch (error) {
       console.error('Refresh Data Error:', error);
       setFetchError(error.message);
@@ -2015,10 +2028,10 @@ function AdminPanel() {
   };
 
   useEffect(() => {
-    refreshData();
-    const interval = setInterval(refreshData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (tenant?.id) {
+      refreshData();
+    }
+  }, [tenant?.id]);
 
   const getStoreName = (storeId) => {
     const store = stores.find(s => s.id === storeId);
@@ -2101,30 +2114,8 @@ function AdminPanel() {
   useEffect(() => {
     if (session) {
       fetchNotifications();
-      
-      // Fetch Tenant Data (Monetization Step 1)
-      const fetchTenantData = async () => {
-        const { data } = await supabase
-          .from('tenants')
-          .select('*')
-          .eq('id', tenantConfig.id)
-          .single();
-        
-        if (data) {
-          const updatedConfig = {
-            ...tenantConfig,
-            name: data.name,
-            logoUrl: data.logo_url,
-            primaryColor: data.primary_color,
-            plan: data.plan,
-            subscriptionStatus: data.subscription_status
-          };
-          localStorage.setItem('saas_tenant_config', JSON.stringify(updatedConfig));
-        }
-      };
-      fetchTenantData();
 
-      // Suscribirse a nuevas notificaciones en tiempo real
+      // Realtime alerts subscription
       const channel = supabase
         .channel('schema-db-changes')
         .on(
@@ -2143,27 +2134,45 @@ function AdminPanel() {
   }, [session]);
 
   const fetchNotifications = async () => {
+    if (!tenant?.id) return;
     const { data } = await supabase
       .from('Alerts')
       .select('*')
-      .eq('tenant_id', tenantConfig.id)
+      .eq('tenant_id', tenant.id)
       .order('created_at', { ascending: false })
       .limit(10);
     if (data) setNotifications(data);
   };
 
   const markAsRead = async (id) => {
-    await supabase.from('Alerts').update({ leida: true }).eq('id', id).eq('tenant_id', tenantConfig.id);
+    await supabase.from('Alerts').update({ leida: true }).eq('id', id).eq('tenant_id', tenant.id);
     setNotifications(notifications.map(n => n.id === id ? { ...n, leida: true } : n));
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('saas_tenant_config');
+      setSession(null);
+    } catch (err) {
+      console.error('Logout error:', err);
+      // Even if signOut fails, clear local state
+      localStorage.removeItem('saas_tenant_config');
+      setSession(null);
+    }
   };
 
   if (!session) {
     return <Auth />;
+  }
+
+  if (tenantLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem', background: '#f8fafc' }}>
+        <Loader className="animate-spin" size={40} color="var(--primary)" />
+        <p style={{ fontWeight: '800', color: '#1e40af', fontSize: '1rem' }}>Sincronizando identidad...</p>
+      </div>
+    );
   }
 
   if (showOnboarding) {
@@ -2186,7 +2195,7 @@ function AdminPanel() {
 
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div style={{ padding: '0 0.5rem', marginBottom: '2rem' }}>
-          <img src={tenantConfig.logoUrl} alt={tenantConfig.name} style={{ maxWidth: '130px', objectFit: 'contain' }} />
+          <img src={tenant.logoUrl} alt={tenant.name} style={{ maxWidth: '130px', objectFit: 'contain' }} />
         </div>
         <nav style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <ul className="nav-links">
@@ -2520,10 +2529,12 @@ function AdminPanel() {
 }
 
 export default function App() {
+  const { tenant, loading: tenantLoading } = useTenant();
+  
   return (
     <Routes>
       <Route path="/feedback" element={<Feedback />} />
-      <Route path="/*" element={<AdminPanel />} />
+      <Route path="/*" element={<AdminPanel tenant={tenant} tenantLoading={tenantLoading} />} />
     </Routes>
   );
 }

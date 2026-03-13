@@ -1,18 +1,33 @@
-const saved = typeof window !== 'undefined' ? localStorage.getItem('saas_tenant_config') : null;
-const parsed = saved ? JSON.parse(saved) : {};
+const getSavedConfig = () => {
+    if (typeof window === 'undefined') return {};
+    try {
+        const saved = localStorage.getItem('saas_tenant_config');
+        return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+        return {};
+    }
+};
+
+export const getTenantId = () => {
+    const config = getSavedConfig();
+    const id = config.id || '00000000-0000-0000-0000-000000000000';
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id) ? id : '00000000-0000-0000-0000-000000000000';
+};
 
 export const tenantConfig = {
-    id: parsed.id || '00000000-0000-0000-0000-000000000000',
-    name: parsed.name || 'SaaS Platform',
-    logoUrl: parsed.logoUrl || '/logo.png',
-    primaryColor: parsed.primaryColor || '#2563eb',
-    plan: parsed.plan || 'starter',
-    subscriptionStatus: parsed.subscriptionStatus || 'active',
-    allowedDomains: ['*'], // Allow all domains for now
+    get id() { return getTenantId(); },
+    get name() { return getSavedConfig().name || 'SaaS Platform'; },
+    get logoUrl() { return getSavedConfig().logoUrl || '/logo.png'; },
+    get primaryColor() { return getSavedConfig().primaryColor || '#2563eb'; },
+    get plan() { return getSavedConfig().plan || 'starter'; },
+    get subscriptionStatus() { return getSavedConfig().subscriptionStatus || 'active'; },
+    allowedDomains: ['*'],
     supportEmail: 'admin@saas-platform.com',
     feedbackUrl: import.meta.env.VITE_FEEDBACK_URL || 'http://localhost:5174/feedback'
 };
 
-if (typeof window !== 'undefined' && tenantConfig.primaryColor) {
-    document.documentElement.style.setProperty('--primary', tenantConfig.primaryColor);
+if (typeof window !== 'undefined') {
+    const color = getSavedConfig().primaryColor || '#2563eb';
+    document.documentElement.style.setProperty('--primary', color);
 }

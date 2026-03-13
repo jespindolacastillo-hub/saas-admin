@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { KpiService } from '../../services/kpiService';
-import { tenantConfig } from '../../config/tenant';
+import { tenantConfig, getTenantId } from '../../config/tenant';
 import { useTranslation } from 'react-i18next';
 import { Target, Save, Search, Calendar, Award, TrendingUp, Loader, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -28,7 +28,7 @@ const KpiManager = () => {
             const { data: storesData, error: storesError } = await supabase
                 .from('Tiendas_Catalogo')
                 .select('*')
-                .eq('tenant_id', tenantConfig.id)
+                .eq('tenant_id', getTenantId())
                 .order('nombre');
 
             if (storesError) throw storesError;

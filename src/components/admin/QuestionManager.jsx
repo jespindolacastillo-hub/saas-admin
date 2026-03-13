@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Save, X, Edit2, Trash2, Check, AlertCircle, Loader, PlusCircle, MinusCircle, Eye, Copy } from 'lucide-react';
-
+import { getTenantId } from '../../config/tenant';
 const QuestionManager = () => {
     const { t } = useTranslation();
     const [questions, setQuestions] = useState([]);
@@ -31,6 +31,7 @@ const QuestionManager = () => {
             const { data: areasData, error: areasError } = await supabase
                 .from('Areas_Catalogo')
                 .select('*')
+                .eq('tenant_id', getTenantId())
                 .order('orden', { ascending: true });
 
             if (areasError) throw areasError;
@@ -43,6 +44,7 @@ const QuestionManager = () => {
                     *,
                     area:Areas_Catalogo(id, nombre, icono, color)
                 `)
+                .eq('tenant_id', getTenantId())
                 .order('orden', { ascending: true });
 
             if (questionsError) throw questionsError;
@@ -246,7 +248,7 @@ const QuestionManager = () => {
                 // Crear nueva pregunta
                 const { error: insertError } = await supabase
                     .from('Area_Preguntas')
-                    .insert([dataToSave]);
+                    .insert([{ ...dataToSave, tenant_id: getTenantId() }]);
 
                 if (insertError) throw insertError;
                 setSuccessMessage(t('questions.success.created'));
@@ -255,7 +257,8 @@ const QuestionManager = () => {
                 const { error: updateError } = await supabase
                     .from('Area_Preguntas')
                     .update(dataToSave)
-                    .eq('id', questionId);
+                    .eq('id', questionId)
+                    .eq('tenant_id', getTenantId());
 
                 if (updateError) throw updateError;
                 setSuccessMessage(t('questions.success.saved'));
@@ -290,7 +293,8 @@ const QuestionManager = () => {
             const { error: deleteError } = await supabase
                 .from('Area_Preguntas')
                 .delete()
-                .eq('id', questionId);
+                .eq('id', questionId)
+                .eq('tenant_id', getTenantId());
 
             if (deleteError) throw deleteError;
 
@@ -313,7 +317,8 @@ const QuestionManager = () => {
             const { error: updateError } = await supabase
                 .from('Area_Preguntas')
                 .update({ activa: !currentStatus })
-                .eq('id', questionId);
+                .eq('id', questionId)
+                .eq('tenant_id', getTenantId());
 
             if (updateError) throw updateError;
 

@@ -1,5 +1,6 @@
-import { tenantConfig } from '../config/tenant';
+import { tenantConfig, getTenantId } from '../config/tenant';
 import { PLAN_LIMITS } from '../config/planLimits';
+import { supabase } from '../lib/supabase';
 
 /**
  * AreaService: Gestión del catálogo de áreas.
@@ -12,7 +13,7 @@ export const AreaService = {
         const { data, error } = await supabase
             .from('Areas_Catalogo')
             .select('*')
-            .eq('tenant_id', tenantConfig.id)
+            .eq('tenant_id', getTenantId())
             .order('orden');
 
         if (error) throw error;
@@ -29,7 +30,7 @@ export const AreaService = {
             const { count } = await supabase
                 .from('Areas_Catalogo')
                 .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', tenantConfig.id);
+                .eq('tenant_id', getTenantId());
             
             const limit = PLAN_LIMITS[tenantConfig.plan]?.maxAreas || 0;
             if (count >= limit) {
@@ -37,27 +38,51 @@ export const AreaService = {
             }
         }
 
-        // Si es nueva, generamos un slug como ID si no existe
-        const id = isNew
-            ? areaData.nombre.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-            : areaData.id;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const payload = { ...areaData, tenant_id: getTenantId() };
+        
+        // PROTECCIÓN: Si el ID no es un UUID válido (ej: legacy slug), lo eliminamos del payload
+        if (payload.id && !uuidRegex.test(payload.id)) {
+            delete payload.id;
+        }
 
-        const payload = { ...areaData, tenant_id: tenantConfig.id };
-        delete payload.id;
-        if (isNew) payload.id = id;
-
-        const { error } = await supabase
+        const { data: savedArea, error } = await supabase
             .from('Areas_Catalogo')
-            .upsert([payload]);
+            .upsert([payload])
+            .select('id')
+            .single();
 
         if (error) throw error;
+        const id = savedArea.id;
         return { id, ...areaData };
+    },
+
+    /**
+     * Añade una nueva área directamente vinculada a una tienda.
+     */
+    async addArea(storeId, areaName) {
+        const tid = getTenantId();
+        const { data, error } = await supabase
+            .from('Areas_Catalogo')
+            .insert([{ 
+                nombre: areaName, 
+                tenant_id: tid,
+                tienda_id: storeId // Direct Link
+            }])
+            .select().single();
+        if (error) throw error;
+        return data;
     },
 
     /**
      * Elimina una área y limpia sus relaciones.
      */
     async deleteArea(id) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(id)) {
+            throw new Error("ID de área inválido (formato esperado: UUID).");
+        }
+
         // Limpiamos relaciones primero (cascada manual)
         await supabase.from('Tienda_Areas').delete().eq('area_id', id);
 

@@ -5,6 +5,7 @@ import {
     AlertCircle, CheckCircle2, Clock, Filter, Mail, Phone
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getTenantId } from '../../config/tenant';
 
 const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
     const { t } = useTranslation();
@@ -38,7 +39,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                 estado: 'Abierto'
             };
 
-            const { error } = await supabase.from('Issues').insert([newIssue]);
+            const { error } = await supabase.from('Issues').insert([{ ...newIssue, tenant_id: getTenantId() }]);
             if (error) throw error;
             if (onIssueUpdate) onIssueUpdate();
         } catch (err) {
@@ -74,7 +75,8 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
             const { error } = await supabase
                 .from('Issues')
                 .update(updates)
-                .eq('id', issueId);
+                .eq('id', issueId)
+                .eq('tenant_id', getTenantId());
 
             if (error) throw error;
 

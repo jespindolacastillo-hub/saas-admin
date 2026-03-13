@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { tenantConfig } from '../config/tenant';
+import { tenantConfig, getTenantId } from '../config/tenant';
 
 export const KpiService = {
     /**
@@ -12,7 +12,7 @@ export const KpiService = {
                 .select('*')
                 .eq('mes', month)
                 .eq('anio', year)
-                .eq('tenant_id', tenantConfig.id);
+                .eq('tenant_id', getTenantId())
 
             if (error) throw error;
             return data;
@@ -35,7 +35,7 @@ export const KpiService = {
                     anio: year,
                     target_nps: targetNps,
                     target_volumen: targetVolume,
-                    tenant_id: tenantConfig.id,
+                    tenant_id: getTenantId(),
                     updated_at: new Date()
                 }, { onConflict: 'tienda_id,mes,anio' })
                 .select();

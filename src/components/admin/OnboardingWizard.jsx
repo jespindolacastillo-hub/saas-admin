@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { supabase } from '../../lib/supabase';
+import { tenantConfig, getTenantId } from '../../config/tenant';
 import { useNavigate } from 'react-router-dom';
+import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '../../lib/supabase';
+import { printQRCodes } from '../../utils/qrUtils';
 import {
   Palette, QrCode, ArrowRight, ArrowLeft, CheckCircle2,
   Building2, MessageSquare, X, ChevronRight, Globe2, Zap
@@ -137,6 +140,19 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
   const [savedStoreId, setSavedStoreId] = useState(null);
   const [savedAreaId, setSavedAreaId] = useState(null);
 
+  // 1-TIME CLEANUP: Si entramos al wizard y el tenant_id actual es basura, limpiamos localstorage
+  useEffect(() => {
+    const tid = getTenantId();
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    // Si el ID es '0000...' pero hay algo guardado en localStorage, podría estar corrupto.
+    // O si por algún motivo getTenantId devolviera algo que no sea UUID (aunque lo blindamos), lo forzamos.
+    if (tid === '00000000-0000-0000-0000-000000000000' || !uuidRegex.test(tid)) {
+        console.warn('Detectado estado inconsistente en Tenant ID. Limpiando para evitar errores "centro".');
+        localStorage.removeItem('saas_tenant_config');
+    }
+  }, []);
+
   // Effect to restore IDs if starting mid-flow
   useEffect(() => {
     if (initialStep > 1 && stores.length > 0) {
@@ -164,80 +180,81 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
   const goBack = () => step > 0 && transition(step - 1, -1);
 
-  const getRealTenantId = async () => {
-    try {
-      const saved = localStorage.getItem('saas_tenant_config');
-      if (saved) {
-        const p = JSON.parse(saved);
-        if (p.id && p.id !== '00000000-0000-0000-0000-000000000000') return p.id;
-      }
-    } catch (_) {}
-    const { data } = await supabase.from('tenants').select('id').limit(1).single();
-    return data?.id || null;
-  };
 
   const saveStep0 = async () => {
     if (!orgName.trim()) return;
     try {
-      const tid = await getRealTenantId();
-      if (tid) await supabase.from('tenants').update({ name: orgName.trim() }).eq('id', tid);
+      const tid = getTenantId();
+      if (tid && tid !== '00000000-0000-0000-0000-000000000000') await supabase.from('tenants').update({ name: orgName.trim() }).eq('id', tid);
     } catch (_) {}
     transition(1);
   };
 
   const saveStep1 = async () => {
     if (!storeName.trim()) return;
-    setSaving(true); setError('');
     try {
-      const tid = await getRealTenantId();
-      if (!tid) throw new Error('No se encontró el tenant.');
-      
-      const storeSlug = storeName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const tid = getTenantId();
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-      // 1. Upsert Store
-      const { data: store, error: storeErr } = await supabase
+      if (!tid || !uuidRegex.test(tid) || tid === '00000000-0000-0000-0000-000000000000') {
+        throw new Error('ID de organización no válido. Por favor, limpia la sesión.');
+      }
+
+      // 1. Create or Get Store (STRICT UUID)
+      let storeIdToUse;
+      const { data: existingStore } = await supabase
         .from('Tiendas_Catalogo')
-        .upsert([{ id: storeSlug, nombre: storeName.trim(), tenant_id: tid }], { onConflict: 'id' })
-        .select('id').single();
-      if (storeErr) throw storeErr;
-      setSavedStoreId(store.id);
+        .select('id')
+        .eq('nombre', storeName.trim())
+        .eq('tenant_id', tid)
+        .maybeSingle();
 
-      // 2. Upsert Area and Link
-      if (areaName.trim()) {
-        const areaSlug = areaName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        
-        const { data: area, error: areaErr } = await supabase
-          .from('Areas_Catalogo')
-          .upsert([{ id: areaSlug, nombre: areaName.trim(), tenant_id: tid }], { onConflict: 'id' })
+      if (existingStore && uuidRegex.test(existingStore.id)) {
+        storeIdToUse = existingStore.id;
+      } else {
+        const { data: newStore, error: storeErr } = await supabase
+          .from('Tiendas_Catalogo')
+          .insert([{ nombre: storeName.trim(), tenant_id: tid }])
           .select('id').single();
-        if (areaErr) throw areaErr;
-        setSavedAreaId(area.id);
+        if (storeErr) throw storeErr;
+        storeIdToUse = newStore.id;
+      }
+      setSavedStoreId(storeIdToUse);
 
-        // 3. Link Tienda <-> Area (CRITICAL for QR Generator)
-        await supabase.from('Tienda_Areas').upsert([{
-          tienda_id: store.id,
-          area_id: area.id,
-          activa: true
-        }], { onConflict: 'tienda_id,area_id' });
+      // 2. Create Area (Simplified Model - NO JUNCTION)
+      if (areaName.trim()) {
+        const { data: newArea, error: areaErr } = await supabase
+          .from('Areas_Catalogo')
+          .insert([{ 
+            nombre: areaName.trim(), 
+            tenant_id: tid,
+            tienda_id: storeIdToUse 
+          }])
+          .select('id').single();
+        
+        if (areaErr) throw areaErr;
+        setSavedAreaId(newArea.id);
       }
 
       await refreshData();
       transition(2);
     } catch (err) {
+      console.error('Wizard Error:', err);
       setError(err.message || 'Error al guardar.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const saveStep2 = async () => {
     if (!questionText.trim()) return;
     setSaving(true); setError('');
     try {
-      const tid = await getRealTenantId();
+      const tid = getTenantId();
       // Use existing IDs if mid-flow
       const finalAreaId = savedAreaId || (areas.length > 0 ? areas[0].id : null);
 
-      if (finalAreaId && tid) {
+      if (finalAreaId && tid && tid !== '00000000-0000-0000-0000-000000000000') {
         const { error: qErr } = await supabase.from('Area_Preguntas').insert([{
           area_id: finalAreaId, tenant_id: tid,
           numero_pregunta: 1, texto_pregunta: questionText.trim(),
@@ -461,7 +478,35 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                   <span>💡</span>
                   <p style={{ fontSize: '0.78rem', color: '#065f46', margin: 0 }}>{t('onboarding.s2_tip', '1 tienda + 1 área es suficiente para generar tu primer QR.')}</p>
                 </div>
-                {error && <ErrBox msg={error} />}
+                {error && (
+            <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ padding: '1.25rem', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', display: 'flex', gap: '12px', alignItems: 'center', color: '#dc2626' }}>
+                <Zap size={20} />
+                <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>{error}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                <button 
+                  onClick={() => {
+                    localStorage.removeItem('saas_tenant_config');
+                    window.location.reload();
+                  }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Limpiar sesión y reintentar
+                </button>
+                <button 
+                  onClick={async () => {
+                    localStorage.clear();
+                    await supabase.auth.signOut();
+                    window.location.reload();
+                  }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: 'white', color: '#dc2626', border: '2px solid #dc2626', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  Borrón y Cuenta Nueva (Limpieza Total)
+                </button>
+              </div>
+            </div>
+          )}
               </div>
             )}
 
@@ -539,19 +584,43 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                   {t('onboarding.done_desc', 'Tu plataforma de feedback inteligente está configurada. Cada QR genera datos reales.')}
                 </p>
 
-                {/* Summary */}
-                <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', marginBottom: '2rem', border: '1px solid #f1f5f9', textAlign: 'left' }}>
-                  {[
-                    { icon: '🏢', label: t('onboarding.sum_store', 'Tienda'), val: storeName || '—' },
-                    { icon: '🗂️', label: t('onboarding.sum_area', 'Área'), val: areaName || '—' },
-                    { icon: '❓', label: t('onboarding.sum_question', 'Pregunta'), val: questionText || '—' },
-                  ].map(r => (
-                    <div key={r.label} style={{ display: 'flex', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc', alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: '1rem' }}>{r.icon}</span>
-                      <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#94a3b8', minWidth: '60px', textTransform: 'uppercase', paddingTop: '2px' }}>{r.label}</span>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{r.val}</span>
+                {/* Summary & QR Preview */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr ppx', gap: '20px', marginBottom: '2rem' }}>
+                  <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '1px solid #f1f5f9', textAlign: 'left' }}>
+                    {[
+                      { icon: '🏢', label: t('onboarding.sum_store', 'Tienda'), val: storeName || '—' },
+                      { icon: '🗂️', label: t('onboarding.sum_area', 'Área'), val: areaName || '—' },
+                      { icon: '❓', label: t('onboarding.sum_question', 'Pregunta'), val: questionText || '—' },
+                    ].map(r => (
+                      <div key={r.label} style={{ display: 'flex', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '1rem' }}>{r.icon}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#94a3b8', minWidth: '60px', textTransform: 'uppercase', paddingTop: '2px' }}>{r.label}</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{r.val}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '2px solid #3b82f633', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                    <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                      <QRCodeSVG 
+                        id="onboarding-qr"
+                        value={qrUrl}
+                        size={140}
+                        level="H"
+                        includeMargin={true}
+                      />
                     </div>
-                  ))}
+                    <button 
+                      onClick={() => {
+                        const storeDisplayName = storeName || 'Tienda';
+                        const areaDisplayName = areaName || 'Área';
+                        printQRCodes([{ area_id: savedAreaId, Areas_Catalogo: { nombre: areaDisplayName } }], storeDisplayName, () => qrUrl, t);
+                      }}
+                      style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '0.72rem', fontWeight: '800', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      🖨️ {t('onboarding.print_qr', 'Imprimir QR')}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { tenantConfig } from '../config/tenant';
+import { tenantConfig, getTenantId } from '../config/tenant';
 
 /**
  * UserService: Capa de servicios centralizada para la gestión de usuarios.
@@ -14,7 +14,7 @@ export const UserService = {
         const { data, error } = await supabase
             .from('Usuarios')
             .select('*')
-            .eq('tenant_id', tenantConfig.id)
+            .eq('tenant_id', getTenantId())
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -80,7 +80,7 @@ export const UserService = {
                 .from('Usuarios')
                 .update({ nombre, apellido, rol, activo, updated_at: new Date().toISOString() })
                 .eq('id', id)
-                .eq('tenant_id', tenantConfig.id);
+                .eq('tenant_id', getTenantId());
 
             if (dbError) throw dbError;
             return { id };
@@ -95,7 +95,7 @@ export const UserService = {
             .from('Usuarios')
             .update({ activo: active, updated_at: new Date().toISOString() })
             .eq('id', id)
-            .eq('tenant_id', tenantConfig.id);
+            .eq('tenant_id', getTenantId());
 
         if (error) throw error;
     },
@@ -121,7 +121,7 @@ export const UserService = {
             .from('Usuarios')
             .delete()
             .eq('id', id)
-            .eq('tenant_id', tenantConfig.id);
+            .eq('tenant_id', getTenantId());
 
         if (dbError) throw dbError;
     }

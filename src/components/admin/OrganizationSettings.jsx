@@ -221,7 +221,7 @@ const OrganizationSettings = () => {
                         <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>Elige el plan que mejor se adapte al volumen de tu operación.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'stretch' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', alignItems: 'stretch' }}>
                         {Object.entries(PLAN_LIMITS).filter(([key]) => key !== 'enterprise').map(([key, plan]) => {
                             const isCurrent = config.plan === key;
                             const isGrowth = key === 'growth';
@@ -235,35 +235,36 @@ const OrganizationSettings = () => {
                                         flexDirection: 'column',
                                         position: 'relative',
                                         border: isCurrent ? '3px solid var(--primary)' : '1px solid #e2e8f0', 
-                                        padding: '2.5rem',
+                                        padding: '2rem 1.75rem',
                                         borderRadius: '24px',
                                         background: isCurrent ? '#fdfdfd' : 'white',
                                         transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        overflow: 'hidden'
+                                        overflow: 'hidden',
+                                        height: '100%'
                                     }}
                                 >
                                     {isCurrent && (
-                                        <div style={{ position: 'absolute', top: '16px', right: '-35px', transform: 'rotate(45deg)', background: 'var(--primary)', color: 'white', width: '140px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '900', padding: '4px 0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                                        <div style={{ position: 'absolute', top: '16px', right: '-35px', transform: 'rotate(45deg)', background: 'var(--primary)', color: 'white', width: '140px', textAlign: 'center', fontSize: '0.65rem', fontWeight: '900', padding: '4px 0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', zIndex: 10 }}>
                                             TU PLAN
                                         </div>
                                     )}
 
-                                    <div style={{ marginBottom: '2rem' }}>
-                                        <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.75rem', color: isCurrent ? 'var(--primary)' : '#0f172a', letterSpacing: '-0.02em' }}>{plan.name}</h3>
+                                    <div style={{ marginBottom: '1.5rem' }}>
+                                        <h3 style={{ fontSize: '1.3rem', fontWeight: '800', marginBottom: '0.5rem', color: isCurrent ? 'var(--primary)' : '#0f172a', letterSpacing: '-0.02em' }}>{plan.name}</h3>
                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                                            <span style={{ fontSize: '2.75rem', fontWeight: '800', color: '#0f172a' }}>${plan.price}</span>
-                                            <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: '600' }}>/mes</span>
+                                            <span style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>${plan.price}</span>
+                                            <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '600' }}>/mes</span>
                                         </div>
-                                        <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '1rem', lineHeight: '1.6', minHeight: '3rem' }}>{plan.description}</p>
+                                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.75rem', lineHeight: '1.5', minHeight: '3rem' }}>{plan.description}</p>
                                     </div>
 
-                                    <div style={{ flex: 1, marginBottom: '2.5rem' }}>
-                                        <p style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>¿Qué incluye?</p>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                    <div style={{ flex: 1, marginBottom: '2rem' }}>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>Incluye:</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                             {plan.features.map((feature, i) => (
-                                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
+                                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.85rem', color: '#334155', fontWeight: '500' }}>
                                                     <div style={{ marginTop: '2px', background: isCurrent ? 'var(--primary)' : '#f1f5f9', color: isCurrent ? 'white' : '#94a3b8', borderRadius: '50%', padding: '2px' }}>
-                                                        <CheckCircle2 size={14} strokeWidth={3} />
+                                                        <CheckCircle2 size={12} strokeWidth={3} />
                                                     </div>
                                                     {feature}
                                                 </div>
@@ -277,23 +278,23 @@ const OrganizationSettings = () => {
                                         className="btn"
                                         style={{ 
                                             width: '100%', 
-                                            padding: '16px', 
-                                            borderRadius: '16px', 
+                                            padding: '14px', 
+                                            borderRadius: '14px', 
                                             fontWeight: '800',
-                                            fontSize: '1rem',
+                                            fontSize: '0.9rem',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '10px',
+                                            gap: '8px',
                                             transition: 'all 0.3s ease',
                                             background: isCurrent ? '#f1f5f9' : (isGrowth ? 'var(--primary)' : '#0f172a'),
                                             color: isCurrent ? '#94a3b8' : 'white',
                                             border: 'none',
-                                            boxShadow: isCurrent ? 'none' : '0 10px 20px -5px rgba(0,0,0,0.1)',
+                                            boxShadow: isCurrent ? 'none' : '0 8px 16px -4px rgba(0,0,0,0.1)',
                                             cursor: isCurrent ? 'default' : 'pointer'
                                         }}
                                     >
-                                        {isCurrent ? 'Plan Activo' : (key === 'starter' ? 'Cambiar a Starter' : <><Zap size={20} fill="currentColor" /> Mejorar Plan</>)}
+                                        {isCurrent ? 'Plan Activo' : (key === 'starter' ? 'Elegir Starter' : <><Zap size={18} fill="currentColor" /> Mejorar Plan</>)}
                                     </button>
                                 </div>
                             );

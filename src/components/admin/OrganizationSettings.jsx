@@ -333,3 +333,5 @@ const OrganizationSettings = () => {
         </div>
     );
 };
+
+export default OrganizationSettings;

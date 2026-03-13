@@ -1945,6 +1945,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 
   const activeTab = pathMap[pathname] || 'dash';
 
+  const [session, setSession] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);

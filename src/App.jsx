@@ -31,7 +31,7 @@ import BackupManager from './components/admin/BackupManager';
 
 import KpiManager from './components/admin/KpiManager';
 import IssueManagement from './components/admin/IssueManagement';
-
+import { getSampleData } from './utils/sampleData';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
 const calculateNPS = (data) => {
@@ -518,23 +518,36 @@ const Dashboard = ({
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
         <div className="w-24 h-24 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
-          <TrendingUp size={48} />
+          <Award size={48} />
         </div>
         <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">
-          {t('menu.welcome_first', '¡Bienvenido a tu nueva era!')}
+          {t('menu.welcome_first')}
         </h2>
         <p className="text-slate-500 max-w-sm mb-8">
-          {t('menu.no_data_desc', 'Estamos listos para analizar tus datos. Empieza compartiendo tus códigos QR con tus clientes.')}
+          {t('menu.no_data_desc')}
         </p>
-        <button onClick={() => navigate('/qr')} className="btn btn-primary h-12 px-8 rounded-2xl">
-          {t('menu.create_first_qr', 'Crear mi primer QR')}
-        </button>
+        <div className="flex gap-4">
+          <button onClick={() => navigate('/qr')} className="btn btn-primary h-12 px-8 rounded-2xl">
+            {t('menu.create_first_qr', 'Crear mi primer QR')}
+          </button>
+          <button onClick={() => setIsDemoMode(true)} className="btn btn-secondary h-12 px-8 rounded-2xl border-dashed border-2">
+            <TrendingUp size={18} /> {t('menu.start_demo')}
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="animate-fade-in">
+      {isDemoMode && (
+        <div style={{ position: 'fixed', top: '1rem', left: '50%', transform: 'translateX(-50%)', zIndex: 99999 }}>
+          <div className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '100px', boxShadow: 'var(--shadow-lg)', border: '1px solid #f97316' }}>
+            <TrendingUp size={16} /> <strong>DEMO MODE ACTIVE</strong>
+            <button onClick={() => setIsDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9a3412', fontWeight: 'bold', marginLeft: '8px' }}>[EXIT]</button>
+          </div>
+        </div>
+      )}
       {window.location.hostname === 'localhost' && (
         <div className="dev-banner">
           <span className="dev-badge">{t('common.dev_mode')}</span>
@@ -1887,6 +1900,7 @@ function AdminPanel() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [filters, setFilters] = useState({
     store: 'Todas',
     area: 'Todas',

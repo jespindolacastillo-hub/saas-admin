@@ -2167,7 +2167,16 @@ function AdminPanel() {
   }
 
   if (showOnboarding) {
-    return <OnboardingWizard session={session} initialStep={wizardStep} onComplete={() => { setShowOnboarding(false); setWizardStep(0); }} />;
+    return (
+      <OnboardingWizard 
+        session={session} 
+        initialStep={wizardStep} 
+        stores={stores}
+        areas={areas}
+        refreshData={refreshData}
+        onComplete={() => { setShowOnboarding(false); setWizardStep(0); }} 
+      />
+    );
   }
 
   return (

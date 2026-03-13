@@ -114,7 +114,7 @@ const ProgressBar = ({ current, total }) => (
 // ─── Main Component ────────────────────────────────────────────────────────────
 const TOTAL_STEPS = 4;
 
-const OnboardingWizard = ({ onComplete, session, initialStep = 0 }) => {
+const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], areas = [], refreshData = () => {} }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const STEPS = useSteps(t);
@@ -136,6 +136,19 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0 }) => {
   // Saved IDs
   const [savedStoreId, setSavedStoreId] = useState(null);
   const [savedAreaId, setSavedAreaId] = useState(null);
+
+  // Effect to restore IDs if starting mid-flow
+  useEffect(() => {
+    if (initialStep > 1 && stores.length > 0) {
+      // Pick the first store as default if none specified (checklist launch)
+      setSavedStoreId(stores[0].id);
+      setStoreName(stores[0].nombre);
+    }
+    if (initialStep > 2 && areas.length > 0) {
+      setSavedAreaId(areas[0].id);
+      setAreaName(areas[0].nombre);
+    }
+  }, [initialStep, stores, areas]);
 
   const currentStep = STEPS[step];
 
@@ -178,20 +191,37 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0 }) => {
     try {
       const tid = await getRealTenantId();
       if (!tid) throw new Error('No se encontró el tenant.');
+      
+      const storeSlug = storeName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+      // 1. Upsert Store
       const { data: store, error: storeErr } = await supabase
         .from('Tiendas_Catalogo')
-        .insert([{ nombre: storeName.trim(), tenant_id: tid }])
+        .upsert([{ id: storeSlug, nombre: storeName.trim(), tenant_id: tid }], { onConflict: 'id' })
         .select('id').single();
       if (storeErr) throw storeErr;
       setSavedStoreId(store.id);
+
+      // 2. Upsert Area and Link
       if (areaName.trim()) {
+        const areaSlug = areaName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        
         const { data: area, error: areaErr } = await supabase
           .from('Areas_Catalogo')
-          .insert([{ nombre: areaName.trim(), tenant_id: tid, tienda_id: store.id }])
+          .upsert([{ id: areaSlug, nombre: areaName.trim(), tenant_id: tid }], { onConflict: 'id' })
           .select('id').single();
         if (areaErr) throw areaErr;
         setSavedAreaId(area.id);
+
+        // 3. Link Tienda <-> Area (CRITICAL for QR Generator)
+        await supabase.from('Tienda_Areas').upsert([{
+          tienda_id: store.id,
+          area_id: area.id,
+          activa: true
+        }], { onConflict: 'tienda_id,area_id' });
       }
+
+      await refreshData();
       transition(2);
     } catch (err) {
       setError(err.message || 'Error al guardar.');
@@ -204,14 +234,18 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0 }) => {
     setSaving(true); setError('');
     try {
       const tid = await getRealTenantId();
-      if (savedAreaId && tid) {
+      // Use existing IDs if mid-flow
+      const finalAreaId = savedAreaId || (areas.length > 0 ? areas[0].id : null);
+
+      if (finalAreaId && tid) {
         const { error: qErr } = await supabase.from('Area_Preguntas').insert([{
-          area_id: savedAreaId, tenant_id: tid,
+          area_id: finalAreaId, tenant_id: tid,
           numero_pregunta: 1, texto_pregunta: questionText.trim(),
           tipo_respuesta: tipoRespuesta, activa: true,
         }]);
         if (qErr) throw qErr;
       }
+      await refreshData();
       transition(3);
     } catch (err) {
       setError(err.message || 'Error al guardar pregunta.');

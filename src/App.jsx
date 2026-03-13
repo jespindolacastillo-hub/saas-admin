@@ -488,6 +488,32 @@ const Dashboard = ({
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>{t('menu.loading')}</div>;
 
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+          <AlertCircle size={40} />
+        </div>
+        <h2 className="text-xl font-bold text-slate-800 mb-2">Error de Base de Datos</h2>
+        <p className="text-slate-500 max-w-md mb-6">
+          El sistema detectó un problema en la estructura de la base de datos (posible columna faltante):
+          <br /><code className="bg-slate-100 p-2 rounded mt-2 block text-xs">{fetchError}</code>
+        </p>
+        <div className="flex gap-4">
+          <button onClick={refreshData} className="btn btn-secondary">
+            Reintentar
+          </button>
+          <button onClick={() => window.open('https://app.supabase.com', '_blank')} className="btn btn-primary">
+            Ir a Supabase SQL Editor
+          </button>
+        </div>
+        <p className="text-xs text-slate-400 mt-8">
+          Nota: Ejecuta el script <code>db_fix_tenant_id.sql</code> para solucionar esto.
+        </p>
+      </div>
+    );
+  }
+
   if (!rawData || rawData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
@@ -579,11 +605,13 @@ const Dashboard = ({
       </div>
 
       {/* Exit Snapshot Mode Floating Button */}
-      <div className="snapshot-mode-overlay">
-        <button className="btn btn-primary" style={{ borderRadius: '100px', padding: '12px 24px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={() => setIsSnapshotMode(false)}>
-          <X size={18} /> {t('common.exit_snapshot')}
-        </button>
-      </div>
+      {isSnapshotMode && (
+        <div className="snapshot-mode-overlay">
+          <button className="btn btn-primary" style={{ borderRadius: '100px', padding: '12px 24px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={() => setIsSnapshotMode(false)}>
+            <X size={18} /> {t('common.exit_snapshot')}
+          </button>
+        </div>
+      )}
 
       {/* Hierarchy Upgrade: Strategic vs Operational Sections */}
 
@@ -2342,6 +2370,26 @@ function AdminPanel() {
 
         <main className="main-content">
           <OnboardingTour />
+          {fetchError && activeTab !== 'dash' && (
+            <div className="card animate-shake" style={{ marginBottom: '1.5rem', borderLeft: '4px solid #ef4444', background: '#fef2f2', padding: '1rem' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <AlertCircle color="#ef4444" size={20} />
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ color: '#991b1b', fontSize: '0.9rem', fontWeight: '800', marginBottom: '4px' }}>
+                    {t('common.database_error', 'Error de Estructura de Datos')}
+                  </h4>
+                  <p style={{ color: '#b91c1c', fontSize: '0.75rem', fontWeight: '500' }}>
+                    {fetchError.includes('tenant_id') 
+                      ? 'Faltan columnas de multi-tenant en la base de datos. Por favor ejecuta el script de migración SQL.' 
+                      : fetchError}
+                  </p>
+                </div>
+                <button onClick={refreshData} className="btn btn-sm btn-primary" style={{ height: '32px' }}>
+                  {t('common.retry', 'Reintentar')}
+                </button>
+              </div>
+            </div>
+          )}
           {activeTab === 'org' && <OrganizationSettings />}
           {activeTab === 'dash' && (
             <Dashboard

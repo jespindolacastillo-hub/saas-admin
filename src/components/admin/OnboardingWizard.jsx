@@ -309,7 +309,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
   const canProceed = step === 0 ? !!orgName.trim() : step === 1 ? !!storeName.trim() : step === 2 ? !!questionText.trim() : true;
 
-  const baseUrl = import.meta.env.VITE_FEEDBACK_URL || 'https://priceshoes.netlify.app/feedback';
+  const baseUrl = import.meta.env.VITE_FEEDBACK_URL || 'https://ian-feedback.netlify.app';
   const qrUrl = savedStoreId ? `${baseUrl}?t=${savedStoreId}${savedAreaId ? `&a=${savedAreaId}` : ''}` : baseUrl;
 
   return (

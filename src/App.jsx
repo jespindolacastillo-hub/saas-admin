@@ -1337,7 +1337,7 @@ const QRGenerator = () => {
 
   const getQRUrl = (storeId, areaId) => {
     // Usar variable de entorno para la URL base del feedback, fallback a producción
-    const baseUrl = import.meta.env.VITE_FEEDBACK_URL || 'https://priceshoes.netlify.app/feedback';
+    const baseUrl = import.meta.env.VITE_FEEDBACK_URL || 'https://ian-feedback.netlify.app';
     return `${baseUrl}?t=${storeId}&a=${areaId}`;
   };
 

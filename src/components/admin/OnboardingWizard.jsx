@@ -160,34 +160,26 @@ const OnboardingWizard = ({ onComplete, session }) => {
         return;
       }
 
-      // Create store
+      // Create store — schema: (id, nombre, tenant_id, created_at)
       const { data: storeData, error: storeErr } = await supabase
         .from('Tiendas_Catalogo')
-        .insert([{ nombre: storeName.trim(), direccion: '', tenant_id: tid, activa: true }])
+        .insert([{ nombre: storeName.trim(), tenant_id: tid }])
         .select()
         .single();
 
       if (storeErr) throw storeErr;
       if (storeData) setSavedStoreId(storeData.id);
 
-      // Create area (optional)
+      // Create area — schema: (id, nombre, tienda_id, tenant_id, created_at)
       if (areaName.trim() && storeData) {
         const { data: areaData, error: areaErr } = await supabase
           .from('Areas_Catalogo')
-          .insert([{ nombre: areaName.trim(), tenant_id: tid, orden: 1 }])
+          .insert([{ nombre: areaName.trim(), tenant_id: tid, tienda_id: storeData.id }])
           .select()
           .single();
 
         if (areaErr) throw areaErr;
-
-        if (areaData) {
-          setSavedAreaId(areaData.id);
-          await supabase.from('Tienda_Areas').insert([{
-            tienda_id: storeData.id,
-            area_id: areaData.id,
-            activa: true
-          }]);
-        }
+        if (areaData) setSavedAreaId(areaData.id);
       }
       setStructSaved(true);
       setSavingStructure(false);

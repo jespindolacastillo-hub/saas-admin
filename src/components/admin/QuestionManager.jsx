@@ -1134,6 +1134,7 @@ const QuestionManager = () => {
 
 // Preview Modal Component
 const PreviewModal = ({ question, onClose }) => {
+    const { t } = useTranslation();
     const [previewAnswer, setPreviewAnswer] = useState('');
 
     const renderPreviewInput = () => {

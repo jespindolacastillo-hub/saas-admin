@@ -95,7 +95,7 @@ const Dashboard = ({
 }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-
+  const { tenant } = useTenant();
 
   const [metas, setMetas] = useState([]);
   const [isSnapshotMode, setIsSnapshotMode] = useState(false);
@@ -1311,6 +1311,7 @@ const Dashboard = ({
 // QR Studio Component: Generación y Gestión de QRs
 const QRGenerator = () => {
   const { t } = useTranslation();
+  const { tenant } = useTenant();
   const [stores, setStores] = useState([]);
   const [areas, setAreas] = useState([]);
   const [selectedStore, setSelectedStore] = useState('');
@@ -1406,6 +1407,7 @@ const QRGenerator = () => {
       6: { cols: 3, qrSize: 150, fontSize: '0.9rem', titleSize: '1rem' }
     };
 
+    const printLayout = 4; // Default to 4 per page
     const config = layoutConfig[printLayout];
     const itemsPerPage = printLayout;
 
@@ -1787,6 +1789,7 @@ const formatDateMX = (dateStr) => {
 
 const AuditTrail = () => {
   const { t } = useTranslation();
+  const { tenant } = useTenant();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState(null);

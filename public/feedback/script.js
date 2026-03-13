@@ -251,20 +251,24 @@ function setupFormSubmission(deviceId, storeId, areaId, qrId) {
             if (error) throw error;
 
             if (rating <= 2 && feedback && feedback.length > 0) {
-                const whatsapp = document.getElementById('whatsapp')?.value || '';
-                const email = document.getElementById('email')?.value || '';
-                const contactInfo = [whatsapp, email].filter(Boolean).join(' | ') || 'No proporcionado';
+                try {
+                    const whatsapp = document.getElementById('whatsapp')?.value || '';
+                    const email = document.getElementById('email')?.value || '';
+                    const contactInfo = [whatsapp, email].filter(Boolean).join(' | ') || 'No proporcionado';
 
-                await _supabase.from('Issues').insert([{
-                    feedback_id: feedback[0].id,
-                    titulo: `Feedback Crítico: ${rating} Estrellas`,
-                    descripcion: `Comentario: ${payload.comentario}\nContacto: ${contactInfo}`,
-                    categoria: 'Servicio',
-                    severidad: rating === 1 ? 'Crítica' : 'Alta',
-                    tienda_id: storeId,
-                    area_id: areaId,
-                    tenant_id: payload.tenant_id
-                }]);
+                    await _supabase.from('Issues').insert([{
+                        feedback_id: feedback[0].id,
+                        titulo: `Feedback Crítico: ${rating} Estrellas`,
+                        descripcion: `Comentario: ${payload.comentario}\nContacto: ${contactInfo}`,
+                        categoria: 'Servicio',
+                        severidad: rating === 1 ? 'Crítica' : 'Alta',
+                        tienda_id: storeId,
+                        area_id: areaId,
+                        tenant_id: payload.tenant_id
+                    }]);
+                } catch (issueErr) {
+                    console.warn('No se pudo crear el Issue automático, pero el Feedback se guardó:', issueErr);
+                }
             }
 
             localStorage.setItem(`feedback_sent_${storeId}_${areaId}`, Date.now().toString());

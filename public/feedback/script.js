@@ -246,9 +246,15 @@ function setupFormSubmission(deviceId, storeId, areaId, qrId) {
             tenant_id: currentTenantId || '00000000-0000-0000-0000-000000000000'
         };
 
+        console.log('Enviando feedback...', payload);
+
         try {
             const { data: feedback, error } = await _supabase.from('Feedback').insert([payload]).select();
-            if (error) throw error;
+            
+            if (error) {
+                console.error('Error detallado de Supabase:', error);
+                throw new Error(error.message || 'Error desconocido en RLS/DB');
+            }
 
             if (rating <= 2 && feedback && feedback.length > 0) {
                 try {

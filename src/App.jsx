@@ -89,7 +89,8 @@ const Dashboard = ({
   fetchError = null,
   refreshData = () => { },
   isDemoMode = false,
-  setIsDemoMode = () => { }
+  setIsDemoMode = () => { },
+  onStepLaunch = () => { }
 }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -524,7 +525,7 @@ const Dashboard = ({
         <SetupChecklist 
           storesCount={stores.length} 
           areasCount={areas.length} 
-          onStepClick={handleLaunchWizard}
+          onStepClick={onStepLaunch}
         />
         <div style={{ marginTop: '2rem' }}>
           <button
@@ -2476,6 +2477,7 @@ function AdminPanel() {
               refreshData={refreshData}
               isDemoMode={isDemoMode}
               setIsDemoMode={setIsDemoMode}
+              onStepLaunch={handleLaunchWizard}
             />
           )}
 

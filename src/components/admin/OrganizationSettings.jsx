@@ -34,6 +34,44 @@ const OrganizationSettings = () => {
         }
     };
 
+    useEffect(() => {
+        // Fetch latest tenant data from Supabase to sync plan/settings
+        const syncTenantData = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('tenants')
+                    .select('*')
+                    .eq('id', tenantConfig.id)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    const newConfig = {
+                        ...config,
+                        name: data.name,
+                        logoUrl: data.logo_url,
+                        primaryColor: data.primary_color,
+                        plan: data.plan,
+                        subscriptionStatus: data.subscription_status
+                    };
+                    setConfig(newConfig);
+                    localStorage.setItem('saas_tenant_config', JSON.stringify(newConfig));
+                }
+            } catch (err) {
+                console.error('Error syncing tenant data:', err);
+            }
+        };
+
+        syncTenantData();
+
+        // Check for success in URL to show a welcome message
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('success')) {
+            // Check again after a short delay to give the webhook time to process
+            setTimeout(syncTenantData, 3000);
+        }
+    }, []);
+
     const handleSave = async () => {
         try {
             // Update in Supabase

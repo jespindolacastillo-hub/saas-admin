@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno'
-
-console.log("Stripe Checkout Function Started!");
+import Stripe from 'https://esm.sh/stripe@13.11.0?api_version=2023-10-16&target=deno'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,24 +7,24 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Manejo de CORS (Preflight)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
-      apiVersion: '2022-11-15',
+    const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY');
+    if (!stripeSecret) {
+      throw new Error('STRIPE_SECRET_KEY is not set');
+    }
+
+    const stripe = new Stripe(stripeSecret, {
+      apiVersion: '2023-10-16',
       httpClient: Stripe.createFetchHttpClient(),
     })
 
     const { tenant_id, plan, user_email } = await req.json()
 
-    // Definir el ID del producto/precio de Stripe según el plan escogido
-    // Para simplificar, usaremos un precio fijo si no se especifica
-    const priceId = plan === 'growth' ? 'price_1GrowthID' : 'price_1StarterID';
-
-    console.log(`Creating checkout session for tenant: ${tenant_id}, plan: ${plan}`);
+    console.log(`Creating session for: ${tenant_id}, user: ${user_email}`);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -42,7 +40,7 @@ serve(async (req) => {
       cancel_url: `https://ianps.netlify.app/ajustes?canceled=true`,
       metadata: {
         tenant_id: tenant_id,
-        plan: plan
+        plan: plan || 'growth'
       },
     })
 
@@ -54,7 +52,7 @@ serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error("Error creating stripe session:", error);
+    console.error("Stripe Checkout Error:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

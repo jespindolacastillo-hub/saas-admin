@@ -521,7 +521,11 @@ const Dashboard = ({
   if (!loading && !isDemoMode && rawData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] py-12">
-        <SetupChecklist storesCount={stores.length} areasCount={areas.length} />
+        <SetupChecklist 
+          storesCount={stores.length} 
+          areasCount={areas.length} 
+          onStepClick={handleLaunchWizard}
+        />
         <div style={{ marginTop: '2rem' }}>
           <button
             onClick={() => setIsDemoMode(true)}
@@ -1945,6 +1949,7 @@ function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
   const [filters, setFilters] = useState({
     store: 'Todas',
     area: 'Todas',
@@ -1976,6 +1981,11 @@ function AdminPanel() {
     setFeedback(criticalFeedback);
   }, [filters.store, filters.area, rawData]);
 
+
+  const handleLaunchWizard = (stepIndex) => {
+    setWizardStep(stepIndex);
+    setShowOnboarding(true);
+  };
 
   const refreshData = async () => {
     try {
@@ -2156,7 +2166,7 @@ function AdminPanel() {
   }
 
   if (showOnboarding) {
-    return <OnboardingWizard session={session} onComplete={() => setShowOnboarding(false)} />;
+    return <OnboardingWizard session={session} initialStep={wizardStep} onComplete={() => { setShowOnboarding(false); setWizardStep(0); }} />;
   }
 
   return (

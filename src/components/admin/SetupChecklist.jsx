@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Palette, Map, QrCode, ChevronRight, CheckCircle2, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const SetupChecklist = ({ storesCount = 0, areasCount = 0 }) => {
+const SetupChecklist = ({ storesCount = 0, areasCount = 0, onStepClick }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -103,7 +103,7 @@ const SetupChecklist = ({ storesCount = 0, areasCount = 0 }) => {
         {steps.map((step, index) => (
           <div
             key={step.id}
-            onClick={() => navigate(step.path)}
+            onClick={() => onStepClick ? onStepClick(index) : navigate(step.path)}
             style={{
               display: 'flex', alignItems: 'center', gap: '1rem',
               padding: '1.1rem 1.25rem',

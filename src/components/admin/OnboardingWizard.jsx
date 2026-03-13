@@ -114,12 +114,12 @@ const ProgressBar = ({ current, total }) => (
 // ─── Main Component ────────────────────────────────────────────────────────────
 const TOTAL_STEPS = 4;
 
-const OnboardingWizard = ({ onComplete, session }) => {
+const OnboardingWizard = ({ onComplete, session, initialStep = 0 }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const STEPS = useSteps(t);
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(initialStep);
   const [dir, setDir] = useState(1);  // 1=forward, -1=back
   const [visible, setVisible] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);

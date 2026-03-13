@@ -87,9 +87,27 @@ const OnboardingWizard = ({ onComplete, session }) => {
   const [structSaved, setStructSaved] = useState(false);
   const [savedStoreId, setSavedStoreId] = useState(null);
   const [savedAreaId, setSavedAreaId] = useState(null);
+  const [saveError, setSaveError] = useState('');
 
   // Step 3 state
   const [qrReady, setQrReady] = useState(false);
+
+  // ── Resolve real tenant ID (avoids dummy UUID fallback)
+  const getRealTenantId = async () => {
+    // 1. Try localStorage (safest — set after login)
+    const saved = localStorage.getItem('saas_tenant_config');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.id && parsed.id !== '00000000-0000-0000-0000-000000000000') {
+          return parsed.id;
+        }
+      } catch (_) {}
+    }
+    // 2. Fallback: query Supabase for the first tenant this user has access to
+    const { data } = await supabase.from('tenants').select('id').limit(1).single();
+    return data?.id || null;
+  };
 
   const STEPS = [
     { icon: <Palette size={28} />, label: t('onboarding.step1_label', 'Identidad'), color: '#3b82f6' },
@@ -122,8 +140,10 @@ const OnboardingWizard = ({ onComplete, session }) => {
 
   const saveStep1 = async () => {
     if (!orgName.trim()) return;
-    // Save to tenants table (non-blocking)
-    await supabase.from('tenants').update({ name: orgName.trim() }).eq('id', tenantConfig.id);
+    const tid = await getRealTenantId();
+    if (tid) {
+      await supabase.from('tenants').update({ name: orgName.trim() }).eq('id', tid);
+    }
     goNext();
   };
 
@@ -131,24 +151,34 @@ const OnboardingWizard = ({ onComplete, session }) => {
   const saveStep2 = async () => {
     if (!storeName.trim()) return;
     setSavingStructure(true);
+    setSaveError('');
     try {
-      // Create store
-      const { data: storeData } = await supabase.from('Tiendas_Catalogo').insert([{
-        nombre: storeName.trim(),
-        direccion: '',
-        tenant_id: tenantConfig.id,
-        activa: true
-      }]).select().single();
+      const tid = await getRealTenantId();
+      if (!tid) {
+        setSaveError('No se encontró el tenant. Por favor cierra sesión e inicia de nuevo.');
+        setSavingStructure(false);
+        return;
+      }
 
+      // Create store
+      const { data: storeData, error: storeErr } = await supabase
+        .from('Tiendas_Catalogo')
+        .insert([{ nombre: storeName.trim(), direccion: '', tenant_id: tid, activa: true }])
+        .select()
+        .single();
+
+      if (storeErr) throw storeErr;
       if (storeData) setSavedStoreId(storeData.id);
 
       // Create area (optional)
       if (areaName.trim() && storeData) {
-        const { data: areaData } = await supabase.from('Areas_Catalogo').insert([{
-          nombre: areaName.trim(),
-          tenant_id: tenantConfig.id,
-          orden: 1
-        }]).select().single();
+        const { data: areaData, error: areaErr } = await supabase
+          .from('Areas_Catalogo')
+          .insert([{ nombre: areaName.trim(), tenant_id: tid, orden: 1 }])
+          .select()
+          .single();
+
+        if (areaErr) throw areaErr;
 
         if (areaData) {
           setSavedAreaId(areaData.id);
@@ -160,11 +190,13 @@ const OnboardingWizard = ({ onComplete, session }) => {
         }
       }
       setStructSaved(true);
+      setSavingStructure(false);
+      goNext();
     } catch (err) {
       console.error('Error saving structure:', err);
+      setSaveError(err?.message || 'Error al guardar. Verifica tu conexión e intenta de nuevo.');
+      setSavingStructure(false);
     }
-    setSavingStructure(false);
-    goNext();
   };
 
   // ── Final completion
@@ -373,6 +405,16 @@ const OnboardingWizard = ({ onComplete, session }) => {
                     {t('onboarding.s2_tip', 'Tip: 1 tienda + 1 área es todo lo que necesitas para generar tu primer QR de feedback.')}
                   </p>
                 </div>
+
+                {/* Error message */}
+                {saveError && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠️</span>
+                    <p style={{ fontSize: '0.8rem', color: '#dc2626', margin: 0, lineHeight: '1.5', fontWeight: '600' }}>
+                      {saveError}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

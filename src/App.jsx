@@ -1980,7 +1980,10 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 
   const fetchIssues = async () => {
     setIssuesLoading(true);
-    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
+      setIssuesLoading(false);
+      return;
+    }
     let query = supabase.from('Issues').select('*').eq('tenant_id', tenant.id);
     if (filters.store !== 'Todas') query = query.eq('tienda_id', filters.store);
     if (filters.area !== 'Todas') query = query.eq('area_id', filters.area);
@@ -2003,7 +2006,10 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
   };
 
   const refreshData = async () => {
-    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setFetchError(null);
@@ -2031,8 +2037,13 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
   };
 
   useEffect(() => {
-    if (tenant?.id) {
+    if (tenant?.id === '00000000-0000-0000-0000-000000000000') {
+      setShowOnboarding(true);
+      setLoading(false);
+    } else if (tenant?.id) {
       refreshData();
+    } else {
+      setLoading(false);
     }
   }, [tenant?.id]);
 

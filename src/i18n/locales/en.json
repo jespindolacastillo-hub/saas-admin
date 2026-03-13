@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "title": "Organization Settings",
+    "subtitle": "Manage your corporate identity and subscription level.",
+    "visual_identity": "Visual Identity",
+    "visual_identity_desc": "Configure how your customers will see the platform. Changes apply in real-time.",
+    "org_name": "Organization Name",
+    "corporate_color": "Corporate Color",
+    "save_identity": "Save Identity",
+    "save_success": "Configuration saved successfully.",
+    "save_error": "Error saving configuration",
+    "payment_error": "Payment error",
+    "brand_logo": "Brand Logo",
+    "select_file": "Select File",
+    "supported_formats": "Supported formats: PNG, JPG, SVG.",
+    "scale_potential": "Scale your Potential",
+    "choose_plan": "Choose the plan that best fits your operation volume.",
+    "your_plan": "YOUR PLAN",
+    "includes": "Includes:",
+    "active_plan": "Active Plan",
+    "upgrade_plan": "Upgrade Plan",
+    "choose_starter": "Choose Starter",
+    "enterprise_title": "Enterprise & Custom",
+    "enterprise_desc": "Scalable solutions with dedicated infrastructure, advanced security, and corporate-level support.",
+    "contact_sales": "Contact Sales"
+  },
+  "plans": {
+    "starter": { "description": "Ideal for small businesses starting their journey." },
+    "growth": { "description": "Perfect for expanding companies with multiple locations." },
+    "pro": { "description": "For large organizations looking for total control." },
+    "features": {
+      "1_sucursal": "1 Location",
+      "hasta_3_áreas": "Up to 3 Areas",
+      "50_respuestas/mes": "50 Responses/month",
+      "5_sucursales": "5 Locations",
+      "áreas_ilimitadas": "Unlimited Areas",
+      "500_respuestas/mes": "500 Responses/month",
+      "branding_personalizado": "Custom Branding",
+      "sucursales_ilimitadas": "Unlimited Locations",
+      "respuestas_ilimitadas": "Unlimited Responses",
+      "soporte_prioritario": "Priority Support"
+    }
+  }
+}

@@ -4,10 +4,16 @@ import { Save, Upload, Palette, Building, Crown, Zap, CheckCircle2 } from 'lucid
 import { PLAN_LIMITS } from '../../config/planLimits';
 import { supabase } from '../../lib/supabase';
 import { loadStripe } from '@stripe/stripe-js';
+import { useTranslation } from 'react-i18next';
 
 const OrganizationSettings = () => {
+    const { t, i18n } = useTranslation();
     const [config, setConfig] = useState(tenantConfig);
     const [logoPreview, setLogoPreview] = useState(tenantConfig.logoUrl);
+
+    const changeLanguage = (lng) => {
+        i18n.changeLanguage(lng);
+    };
 
     useEffect(() => {
         const saved = localStorage.getItem('saas_tenant_config');
@@ -114,10 +120,10 @@ const OrganizationSettings = () => {
                 document.documentElement.style.setProperty('--primary', config.primaryColor);
             }
             
-            alert('Configuración guardada exitosamente.');
+            alert(t('settings.save_success'));
             window.location.reload();
         } catch (err) {
-            alert('Error al guardar: ' + err.message);
+            alert(t('settings.save_error') + ': ' + err.message);
         }
     };
 
@@ -145,7 +151,7 @@ const OrganizationSettings = () => {
             }
         } catch (err) {
             console.error('Stripe Error:', err);
-            alert('Error al iniciar pago: ' + err.message);
+            alert(`${t('settings.payment_error')}: ${err.message}`);
         }
     };
 
@@ -153,13 +159,21 @@ const OrganizationSettings = () => {
 
     return (
         <div className="animate-in fade-in duration-700" style={{ paddingBottom: '6rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <header style={{ marginBottom: '3.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '2rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <div style={{ background: 'var(--primary)', width: '32px', height: '6px', borderRadius: '3px' }}></div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Administración</span>
+            <header style={{ marginBottom: '3.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '2rem', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <div style={{ background: 'var(--primary)', width: '32px', height: '6px', borderRadius: '3px' }}></div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('settings.administration', 'ADMINISTRACIÓN')}</span>
+                    </div>
+                    <h1 style={{ fontFamily: 'Outfit', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em', lineHeight: '1.1' }}>{t('settings.title')}</h1>
+                    <p style={{ color: '#64748b', fontSize: '1rem', marginTop: '0.5rem', fontWeight: '500' }}>{t('settings.subtitle')}</p>
                 </div>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em', lineHeight: '1.1' }}>Configuración General</h1>
-                <p style={{ color: '#64748b', fontSize: '1rem', marginTop: '0.5rem', fontWeight: '500' }}>Personaliza tu marca y gestiona el crecimiento de tu organización.</p>
+                
+                {/* Language Selector */}
+                <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+                    <button onClick={() => changeLanguage('es')} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: i18n.language.startsWith('es') ? 'white' : 'transparent', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', boxShadow: i18n.language.startsWith('es') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>ES</button>
+                    <button onClick={() => changeLanguage('en')} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: i18n.language.startsWith('en') ? 'white' : 'transparent', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', boxShadow: i18n.language.startsWith('en') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>EN</button>
+                </div>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4rem' }}>
@@ -167,19 +181,17 @@ const OrganizationSettings = () => {
                 {/* Profile Settings Section */}
                 <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', alignItems: 'start' }}>
                     <div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>Identidad Visual</h3>
-                        <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: '1.6', marginBottom: '2rem' }}>
-                            Configura cómo verán tus clientes la plataforma. Los cambios se aplican en tiempo real a todas las aplicaciones vinculadas.
-                        </p>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>{t('settings.visual_identity')}</h3>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: '1.6', marginBottom: '2rem' }}>{t('settings.visual_identity_desc')}</p>
                         
                         <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white', padding: '1.5rem' }}>
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Nombre de Organización</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>{t('settings.org_name')}</label>
                                 <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder="Ej. Ultra Mobile Solutions" style={{ fontSize: '0.95rem', padding: '12px' }} />
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Color Corporativo</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>{t('settings.corporate_color')}</label>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#f8fafc', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                     <input type="color" name="primaryColor" value={config.primaryColor || '#2563eb'} onChange={handleChange} style={{ height: 40, width: 60, cursor: 'pointer', borderRadius: '6px', border: 'none', background: 'transparent' }} />
                                     <span style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: '700', fontFamily: 'monospace' }}>{config.primaryColor?.toUpperCase()}</span>
@@ -187,13 +199,13 @@ const OrganizationSettings = () => {
                             </div>
 
                             <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', fontWeight: '700', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' }}>
-                                <Save size={20} /> Guardar Identidad
+                                <Save size={20} /> {t('settings.save_identity')}
                             </button>
                         </div>
                     </div>
 
                     <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white', padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '1.5rem', display: 'block', textTransform: 'uppercase' }}>Logotipo de Marca</label>
+                        <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '1.5rem', display: 'block', textTransform: 'uppercase' }}>{t('settings.brand_logo')}</label>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
                             <div style={{ width: '100%', maxWidth: '200px', aspectRatio: '1', background: '#f1f5f9', border: '2px dashed #cbd5e1', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '20px', position: 'relative', transition: 'all 0.4s ease' }}>
                                 {logoPreview ? (
@@ -201,14 +213,14 @@ const OrganizationSettings = () => {
                                 ) : (
                                     <div style={{ textAlign: 'center' }}>
                                         <Upload size={32} color="#94a3b8" style={{ marginBottom: '10px' }} />
-                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Sube tu logo</p>
+                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('settings.brand_logo_placeholder', 'Sube tu logo')}</p>
                                     </div>
                                 )}
                             </div>
                             <div style={{ textAlign: 'center' }}>
                                 <input type="file" accept="image/*" id="logoUpload" style={{ display: 'none' }} onChange={handleLogoUpload} />
-                                <label htmlFor="logoUpload" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '10px 24px', fontSize: '0.9rem', fontWeight: '700' }}>Seleccionar Archivo</label>
-                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '12px' }}>Formatos soportados: PNG, JPG, SVG.</p>
+                                <label htmlFor="logoUpload" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '10px 24px', fontSize: '0.9rem', fontWeight: '700' }}>{t('settings.select_file')}</label>
+                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '12px' }}>{t('settings.supported_formats')}</p>
                             </div>
                         </div>
                     </div>
@@ -217,8 +229,8 @@ const OrganizationSettings = () => {
                 {/* Subscriptions Section */}
                 <section>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '800', color: '#0f172a', marginBottom: '1rem' }}>Escala tu Potencial</h2>
-                        <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>Elige el plan que mejor se adapte al volumen de tu operación.</p>
+                        <h2 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '800', color: '#0f172a', marginBottom: '1rem' }}>{t('settings.scale_potential')}</h2>
+                        <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>{t('settings.choose_plan')}</p>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', alignItems: 'stretch' }}>
@@ -245,7 +257,7 @@ const OrganizationSettings = () => {
                                 >
                                     {isCurrent && (
                                         <div style={{ position: 'absolute', top: '16px', right: '-35px', transform: 'rotate(45deg)', background: 'var(--primary)', color: 'white', width: '140px', textAlign: 'center', fontSize: '0.65rem', fontWeight: '900', padding: '4px 0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', zIndex: 10 }}>
-                                            TU PLAN
+                                            {t('settings.your_plan')}
                                         </div>
                                     )}
 
@@ -255,18 +267,18 @@ const OrganizationSettings = () => {
                                             <span style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>${plan.price}</span>
                                             <span style={{ fontSize: '0.9rem', color: '#94a3b8', fontWeight: '600' }}>/mes</span>
                                         </div>
-                                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.75rem', lineHeight: '1.5', minHeight: '3rem' }}>{plan.description}</p>
+                                        <p style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.75rem', lineHeight: '1.5', minHeight: '3rem' }}>{t(`plans.${key}.description`, plan.description)}</p>
                                     </div>
 
                                     <div style={{ flex: 1, marginBottom: '2rem' }}>
-                                        <p style={{ fontSize: '0.7rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>Incluye:</p>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>{t('settings.includes')}</p>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                             {plan.features.map((feature, i) => (
                                                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '0.85rem', color: '#334155', fontWeight: '500' }}>
                                                     <div style={{ marginTop: '2px', background: isCurrent ? 'var(--primary)' : '#f1f5f9', color: isCurrent ? 'white' : '#94a3b8', borderRadius: '50%', padding: '2px' }}>
                                                         <CheckCircle2 size={12} strokeWidth={3} />
                                                     </div>
-                                                    {feature}
+                                                    {t(`plans.features.${feature.replace(/\s/g, '_').toLowerCase()}`, feature)}
                                                 </div>
                                             ))}
                                         </div>
@@ -294,7 +306,7 @@ const OrganizationSettings = () => {
                                             cursor: isCurrent ? 'default' : 'pointer'
                                         }}
                                     >
-                                        {isCurrent ? 'Plan Activo' : (key === 'starter' ? 'Elegir Starter' : <><Zap size={18} fill="currentColor" /> Mejorar Plan</>)}
+                                        {isCurrent ? t('settings.active_plan') : (key === 'starter' ? t('settings.choose_starter') : <><Zap size={18} fill="currentColor" /> {t('settings.upgrade_plan')}</>)}
                                     </button>
                                 </div>
                             );
@@ -307,12 +319,12 @@ const OrganizationSettings = () => {
                         
                         <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
                             <div style={{ maxWidth: '500px' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.1)', width: 'fit-content', padding: '6px 16px', borderRadius: '20px', color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800', marginBottom: '1.5rem', textTransform: 'uppercase' }}>Consulte un especialista</div>
-                                <h3 style={{ fontSize: '2rem', fontWeight: '800', color: 'white', marginBottom: '1rem', letterSpacing: '-0.02em' }}>Enterprise & Custom</h3>
-                                <p style={{ fontSize: '1rem', color: '#94a3b8', lineHeight: '1.6' }}>Soluciones escalables con infraestructura dedicada, seguridad avanzada y soporte de nivel corporativo para operaciones de alto volumen.</p>
+                                <div style={{ background: 'rgba(255,255,255,0.1)', width: 'fit-content', padding: '6px 16px', borderRadius: '20px', color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800', marginBottom: '1.5rem', textTransform: 'uppercase' }}>{t('settings.consult_expert', 'Consulte un especialista')}</div>
+                                <h3 style={{ fontSize: '2rem', fontWeight: '800', color: 'white', marginBottom: '1rem', letterSpacing: '-0.02em' }}>{t('settings.enterprise_title')}</h3>
+                                <p style={{ fontSize: '1rem', color: '#94a3b8', lineHeight: '1.6' }}>{t('settings.enterprise_desc')}</p>
                             </div>
                             <button className="btn" style={{ background: 'white', color: '#0f172a', fontWeight: '800', padding: '16px 36px', borderRadius: '16px', fontSize: '1.05rem', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', transition: 'all 0.3s ease' }}>
-                                Contactar Ventas
+                                {t('settings.contact_sales')}
                             </button>
                         </div>
                     </div>
@@ -321,5 +333,3 @@ const OrganizationSettings = () => {
         </div>
     );
 };
-
-export default OrganizationSettings;

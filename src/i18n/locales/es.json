@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "title": "Configuración de Organización",
+    "subtitle": "Gestiona la identidad corporativa y el nivel de suscripción de tu plataforma.",
+    "visual_identity": "Identidad Visual",
+    "visual_identity_desc": "Configura cómo verán tus clientes la plataforma. Los cambios se aplican en tiempo real.",
+    "org_name": "Nombre de Organización",
+    "corporate_color": "Color Corporativo",
+    "save_identity": "Guardar Identidad",
+    "save_success": "Configuración guardada exitosamente.",
+    "save_error": "Error al guardar",
+    "payment_error": "Error en el pago",
+    "brand_logo": "Logotipo de Marca",
+    "select_file": "Seleccionar Archivo",
+    "supported_formats": "Formatos soportados: PNG, JPG, SVG.",
+    "scale_potential": "Escala tu Potencial",
+    "choose_plan": "Elige el plan que mejor se adapte al volumen de tu operación.",
+    "your_plan": "TU PLAN",
+    "includes": "Incluye:",
+    "active_plan": "Plan Activo",
+    "upgrade_plan": "Mejorar Plan",
+    "choose_starter": "Elegir Starter",
+    "enterprise_title": "Enterprise & Custom",
+    "enterprise_desc": "Soluciones escalables con infraestructura dedicada, seguridad avanzada y soporte de nivel corporativo.",
+    "contact_sales": "Contactar Ventas"
+  },
+  "plans": {
+    "starter": { "description": "Ideal para pequeños negocios empezando su camino." },
+    "growth": { "description": "Perfecto para empresas en expansión con múltiples puntos." },
+    "pro": { "description": "Para organizaciones grandes que buscan control total." },
+    "features": {
+      "1_sucursal": "1 Sucursal",
+      "hasta_3_áreas": "Hasta 3 Áreas",
+      "50_respuestas/mes": "50 Respuestas/mes",
+      "5_sucursales": "5 Sucursales",
+      "áreas_ilimitadas": "Áreas Ilimitadas",
+      "500_respuestas/mes": "500 Respuestas/mes",
+      "branding_personalizado": "Branding Personalizado",
+      "sucursales_ilimitadas": "Sucursales Ilimitadas",
+      "respuestas_ilimitadas": "Respuestas Ilimitadas",
+      "soporte_prioritario": "Soporte Prioritario"
+    }
+  }
+}

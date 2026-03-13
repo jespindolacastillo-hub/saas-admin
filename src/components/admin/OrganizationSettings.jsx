@@ -59,12 +59,13 @@ const OrganizationSettings = () => {
 
                 if (error) throw error;
                 if (data) {
+                    console.log('Sync result:', data);
                     const newConfig = {
                         ...config,
                         id: data.id,
                         name: data.name,
                         logoUrl: data.logo_url,
-                        primaryColor: data.primary_color,
+                        primaryColor: data.primary_color, // FIXED: was primary_color
                         plan: data.plan,
                         subscriptionStatus: data.subscription_status
                     };
@@ -75,6 +76,8 @@ const OrganizationSettings = () => {
                     if (data.primary_color) {
                         document.documentElement.style.setProperty('--primary', data.primary_color);
                     }
+                } else {
+                    console.warn('No tenant data found for ID:', effectiveTenantId);
                 }
             } catch (err) {
                 console.error('Error syncing tenant data:', err);

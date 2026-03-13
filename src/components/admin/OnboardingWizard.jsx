@@ -309,7 +309,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
   const canProceed = step === 0 ? !!orgName.trim() : step === 1 ? !!storeName.trim() : step === 2 ? !!questionText.trim() : true;
 
-  const baseUrl = 'https://ian-feedback.netlify.app';
+  const baseUrl = 'https://priceshoes.netlify.app/feedback';
   console.log('Wizard - Base URL used for QR:', baseUrl);
   const qrUrl = savedStoreId ? `${baseUrl}?t=${savedStoreId}${savedAreaId ? `&a=${savedAreaId}` : ''}` : baseUrl;
 

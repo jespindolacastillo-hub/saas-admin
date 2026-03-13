@@ -1337,7 +1337,7 @@ const QRGenerator = () => {
 
   const getQRUrl = (storeId, areaId) => {
     // Usar variable de entorno para la URL base del feedback, fallback a producción
-    const baseUrl = 'https://ian-feedback.netlify.app';
+    const baseUrl = 'https://priceshoes.netlify.app/feedback';
     console.log('App - Base URL used for QR:', baseUrl);
     return `${baseUrl}?t=${storeId}&a=${areaId}`;
   };

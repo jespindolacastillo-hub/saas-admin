@@ -4,7 +4,6 @@ import { tenantConfig, getTenantId } from '../../config/tenant';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../../lib/supabase';
-import { printQRCodes } from '../../utils/qrUtils';
 import {
   Palette, QrCode, ArrowRight, ArrowLeft, CheckCircle2,
   Building2, MessageSquare, X, ChevronRight, Globe2, Zap
@@ -611,11 +610,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                       />
                     </div>
                     <button 
-                      onClick={() => {
-                        const storeDisplayName = storeName || 'Tienda';
-                        const areaDisplayName = areaName || 'Área';
-                        printQRCodes([{ area_id: savedAreaId, Areas_Catalogo: { nombre: areaDisplayName } }], storeDisplayName, () => qrUrl, t);
-                      }}
+                      onClick={() => alert(t('qr.print_not_available_yet', 'La impresión estará disponible desde el dashboard principal.'))}
                       style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '0.72rem', fontWeight: '800', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
                       🖨️ {t('onboarding.print_qr', 'Imprimir QR')}

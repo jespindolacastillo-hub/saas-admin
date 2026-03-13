@@ -1923,7 +1923,7 @@ const AuditTrail = () => {
   );
 };
 
-function AdminPanel({ tenant }) { // Use 'tenant' directly from props
+function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from props
   const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -1953,7 +1953,6 @@ function AdminPanel({ tenant }) { // Use 'tenant' directly from props
 
 
   // Shared Filtering State
-  const { tenant, loading: tenantLoading, refresh: syncTenant } = useTenant();
   const [rawData, setRawData] = useState([]);
   const [stores, setStores] = useState([]);
   const [areas, setAreas] = useState([]);

@@ -2409,14 +2409,16 @@ function AdminPanel() {
           {activeTab === 'org' && <OrganizationSettings />}
           {activeTab === 'dash' && (
             <Dashboard
-              rawData={rawData}
-              stores={stores}
-              areas={areas}
+              rawData={isDemoMode ? getSampleData(i18n.language).rawData : rawData}
+              stores={isDemoMode ? getSampleData(i18n.language).stores : stores}
+              areas={isDemoMode ? getSampleData(i18n.language).areas : areas}
               filters={filters}
               setFilters={setFilters}
               loading={loading}
               fetchError={fetchError}
               refreshData={refreshData}
+              isDemoMode={isDemoMode}
+              setIsDemoMode={setIsDemoMode}
             />
           )}
 

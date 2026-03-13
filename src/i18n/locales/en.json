@@ -289,7 +289,8 @@
     "contact_support": "24/7 Support",
     "welcome_first": "Welcome to your new era!",
     "no_data_desc": "We are ready to analyze your data. Start by sharing your QR codes with customers.",
-    "create_first_qr": "Create my first QR"
+    "create_first_qr": "Create my first QR",
+    "start_demo": "Explore Demo Data"
   },
   "onboarding": {
     "welcome": "Welcome to the Future",

@@ -40,5 +40,24 @@
       "respuestas_ilimitadas": "Unlimited Responses",
       "soporte_prioritario": "Priority Support"
     }
+  },
+  "menu": {
+    "dashboard": "Organization Pro",
+    "settings": "Settings & Plans",
+    "issues": "Issue Management",
+    "qr": "QR Studio",
+    "leaderboard": "Leaderboard",
+    "structure": "Structure",
+    "marketing": "Email Marketing",
+    "questions": "Questions",
+    "kpi": "KPI Goals",
+    "backup": "Restore Points",
+    "audit": "Audit Trail",
+    "logout": "Sign Out",
+    "admin": "Administrator",
+    "notifications": "Notifications",
+    "recent": "Recent",
+    "no_notifications": "No notifications",
+    "loading": "Generating executive report..."
   }
 }

@@ -169,11 +169,6 @@ const OrganizationSettings = () => {
                     <p style={{ color: '#64748b', fontSize: '1rem', marginTop: '0.5rem', fontWeight: '500' }}>{t('settings.subtitle')}</p>
                 </div>
                 
-                {/* Language Selector */}
-                <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
-                    <button onClick={() => changeLanguage('es')} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: i18n.language.startsWith('es') ? 'white' : 'transparent', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', boxShadow: i18n.language.startsWith('es') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>ES</button>
-                    <button onClick={() => changeLanguage('en')} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: i18n.language.startsWith('en') ? 'white' : 'transparent', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', boxShadow: i18n.language.startsWith('en') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>EN</button>
-                </div>
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4rem' }}>

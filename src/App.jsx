@@ -4,6 +4,7 @@ import Feedback from './components/Feedback';
 import { supabase } from './lib/supabase';
 import { tenantConfig } from './config/tenant';
 import OrganizationSettings from './components/admin/OrganizationSettings';
+import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, QrCode, LogOut,
   Menu, X, TrendingUp, TrendingDown,
@@ -484,7 +485,7 @@ const Dashboard = ({
     return insights;
   }, [areaRanking, weeklyComparison, currentNPS, currentMeta, sentimentStats]);
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>Generando reporte ejecutivo...</div>;
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>{t('menu.loading')}</div>;
 
   return (
     <div className="animate-fade-in">
@@ -1800,6 +1801,7 @@ const AuditTrail = () => {
 };
 
 function AdminPanel() {
+  const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [session, setSession] = useState(null);
@@ -2054,57 +2056,57 @@ function AdminPanel() {
           <ul className="nav-links">
             <li>
               <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>
-                <LayoutDashboard size={18} /> Organization Pro
+                <LayoutDashboard size={18} /> {t('menu.dashboard')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { navigate('/ajustes'); setIsSidebarOpen(false); }}>
-                <Building size={18} /> Ajustes y Planes
+                <Building size={18} /> {t('menu.settings')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
-                <AlertTriangle size={18} /> Issues
+                <AlertTriangle size={18} /> {t('menu.issues')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { navigate('/qr'); setIsSidebarOpen(false); }}>
-                <QrCode size={18} /> QR Studio
+                <QrCode size={18} /> {t('menu.qr')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => { navigate('/leaderboard'); setIsSidebarOpen(false); }}>
-                <Trophy size={18} /> Leaderboard
+                <Trophy size={18} /> {t('menu.leaderboard')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { navigate('/estructura'); setIsSidebarOpen(false); }}>
-                <Users size={18} /> Estructura
+                <Users size={18} /> {t('menu.structure')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
-                <Mail size={18} /> Email Marketing
+                <Mail size={18} /> {t('menu.marketing')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
-                <MessageSquare size={18} /> Preguntas
+                <MessageSquare size={18} /> {t('menu.questions')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'kpi' ? 'active' : ''}`} onClick={() => { navigate('/metas'); setIsSidebarOpen(false); }}>
-                <Target size={18} /> Metas KPI
+                <Target size={18} /> {t('menu.kpi')}
               </button>
             </li>
             <li style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
               <button className={`nav-item ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => { navigate('/respaldos'); setIsSidebarOpen(false); }}>
-                <RotateCcw size={18} /> Puntos de Restauración
+                <RotateCcw size={18} /> {t('menu.backup')}
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { navigate('/auditoria'); setIsSidebarOpen(false); }}>
-                <ShieldCheck size={18} /> Audit Trail
+                <ShieldCheck size={18} /> {t('menu.audit')}
               </button>
             </li>
           </ul>
@@ -2116,7 +2118,7 @@ function AdminPanel() {
               {session?.user?.email?.substring(0, 2).toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '700' }}>{session?.user?.user_metadata?.nombre || 'Administrador'}</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: '700' }}>{session?.user?.user_metadata?.nombre || t('menu.admin')}</div>
               <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>{session?.user?.email}</div>
             </div>
           </div>
@@ -2124,7 +2126,7 @@ function AdminPanel() {
             onClick={handleLogout}
             style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#ef4444', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
           >
-            <LogOut size={16} /> Cerrar Sesión
+            <LogOut size={16} /> {t('menu.logout')}
           </button>
         </div>
       </aside>
@@ -2140,18 +2142,41 @@ function AdminPanel() {
               <Menu size={22} />
             </button>
             <h2 className="view-title">
-              {activeTab === 'dash' ? 'Organization Pro' :
-                activeTab === 'issues' ? 'Gestión de Issues' :
-                  activeTab === 'email' ? 'Email Marketing' :
-                    activeTab === 'backup' ? 'Sistema de Respaldos' :
-                      activeTab === 'kpi' ? 'Gestor de Metas' :
-                        activeTab === 'qr' ? 'QR Studio' : 'Estructura'}
+              {activeTab === 'dash' ? t('menu.dashboard') :
+                activeTab === 'issues' ? t('menu.issues') :
+                  activeTab === 'email' ? t('menu.marketing') :
+                    activeTab === 'backup' ? t('menu.backup') :
+                      activeTab === 'kpi' ? t('menu.kpi') :
+                        activeTab === 'qr' ? t('menu.qr') :
+                        activeTab === 'org' ? t('menu.settings') : t('menu.structure')}
             </h2>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
             {/* Global Filter Bar */}
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '4px 12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              {/* Language Selector */}
+              <div style={{ display: 'flex', gap: '4px', background: '#e2e8f0', padding: '2px', borderRadius: '8px', marginRight: '8px' }}>
+                <button 
+                  onClick={() => i18n.changeLanguage('es')} 
+                  style={{ 
+                    padding: '4px 8px', borderRadius: '6px', border: 'none', 
+                    background: i18n.language.startsWith('es') ? 'white' : 'transparent', 
+                    fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer',
+                    boxShadow: i18n.language.startsWith('es') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >ES</button>
+                <button 
+                  onClick={() => i18n.changeLanguage('en')} 
+                  style={{ 
+                    padding: '4px 8px', borderRadius: '6px', border: 'none', 
+                    background: i18n.language.startsWith('en') ? 'white' : 'transparent', 
+                    fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer',
+                    boxShadow: i18n.language.startsWith('en') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >EN</button>
+              </div>
+              
               <Filter size={16} color="var(--primary)" />
               <select className="filter-select-mini" value={filters.dateRange} onChange={e => setFilters({ ...filters, dateRange: e.target.value })}>
                 <option value="last7days">Últimos 7 días</option>
@@ -2217,14 +2242,14 @@ function AdminPanel() {
                     <div className="dropdown-overlay" onClick={() => setShowNotifications(false)}></div>
                     <div className="notifications-dropdown">
                       <div className="dropdown-header">
-                        <span>Notificaciones</span>
-                        <span className="badge">Recientes</span>
+                        <span>{t('menu.notifications')}</span>
+                        <span className="badge">{t('menu.recent')}</span>
                       </div>
                       <div className="dropdown-body">
                         {notifications.length === 0 ? (
                           <div className="empty-state">
                             <Bell size={32} />
-                            <p>No tienes notificaciones</p>
+                            <p>{t('menu.no_notifications')}</p>
                           </div>
                         ) : (
                           notifications.map(n => (

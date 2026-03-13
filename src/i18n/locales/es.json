@@ -40,5 +40,24 @@
       "respuestas_ilimitadas": "Respuestas Ilimitadas",
       "soporte_prioritario": "Soporte Prioritario"
     }
+  },
+  "menu": {
+    "dashboard": "Organization Pro",
+    "settings": "Ajustes y Planes",
+    "issues": "Gestión de Issues",
+    "qr": "QR Studio",
+    "leaderboard": "Leaderboard",
+    "structure": "Estructura",
+    "marketing": "Email Marketing",
+    "questions": "Preguntas",
+    "kpi": "Metas KPI",
+    "backup": "Puntos de Restauración",
+    "audit": "Audit Trail",
+    "logout": "Cerrar Sesión",
+    "admin": "Administrador",
+    "notifications": "Notificaciones",
+    "recent": "Recientes",
+    "no_notifications": "No tienes notificaciones",
+    "loading": "Generando reporte ejecutivo..."
   }
 }

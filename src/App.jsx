@@ -33,6 +33,7 @@ import KpiManager from './components/admin/KpiManager';
 import IssueManagement from './components/admin/IssueManagement';
 import { getSampleData } from './utils/sampleData';
 import SetupChecklist from './components/admin/SetupChecklist';
+import OnboardingWizard from './components/admin/OnboardingWizard';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
 const calculateNPS = (data) => {
@@ -1934,6 +1935,8 @@ function AdminPanel() {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [masterMode, setMasterMode] = useState(localStorage.getItem('ps_master_mode') === 'active');
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_complete'));
+
 
   // Shared Filtering State
   const [rawData, setRawData] = useState([]);
@@ -2150,6 +2153,10 @@ function AdminPanel() {
 
   if (!session) {
     return <Auth />;
+  }
+
+  if (showOnboarding) {
+    return <OnboardingWizard session={session} onComplete={() => setShowOnboarding(false)} />;
   }
 
   return (

@@ -35,19 +35,33 @@ const OrganizationSettings = () => {
     };
 
     useEffect(() => {
-        // Fetch latest tenant data from Supabase to sync plan/settings
         const syncTenantData = async () => {
             try {
+                // 1. Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                // 2. Get user's tenant_id from Usuarios table
+                const { data: userData, error: userError } = await supabase
+                    .from('Usuarios')
+                    .select('tenant_id')
+                    .eq('email', user.email)
+                    .single();
+
+                const effectiveTenantId = userData?.tenant_id || tenantConfig.id;
+
+                // 3. Fetch tenant data
                 const { data, error } = await supabase
                     .from('tenants')
                     .select('*')
-                    .eq('id', tenantConfig.id)
+                    .eq('id', effectiveTenantId)
                     .single();
 
                 if (error) throw error;
                 if (data) {
                     const newConfig = {
                         ...config,
+                        id: data.id,
                         name: data.name,
                         logoUrl: data.logo_url,
                         primaryColor: data.primary_color,
@@ -56,6 +70,11 @@ const OrganizationSettings = () => {
                     };
                     setConfig(newConfig);
                     localStorage.setItem('saas_tenant_config', JSON.stringify(newConfig));
+                    
+                    // Update theme color
+                    if (data.primary_color) {
+                        document.documentElement.style.setProperty('--primary', data.primary_color);
+                    }
                 }
             } catch (err) {
                 console.error('Error syncing tenant data:', err);
@@ -64,10 +83,9 @@ const OrganizationSettings = () => {
 
         syncTenantData();
 
-        // Check for success in URL to show a welcome message
         const params = new URLSearchParams(window.location.search);
         if (params.get('success')) {
-            // Check again after a short delay to give the webhook time to process
+            console.log('Payment success detected, syncing data in 3s...');
             setTimeout(syncTenantData, 3000);
         }
     }, []);

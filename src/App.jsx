@@ -11,7 +11,7 @@ import {
   Menu, X, TrendingUp, TrendingDown,
   Smile, Frown, Meh, Filter, Award, Target, Building,
   Lightbulb, AlertCircle, CheckCircle2, AlertTriangle, Clock,
-  Trophy, ShieldCheck, Download, History, HelpCircle, Trash2,
+  Trophy, ShieldCheck, Download, History, HelpCircle, Trash2, Loader,
   Search, Plus, Save, Edit2, Check, Eye, Copy, PlusCircle, UserPlus, Fingerprint, Mail
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';

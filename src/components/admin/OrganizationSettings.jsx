@@ -152,102 +152,155 @@ const OrganizationSettings = () => {
     const currentPlanLimit = PLAN_LIMITS[config.plan] || PLAN_LIMITS.starter;
 
     return (
-        <div className="animate-in fade-in duration-500">
-            <header style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>Organización (White-Label)</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Personaliza la apariencia de tu plataforma SaaS.</p>
+        <div className="animate-in fade-in duration-500" style={{ paddingBottom: '4rem' }}>
+            <header style={{ marginBottom: '2.5rem' }}>
+                <h1 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>Configuración de Organización</h1>
+                <p style={{ color: '#64748b', fontSize: '0.95rem' }}>Gestiona la identidad corporativa y el nivel de suscripción de tu plataforma.</p>
             </header>
 
-            <div className="card shadow-sm" style={{ maxWidth: '600px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    
-                    <div className="form-group">
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem' }}><Building size={16}/> Nombre de la Empresa</label>
-                        <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder="Ej. Mi Empresa SaaS" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+                
+                {/* Profile Settings Section */}
+                <section>
+                    <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b' }}>
+                            <Building size={20} className="text-primary" /> Perfil Visual
+                        </h3>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+                            <div className="form-group">
+                                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Nombre de la Empresa</label>
+                                <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder="Ej. Mi Empresa SaaS" style={{ fontSize: '0.9rem' }} />
+                            </div>
+
+                            <div className="form-group">
+                                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Color de Marca</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <input type="color" name="primaryColor" value={config.primaryColor || '#2563eb'} onChange={handleChange} style={{ height: 42, width: 80, cursor: 'pointer', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '2px' }} />
+                                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontFamily: 'monospace' }}>{config.primaryColor}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="form-group" style={{ marginTop: '1.5rem' }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Logotipo Principal</label>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
+                                <div style={{ width: '120px', height: '120px', background: '#f8fafc', border: '2px dashed #e2e8f0', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '12px', transition: 'all 0.3s ease' }}>
+                                    {logoPreview ? <img src={logoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Sin logo</span>}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <input type="file" accept="image/*" id="logoUpload" style={{ display: 'none' }} onChange={handleLogoUpload} />
+                                    <label htmlFor="logoUpload" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '0.85rem' }}>Cambiar Imagen</label>
+                                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px', lineHeight: '1.4' }}>Sube una imagen con fondo transparente. Tamaño recomendado: 400x400px.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button onClick={handleSave} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', fontWeight: '600' }}>
+                                <Save size={18} /> Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Pricing Grid Section */}
+                <section style={{ marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                        <h2 style={{ fontFamily: 'Outfit', fontSize: '1.4rem', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Crown size={24} className="text-primary" /> Planes y Suscripción
+                        </h2>
+                        <div style={{ background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>
+                            Facturación Mensual
+                        </div>
                     </div>
 
-                    <div className="form-group">
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem' }}><Upload size={16}/> Logotipo</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ width: '100px', height: '100px', background: '#f8fafc', border: '2px dashed #e2e8f0', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '10px' }}>
-                                {logoPreview ? <img src={logoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Sin logo</span>}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                        {Object.entries(PLAN_LIMITS).filter(([key]) => key !== 'enterprise').map(([key, plan]) => {
+                            const isCurrent = config.plan === key;
+                            
+                            return (
+                                <div 
+                                    key={key} 
+                                    className={`card ${isCurrent ? 'shadow-lg' : 'shadow-sm'}`} 
+                                    style={{ 
+                                        position: 'relative',
+                                        border: isCurrent ? '2px solid var(--primary)' : '1px solid #e2e8f0', 
+                                        padding: '2rem',
+                                        background: isCurrent ? 'linear-gradient(to bottom right, #ffffff, #f8faff)' : 'white',
+                                        transition: 'all 0.3s ease',
+                                        transform: isCurrent ? 'translateY(-5px)' : 'none'
+                                    }}
+                                >
+                                    {isCurrent && (
+                                        <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: 'white', padding: '4px 16px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.05em', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+                                            PLAN ACTUAL
+                                        </div>
+                                    )}
+
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '0.5rem', color: '#0f172a' }}>{plan.name}</h3>
+                                    <p style={{ fontSize: '0.8rem', color: '#64748b', minHeight: '40px', marginBottom: '1.5rem', lineHeight: '1.5' }}>{plan.description}</p>
+                                    
+                                    <div style={{ marginBottom: '2rem' }}>
+                                        <span style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>${plan.price}</span>
+                                        <span style={{ color: '#94a3b8', fontWeight: '600' }}> /mes</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
+                                        {plan.features.map((feature, i) => (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#334155' }}>
+                                                <div style={{ background: isCurrent ? 'var(--primary)' : '#e2e8f0', color: isCurrent ? 'white' : '#94a3b8', borderRadius: '50%', padding: '2px' }}>
+                                                    <CheckCircle2 size={14} />
+                                                </div>
+                                                {feature}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button 
+                                        disabled={isCurrent}
+                                        onClick={isCurrent ? null : handleUpgrade}
+                                        className={`btn ${isCurrent ? 'btn-secondary' : 'btn-primary'}`}
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '14px', 
+                                            borderRadius: '12px', 
+                                            fontWeight: '700',
+                                            fontSize: '0.95rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            opacity: isCurrent ? 0.7 : 1,
+                                            cursor: isCurrent ? 'default' : 'pointer',
+                                            background: isCurrent ? '#f1f5f9' : null,
+                                            color: isCurrent ? '#94a3b8' : null
+                                        }}
+                                    >
+                                        {isCurrent ? 'Plan Activo' : key === 'starter' ? 'Cambiar a este' : <><Zap size={18} /> Mejorar Ahora</>}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Enterprise Banner */}
+                    <div style={{ marginTop: '2rem', padding: '2rem', borderRadius: '20px', background: '#0f172a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px' }}>
+                                <Building size={32} color="#94a3b8" />
                             </div>
                             <div>
-                                <input type="file" accept="image/*" id="logoUpload" style={{ display: 'none' }} onChange={handleLogoUpload} />
-                                <label htmlFor="logoUpload" className="btn btn-secondary" style={{ cursor: 'pointer' }}>Subir Imagen</label>
-                                <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '8px' }}>Se recomienda PNG transparente.</p>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px' }}>Enterprise</h3>
+                                <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Personalización extrema y soporte 24/7 para equipos globales.</p>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem' }}><Palette size={16}/> Color Primario</label>
-                        <input type="color" name="primaryColor" value={config.primaryColor || '#2563eb'} onChange={handleChange} style={{ height: 50, width: '100%', cursor: 'pointer', borderRadius: '8px', border: '2px solid #f1f5f9' }} />
-                    </div>
-
-                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                        <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', fontSize: '1rem', fontWeight: '700' }}>
-                            <Save size={18} /> Guardar Cambios
+                        <button className="btn btn-secondary" style={{ background: 'white', color: '#0f172a', fontWeight: '700', padding: '10px 24px' }}>
+                            Contactar Ventas
                         </button>
                     </div>
+                </section>
 
-                </div>
-            </div>
-
-            <div className="card shadow-sm" style={{ maxWidth: '600px', marginTop: '2rem', border: '1px solid #e0e7ff', background: 'linear-gradient(to bottom right, #ffffff, #f5f7ff)' }}>
-                <header style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                        <h2 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', fontWeight: '700', color: '#1e1b4b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Crown size={20} color="#6366f1" /> Mi Plan Actual
-                        </h2>
-                        <p style={{ color: '#6366f1', fontSize: '0.8rem', fontWeight: '600' }}>Plan {currentPlanLimit.name}</p>
-                    </div>
-                    {config.plan === 'starter' && (
-                        <div style={{ background: '#e0e7ff', color: '#4338ca', padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '700' }}>
-                            GRATIS
-                        </div>
-                    )}
-                </header>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>SUCURSALES</p>
-                        <p style={{ fontSize: '1.2rem', fontWeight: '700' }}>{currentPlanLimit.maxStores === 999 ? '∞' : currentPlanLimit.maxStores}</p>
-                    </div>
-                    <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>ÁREAS / CATÁLOGO</p>
-                        <p style={{ fontSize: '1.2rem', fontWeight: '700' }}>{currentPlanLimit.maxAreas === 999 ? '∞' : currentPlanLimit.maxAreas}</p>
-                    </div>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: currentPlanLimit.customBranding ? '#059669' : '#94a3b8' }}>
-                        <CheckCircle2 size={16} /> Branding Personalizado
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: currentPlanLimit.prioritySupport ? '#059669' : '#94a3b8' }}>
-                        <CheckCircle2 size={16} /> Soporte Prioritario
-                    </div>
-                </div>
-
-                <button 
-                  className="btn" 
-                  style={{ 
-                    width: '100%', 
-                    background: 'linear-gradient(45deg, #4f46e5, #7c3aed)', 
-                    color: 'white', 
-                    border: 'none',
-                    padding: '12px',
-                    borderRadius: '12px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                  onClick={handleUpgrade}
-                >
-                    <Zap size={18} /> Mejorar mi Plan
-                </button>
             </div>
         </div>
     );

@@ -195,8 +195,27 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
       const tid = getTenantId();
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+      let validTid = tid;
       if (!tid || !uuidRegex.test(tid) || tid === '00000000-0000-0000-0000-000000000000') {
-        throw new Error('ID de organización no válido. Por favor, limpia la sesión.');
+        // 0. Auto-create tenant for fresh user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Debes iniciar sesión primero.');
+        
+        const { data: newTenant, error: tenantErr } = await supabase
+          .from('tenants')
+          .insert([{ name: storeName.trim() }])
+          .select('id').single();
+        
+        if (tenantErr) throw tenantErr;
+        validTid = newTenant.id;
+
+        // Link user to new tenant
+        const { error: userUpdateErr } = await supabase
+          .from('Usuarios')
+          .update({ tenant_id: validTid })
+          .eq('email', user.email);
+        
+        if (userUpdateErr) throw userUpdateErr;
       }
 
       // 1. Create or Get Store (STRICT UUID)
@@ -205,7 +224,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
         .from('Tiendas_Catalogo')
         .select('id')
         .eq('nombre', storeName.trim())
-        .eq('tenant_id', tid)
+        .eq('tenant_id', validTid)
         .maybeSingle();
 
       if (existingStore && uuidRegex.test(existingStore.id)) {
@@ -213,7 +232,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
       } else {
         const { data: newStore, error: storeErr } = await supabase
           .from('Tiendas_Catalogo')
-          .insert([{ nombre: storeName.trim(), tenant_id: tid }])
+          .insert([{ nombre: storeName.trim(), tenant_id: validTid }])
           .select('id').single();
         if (storeErr) throw storeErr;
         storeIdToUse = newStore.id;
@@ -226,7 +245,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
           .from('Areas_Catalogo')
           .insert([{ 
             nombre: areaName.trim(), 
-            tenant_id: tid,
+            tenant_id: validTid,
             tienda_id: storeIdToUse 
           }])
           .select('id').single();
@@ -250,12 +269,21 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
     setSaving(true); setError('');
     try {
       const tid = getTenantId();
+      let validTid = tid;
+      if (!tid || tid === '00000000-0000-0000-0000-000000000000') {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userData } = await supabase.from('Usuarios').select('tenant_id').eq('email', user.email).maybeSingle();
+          if (userData?.tenant_id) validTid = userData.tenant_id;
+        }
+      }
+
       // Use existing IDs if mid-flow
       const finalAreaId = savedAreaId || (areas.length > 0 ? areas[0].id : null);
 
-      if (finalAreaId && tid && tid !== '00000000-0000-0000-0000-000000000000') {
+      if (finalAreaId && validTid && validTid !== '00000000-0000-0000-0000-000000000000') {
         const { error: qErr } = await supabase.from('Area_Preguntas').insert([{
-          area_id: finalAreaId, tenant_id: tid,
+          area_id: finalAreaId, tenant_id: validTid,
           numero_pregunta: 1, texto_pregunta: questionText.trim(),
           tipo_respuesta: tipoRespuesta, activa: true,
         }]);

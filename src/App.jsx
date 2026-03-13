@@ -2195,7 +2195,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div style={{ padding: '0 0.5rem', marginBottom: '2rem' }}>
-          <img src={tenant.logoUrl} alt={tenant.name} style={{ maxWidth: '130px', objectFit: 'contain' }} />
+          {tenant?.logoUrl && <img src={tenant.logoUrl} alt={tenant?.name || 'SaaS Admin'} style={{ maxWidth: '130px', objectFit: 'contain' }} />}
         </div>
         <nav style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <ul className="nav-links">

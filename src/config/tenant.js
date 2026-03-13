@@ -24,7 +24,7 @@ export const tenantConfig = {
     get subscriptionStatus() { return getSavedConfig().subscriptionStatus || 'active'; },
     allowedDomains: ['*'],
     supportEmail: 'admin@saas-platform.com',
-    feedbackUrl: 'https://ian-feedback.netlify.app'
+    feedbackUrl: (typeof window !== 'undefined' ? window.location.origin : 'https://ianps.netlify.app') + '/feedback'
 };
 
 if (typeof window !== 'undefined') {

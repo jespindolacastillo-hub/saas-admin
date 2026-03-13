@@ -64,6 +64,7 @@ const OnboardingWizard = ({ onComplete, session }) => {
   const [storeName, setStoreName] = useState('');
   const [areaName, setAreaName] = useState('');
   const [questionText, setQuestionText] = useState('');
+  const [tipoRespuesta, setTipoRespuesta] = useState('stars');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -152,7 +153,7 @@ const OnboardingWizard = ({ onComplete, session }) => {
             tenant_id: tid,
             numero_pregunta: 1,
             texto_pregunta: questionText.trim(),
-            tipo_respuesta: 'stars',
+            tipo_respuesta: tipoRespuesta,
             activa: true,
           }]);
         if (qErr) throw qErr;
@@ -288,48 +289,66 @@ const OnboardingWizard = ({ onComplete, session }) => {
           {/* ── STEP 2: First Question ── */}
           {step === 2 && (
             <div>
-              <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                 <div style={{ width: '60px', height: '60px', background: '#faf5ff', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', color: '#8b5cf6' }}><MessageSquare size={30} /></div>
-                <h2 style={{ fontFamily: 'Outfit', fontSize: '1.7rem', fontWeight: '900', color: '#0f172a', margin: '0 0 0.4rem', letterSpacing: '-0.03em' }}>
+                <h2 style={{ fontFamily: 'Outfit', fontSize: '1.6rem', fontWeight: '900', color: '#0f172a', margin: '0 0 0.4rem', letterSpacing: '-0.03em' }}>
                   {t('onboarding.s3_title', '¿Qué le preguntas a tus clientes?')}
                 </h2>
-                <p style={{ color: '#64748b', fontSize: '0.88rem', lineHeight: '1.5', margin: 0 }}>
-                  {t('onboarding.s3_desc', 'Esta pregunta aparecerá en el formulario de feedback. Puedes agregar más después.')}
+                <p style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: '1.5', margin: 0 }}>
+                  {t('onboarding.s3_desc', 'Elige el tipo de respuesta y escribe tu pregunta.')}
                 </p>
               </div>
 
-              {/* Suggestion chips */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '1rem' }}>
+              {/* Type picker */}
+              <label style={labelStyle}>Tipo de respuesta *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
                 {[
-                  '¿Cómo calificarías tu experiencia hoy?',
-                  '¿Qué tan satisfecho estás con el servicio?',
-                  '¿Recomendarías visitarnos de nuevo?',
-                ].map(s => (
-                  <button key={s} onClick={() => setQuestionText(s)}
-                    style={{ padding: '6px 12px', borderRadius: '20px', border: `1.5px solid ${questionText === s ? '#8b5cf6' : '#e2e8f0'}`,
-                      background: questionText === s ? '#faf5ff' : 'white', color: questionText === s ? '#8b5cf6' : '#64748b',
-                      fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                    {s}
+                  { value: 'stars', emoji: '⭐', title: 'Estrellas (1-5)', desc: 'Calif. de 1 a 5 estrellas' },
+                  { value: 'si_no', emoji: '👍', title: 'Sí / No', desc: 'Respuesta binaria' },
+                  { value: 'nps', emoji: '📊', title: 'NPS (0-10)', desc: 'Probabilidad de recomendar' },
+                  { value: 'emoji', emoji: '😊', title: 'Emojis', desc: 'Sábrosamente intuitivo' },
+                ].map(opt => (
+                  <button key={opt.value} type="button"
+                    onClick={() => setTipoRespuesta(opt.value)}
+                    style={{
+                      padding: '0.85rem 1rem', borderRadius: '14px', cursor: 'pointer', textAlign: 'left',
+                      border: `2px solid ${tipoRespuesta === opt.value ? '#8b5cf6' : '#e2e8f0'}`,
+                      background: tipoRespuesta === opt.value ? '#faf5ff' : 'white',
+                      transition: 'all 0.2s',
+                    }}>
+                    <div style={{ fontSize: '1.3rem', marginBottom: '4px' }}>{opt.emoji}</div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: '800', color: tipoRespuesta === opt.value ? '#7c3aed' : '#1e293b' }}>{opt.title}</div>
+                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '2px' }}>{opt.desc}</div>
                   </button>
                 ))}
               </div>
 
-              <label style={labelStyle}>{t('onboarding.question_label', 'O escribe tu propia pregunta')} *</label>
+              {/* Suggestion chips */}
+              <label style={labelStyle}>Tu pregunta *</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '0.75rem' }}>
+                {[
+                  '¿Cómo calificarías tu experiencia hoy?',
+                  '¿El servicio cumplió tus expectativas?',
+                  '¿Nos recomendarías a un amigo?',
+                  '¿Qué tan satisfecho estás con la atención?',
+                ].map(s => (
+                  <button key={s} type="button" onClick={() => setQuestionText(s)}
+                    style={{ padding: '5px 10px', borderRadius: '20px', border: `1.5px solid ${questionText === s ? '#8b5cf6' : '#e2e8f0'}`,
+                      background: questionText === s ? '#faf5ff' : '#f9fafb', color: questionText === s ? '#7c3aed' : '#64748b',
+                      fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
               <input autoFocus type="text" value={questionText} onChange={e => setQuestionText(e.target.value)}
                 placeholder={t('onboarding.question_placeholder', 'ej. ¿Cómo calificarías tu visita hoy?')}
                 style={inputStyle(!!questionText)} />
 
-              <div style={{ background: '#faf5ff', borderRadius: '12px', padding: '0.75rem 1rem', marginTop: '1rem', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: '1rem', flexShrink: 0 }}>⭐</span>
-                <p style={{ fontSize: '0.78rem', color: '#7c3aed', margin: 0, lineHeight: '1.5' }}>
-                  {t('onboarding.s3_tip', 'Los clientes responderán con 1 a 5 estrellas. Tú verás el resultado en tiempo real en tu dashboard.')}
-                </p>
-              </div>
               {!savedAreaId && (
                 <div style={{ background: '#fffbeb', borderRadius: '12px', padding: '0.75rem 1rem', marginTop: '0.75rem', display: 'flex', gap: '10px' }}>
                   <span>⚠️</span>
                   <p style={{ fontSize: '0.75rem', color: '#92400e', margin: 0 }}>
-                    {t('onboarding.s3_no_area', 'No creaste un área en el paso anterior. La pregunta se guardará de forma general. Puedes asignarla después.')}
+                    No se guardó el área anterior. La pregunta quedará sin asignar — puedes moverla desde Gestión de Preguntas.
                   </p>
                 </div>
               )}

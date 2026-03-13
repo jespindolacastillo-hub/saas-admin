@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import Feedback from './components/Feedback';
 import { supabase } from './lib/supabase';
 import { tenantConfig } from './config/tenant';
@@ -1800,8 +1800,27 @@ const AuditTrail = () => {
 };
 
 function AdminPanel() {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [session, setSession] = useState(null);
-  const [activeTab, setActiveTab] = useState('dash');
+  
+  // Map path to activeTab
+  const pathMap = {
+    '/ajustes': 'org',
+    '/issues': 'issues',
+    '/qr': 'qr',
+    '/leaderboard': 'leaderboard',
+    '/estructura': 'users',
+    '/marketing': 'email',
+    '/respaldos': 'backup',
+    '/metas': 'kpi',
+    '/preguntas': 'questions',
+    '/auditoria': 'audit',
+    '/': 'dash'
+  };
+
+  const activeTab = pathMap[pathname] || 'dash';
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -2034,57 +2053,57 @@ function AdminPanel() {
         <nav style={{ flex: 1 }}>
           <ul className="nav-links">
             <li>
-              <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { setActiveTab('dash'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>
                 <LayoutDashboard size={18} /> Organization Pro
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { setActiveTab('org'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { navigate('/ajustes'); setIsSidebarOpen(false); }}>
                 <Building size={18} /> Ajustes y Planes
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { setActiveTab('issues'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
                 <AlertTriangle size={18} /> Issues
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { setActiveTab('qr'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { navigate('/qr'); setIsSidebarOpen(false); }}>
                 <QrCode size={18} /> QR Studio
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => { setActiveTab('leaderboard'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => { navigate('/leaderboard'); setIsSidebarOpen(false); }}>
                 <Trophy size={18} /> Leaderboard
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { navigate('/estructura'); setIsSidebarOpen(false); }}>
                 <Users size={18} /> Estructura
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { setActiveTab('email'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
                 <Mail size={18} /> Email Marketing
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { setActiveTab('questions'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
                 <MessageSquare size={18} /> Preguntas
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'kpi' ? 'active' : ''}`} onClick={() => { setActiveTab('kpi'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'kpi' ? 'active' : ''}`} onClick={() => { navigate('/metas'); setIsSidebarOpen(false); }}>
                 <Target size={18} /> Metas KPI
               </button>
             </li>
             <li style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
-              <button className={`nav-item ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => { setActiveTab('backup'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => { navigate('/respaldos'); setIsSidebarOpen(false); }}>
                 <RotateCcw size={18} /> Puntos de Restauración
               </button>
             </li>
             <li>
-              <button className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { setActiveTab('audit'); setIsSidebarOpen(false); }}>
+              <button className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { navigate('/auditoria'); setIsSidebarOpen(false); }}>
                 <ShieldCheck size={18} /> Audit Trail
               </button>
             </li>

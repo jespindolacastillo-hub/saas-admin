@@ -58,6 +58,23 @@
     "notifications": "Notifications",
     "recent": "Recent",
     "no_notifications": "No notifications",
-    "loading": "Generating executive report..."
+    "loading": "Generating executive report...",
+    "help": "Help Center",
+    "help_desc": "Need help scaling your business?",
+    "contact_support": "24/7 Support",
+    "welcome_first": "Welcome to your new era!",
+    "no_data_desc": "We are ready to analyze your data. Start by sharing your QR codes with customers.",
+    "create_first_qr": "Create my first QR"
+  },
+  "onboarding": {
+    "welcome": "Welcome to the Future",
+    "step1_title": "Visual Identity",
+    "step1_desc": "Start by customizing your colors and logo.",
+    "step2_title": "Create your QR",
+    "step2_desc": "Generate your first QR code for feedback.",
+    "step3_title": "Analyze Data",
+    "step3_desc": "See NPS in real-time on your Dashboard.",
+    "next": "Next",
+    "finish": "Get Started"
   }
 }

@@ -4,6 +4,7 @@ import Feedback from './components/Feedback';
 import { supabase } from './lib/supabase';
 import { tenantConfig } from './config/tenant';
 import OrganizationSettings from './components/admin/OrganizationSettings';
+import OnboardingTour from './components/admin/OnboardingTour';
 import { useTranslation } from 'react-i18next';
 import {
   LayoutDashboard, Users, QrCode, LogOut,
@@ -486,6 +487,25 @@ const Dashboard = ({
   }, [areaRanking, weeklyComparison, currentNPS, currentMeta, sentimentStats]);
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>{t('menu.loading')}</div>;
+
+  if (!rawData || rawData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
+        <div className="w-24 h-24 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
+          <TrendingUp size={48} />
+        </div>
+        <h2 className="text-2xl font-black text-slate-800 mb-2 font-outfit uppercase tracking-tight">
+          {t('menu.welcome_first', '¡Bienvenido a tu nueva era!')}
+        </h2>
+        <p className="text-slate-500 max-w-sm mb-8">
+          {t('menu.no_data_desc', 'Estamos listos para analizar tus datos. Empieza compartiendo tus códigos QR con tus clientes.')}
+        </p>
+        <button onClick={() => navigate('/qr')} className="btn btn-primary h-12 px-8 rounded-2xl">
+          {t('menu.create_first_qr', 'Crear mi primer QR')}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
@@ -2109,6 +2129,21 @@ function AdminPanel() {
                 <ShieldCheck size={18} /> {t('menu.audit')}
               </button>
             </li>
+            
+            <li style={{ marginTop: '1rem' }}>
+              <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)', borderRadius: '16px', border: '1px solid #dbeafe' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#1e40af' }}>
+                  <HelpCircle size={16} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: '800' }}>{t('menu.help', 'Centro de Ayuda')}</span>
+                </div>
+                <p style={{ fontSize: '0.65rem', color: '#60a5fa', lineHeight: '1.4', marginBottom: '8px' }}>
+                  {t('menu.help_desc', '¿Necesitas ayuda para escalar tu negocio?')}
+                </p>
+                <button className="btn btn-sm btn-primary" style={{ width: '100%', fontSize: '0.65rem' }}>
+                  {t('menu.contact_support', 'Soporte 24/7')}
+                </button>
+              </div>
+            </li>
           </ul>
         </nav>
 
@@ -2175,6 +2210,15 @@ function AdminPanel() {
                     boxShadow: i18n.language.startsWith('en') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
                   }}
                 >EN</button>
+                <button 
+                  onClick={() => i18n.changeLanguage('pt')} 
+                  style={{ 
+                    padding: '4px 8px', borderRadius: '6px', border: 'none', 
+                    background: i18n.language.startsWith('pt') ? 'white' : 'transparent', 
+                    fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer',
+                    boxShadow: i18n.language.startsWith('pt') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  }}
+                >PT</button>
               </div>
               
               <Filter size={16} color="var(--primary)" />
@@ -2279,6 +2323,7 @@ function AdminPanel() {
         </header>
 
         <main className="main-content">
+          <OnboardingTour />
           {activeTab === 'org' && <OrganizationSettings />}
           {activeTab === 'dash' && (
             <Dashboard

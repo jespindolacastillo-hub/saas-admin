@@ -351,13 +351,25 @@
     "footer": "Works in ES · EN · PT • 100% secure",
     "setup": {
       "title": "Launch Checklist",
-      "subtitle": "3 steps to start your data-driven era.",
+      "subtitle": "4 steps to start your data era.",
       "step1_title": "Brand Identity",
-      "step1_desc": "Upload logo and set colors.",
+      "step1_desc": "Upload your logo and set your business name.",
+      "step1_cta": "Go to Settings",
       "step2_title": "Network Map",
       "step2_desc": "Add stores and service areas.",
-      "step3_title": "QR Activation",
-      "step3_desc": "Generate and print your codes."
+      "step2_cta": "Go to Structure",
+      "step3_title": "First Question",
+      "step3_desc": "Define what you ask your customers.",
+      "step3_cta": "Go to Questions",
+      "step4_title": "QR Activation",
+      "step4_desc": "Generate and print your first QR code.",
+      "step4_cta": "Go to QR Studio",
+      "badge": "Initial setup",
+      "step": "Step",
+      "complete": "completed",
+      "done": "Done",
+      "help_title": "Need guidance?",
+      "help_desc": "Explore with demo data to understand the platform before setting it up."
     }
   },
   "questions": {

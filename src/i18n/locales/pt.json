@@ -351,13 +351,25 @@
     "footer": "Funciona em ES · EN · PT • 100% seguro",
     "setup": {
       "title": "Lista de Decolagem",
-      "subtitle": "3 passos para iniciar sua era de dados.",
+      "subtitle": "4 passos para iniciar sua era de dados.",
       "step1_title": "Identidade da Marca",
-      "step1_desc": "Suba seu logo e defina suas cores.",
+      "step1_desc": "Suba seu logo e defina o nome do seu negócio.",
+      "step1_cta": "Ir para Configurações",
       "step2_title": "Mapa da Rede",
       "step2_desc": "Adicione lojas e áreas de serviço.",
-      "step3_title": "Ativação QR",
-      "step3_desc": "Gere e imprima seus códigos."
+      "step2_cta": "Ir para Estrutura",
+      "step3_title": "Primeira Pergunta",
+      "step3_desc": "Defina o que você pergunta aos seus clientes.",
+      "step3_cta": "Ir para Perguntas",
+      "step4_title": "Ativação QR",
+      "step4_desc": "Gere e imprima seu primeiro código QR.",
+      "step4_cta": "Ir para QR Studio",
+      "badge": "Configuração inicial",
+      "step": "Etapa",
+      "complete": "concluídos",
+      "done": "Pronto",
+      "help_title": "Precisa de orientação?",
+      "help_desc": "Explore com dados demo para entender a plataforma antes de configurá-la."
     }
   },
   "questions": {

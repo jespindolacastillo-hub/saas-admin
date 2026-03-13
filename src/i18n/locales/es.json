@@ -343,13 +343,25 @@
     "footer": "Funciona en ES · EN · PT • 100% seguro",
     "setup": {
       "title": "Lista de Despegue",
-      "subtitle": "3 pasos para iniciar tu era de datos.",
+      "subtitle": "4 pasos para iniciar tu era de datos.",
       "step1_title": "Identidad de Marca",
-      "step1_desc": "Sube tu logo y define tus colores.",
+      "step1_desc": "Sube tu logo y define el nombre de tu negocio.",
+      "step1_cta": "Ir a Ajustes",
       "step2_title": "Mapa de Red",
-      "step2_desc": "Agrega sucursales y áreas.",
-      "step3_title": "Activación QR",
-      "step3_desc": "Genera e imprime tus códigos."
+      "step2_desc": "Agrega sucursales y áreas de evaluación.",
+      "step2_cta": "Ir a Estructura",
+      "step3_title": "Primera Pregunta",
+      "step3_desc": "Define qué le preguntas a tus clientes.",
+      "step3_cta": "Ir a Preguntas",
+      "step4_title": "Activación QR",
+      "step4_desc": "Genera e imprime tu primer código QR.",
+      "step4_cta": "Ir a QR Studio",
+      "badge": "Configuración inicial",
+      "step": "Paso",
+      "complete": "completados",
+      "done": "Listo",
+      "help_title": "¿Necesitas orientación?",
+      "help_desc": "Explora con datos demo para entender la plataforma antes de configurarla."
     }
   },
   "questions": {

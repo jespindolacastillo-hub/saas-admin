@@ -1,5 +1,6 @@
 import { tenantConfig } from '../config/tenant';
 import { PLAN_LIMITS } from '../config/planLimits';
+import { supabase } from '../lib/supabase';
 
 /**
  * StoreService: Gestión de tiendas y su relación con las áreas.

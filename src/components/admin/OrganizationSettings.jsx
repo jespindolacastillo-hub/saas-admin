@@ -152,155 +152,170 @@ const OrganizationSettings = () => {
     const currentPlanLimit = PLAN_LIMITS[config.plan] || PLAN_LIMITS.starter;
 
     return (
-        <div className="animate-in fade-in duration-500" style={{ paddingBottom: '4rem' }}>
-            <header style={{ marginBottom: '2.5rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>Configuración de Organización</h1>
-                <p style={{ color: '#64748b', fontSize: '0.95rem' }}>Gestiona la identidad corporativa y el nivel de suscripción de tu plataforma.</p>
+        <div className="animate-in fade-in duration-700" style={{ paddingBottom: '6rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <header style={{ marginBottom: '3.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '2rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ background: 'var(--primary)', width: '32px', height: '6px', borderRadius: '3px' }}></div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Administración</span>
+                </div>
+                <h1 style={{ fontFamily: 'Outfit', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em', lineHeight: '1.1' }}>Configuración General</h1>
+                <p style={{ color: '#64748b', fontSize: '1rem', marginTop: '0.5rem', fontWeight: '500' }}>Personaliza tu marca y gestiona el crecimiento de tu organización.</p>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4rem' }}>
                 
                 {/* Profile Settings Section */}
-                <section>
-                    <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white' }}>
-                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b' }}>
-                            <Building size={20} className="text-primary" /> Perfil Visual
-                        </h3>
+                <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', alignItems: 'start' }}>
+                    <div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>Identidad Visual</h3>
+                        <p style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: '1.6', marginBottom: '2rem' }}>
+                            Configura cómo verán tus clientes la plataforma. Los cambios se aplican en tiempo real a todas las aplicaciones vinculadas.
+                        </p>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-                            <div className="form-group">
-                                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Nombre de la Empresa</label>
-                                <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder="Ej. Mi Empresa SaaS" style={{ fontSize: '0.9rem' }} />
+                        <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white', padding: '1.5rem' }}>
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Nombre de Organización</label>
+                                <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder="Ej. Ultra Mobile Solutions" style={{ fontSize: '0.95rem', padding: '12px' }} />
                             </div>
 
-                            <div className="form-group">
-                                <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Color de Marca</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                    <input type="color" name="primaryColor" value={config.primaryColor || '#2563eb'} onChange={handleChange} style={{ height: 42, width: 80, cursor: 'pointer', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '2px' }} />
-                                    <span style={{ fontSize: '0.85rem', color: '#64748b', fontFamily: 'monospace' }}>{config.primaryColor}</span>
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>Color Corporativo</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#f8fafc', padding: '10px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <input type="color" name="primaryColor" value={config.primaryColor || '#2563eb'} onChange={handleChange} style={{ height: 40, width: 60, cursor: 'pointer', borderRadius: '6px', border: 'none', background: 'transparent' }} />
+                                    <span style={{ fontSize: '0.9rem', color: '#1e293b', fontWeight: '700', fontFamily: 'monospace' }}>{config.primaryColor?.toUpperCase()}</span>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="form-group" style={{ marginTop: '1.5rem' }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: '700', color: '#475569', marginBottom: '0.5rem', display: 'block' }}>Logotipo Principal</label>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem' }}>
-                                <div style={{ width: '120px', height: '120px', background: '#f8fafc', border: '2px dashed #e2e8f0', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '12px', transition: 'all 0.3s ease' }}>
-                                    {logoPreview ? <img src={logoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} /> : <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Sin logo</span>}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <input type="file" accept="image/*" id="logoUpload" style={{ display: 'none' }} onChange={handleLogoUpload} />
-                                    <label htmlFor="logoUpload" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '8px 16px', fontSize: '0.85rem' }}>Cambiar Imagen</label>
-                                    <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '10px', lineHeight: '1.4' }}>Sube una imagen con fondo transparente. Tamaño recomendado: 400x400px.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end' }}>
-                            <button onClick={handleSave} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', fontWeight: '600' }}>
-                                <Save size={18} /> Guardar Cambios
+                            <button onClick={handleSave} className="btn btn-primary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', fontWeight: '700', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(37, 99, 235, 0.2)' }}>
+                                <Save size={20} /> Guardar Identidad
                             </button>
+                        </div>
+                    </div>
+
+                    <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white', padding: '2rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '1.5rem', display: 'block', textTransform: 'uppercase' }}>Logotipo de Marca</label>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+                            <div style={{ width: '100%', maxWidth: '200px', aspectRatio: '1', background: '#f1f5f9', border: '2px dashed #cbd5e1', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '20px', position: 'relative', transition: 'all 0.4s ease' }}>
+                                {logoPreview ? (
+                                    <img src={logoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                ) : (
+                                    <div style={{ textAlign: 'center' }}>
+                                        <Upload size={32} color="#94a3b8" style={{ marginBottom: '10px' }} />
+                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Sube tu logo</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <input type="file" accept="image/*" id="logoUpload" style={{ display: 'none' }} onChange={handleLogoUpload} />
+                                <label htmlFor="logoUpload" className="btn btn-secondary" style={{ cursor: 'pointer', padding: '10px 24px', fontSize: '0.9rem', fontWeight: '700' }}>Seleccionar Archivo</label>
+                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '12px' }}>Formatos soportados: PNG, JPG, SVG.</p>
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                {/* Pricing Grid Section */}
-                <section style={{ marginTop: '1rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                        <h2 style={{ fontFamily: 'Outfit', fontSize: '1.4rem', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Crown size={24} className="text-primary" /> Planes y Suscripción
-                        </h2>
-                        <div style={{ background: '#f1f5f9', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '600', color: '#475569' }}>
-                            Facturación Mensual
-                        </div>
+                {/* Subscriptions Section */}
+                <section>
+                    <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+                        <h2 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '800', color: '#0f172a', marginBottom: '1rem' }}>Escala tu Potencial</h2>
+                        <p style={{ fontSize: '1.1rem', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>Elige el plan que mejor se adapte al volumen de tu operación.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'stretch' }}>
                         {Object.entries(PLAN_LIMITS).filter(([key]) => key !== 'enterprise').map(([key, plan]) => {
                             const isCurrent = config.plan === key;
+                            const isGrowth = key === 'growth';
                             
                             return (
                                 <div 
                                     key={key} 
-                                    className={`card ${isCurrent ? 'shadow-lg' : 'shadow-sm'}`} 
+                                    className={`card ${isCurrent ? 'shadow-xl' : 'shadow-sm'}`} 
                                     style={{ 
+                                        display: 'flex',
+                                        flexDirection: 'column',
                                         position: 'relative',
-                                        border: isCurrent ? '2px solid var(--primary)' : '1px solid #e2e8f0', 
-                                        padding: '2rem',
-                                        background: isCurrent ? 'linear-gradient(to bottom right, #ffffff, #f8faff)' : 'white',
-                                        transition: 'all 0.3s ease',
-                                        transform: isCurrent ? 'translateY(-5px)' : 'none'
+                                        border: isCurrent ? '3px solid var(--primary)' : '1px solid #e2e8f0', 
+                                        padding: '2.5rem',
+                                        borderRadius: '24px',
+                                        background: isCurrent ? '#fdfdfd' : 'white',
+                                        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        overflow: 'hidden'
                                     }}
                                 >
                                     {isCurrent && (
-                                        <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'var(--primary)', color: 'white', padding: '4px 16px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.05em', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                                            PLAN ACTUAL
+                                        <div style={{ position: 'absolute', top: '16px', right: '-35px', transform: 'rotate(45deg)', background: 'var(--primary)', color: 'white', width: '140px', textAlign: 'center', fontSize: '0.7rem', fontWeight: '900', padding: '4px 0', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                                            TU PLAN
                                         </div>
                                     )}
 
-                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '800', marginBottom: '0.5rem', color: '#0f172a' }}>{plan.name}</h3>
-                                    <p style={{ fontSize: '0.8rem', color: '#64748b', minHeight: '40px', marginBottom: '1.5rem', lineHeight: '1.5' }}>{plan.description}</p>
-                                    
                                     <div style={{ marginBottom: '2rem' }}>
-                                        <span style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0f172a' }}>${plan.price}</span>
-                                        <span style={{ color: '#94a3b8', fontWeight: '600' }}> /mes</span>
+                                        <h3 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.75rem', color: isCurrent ? 'var(--primary)' : '#0f172a', letterSpacing: '-0.02em' }}>{plan.name}</h3>
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                            <span style={{ fontSize: '2.75rem', fontWeight: '800', color: '#0f172a' }}>${plan.price}</span>
+                                            <span style={{ fontSize: '1rem', color: '#94a3b8', fontWeight: '600' }}>/mes</span>
+                                        </div>
+                                        <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '1rem', lineHeight: '1.6', minHeight: '3rem' }}>{plan.description}</p>
                                     </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
-                                        {plan.features.map((feature, i) => (
-                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#334155' }}>
-                                                <div style={{ background: isCurrent ? 'var(--primary)' : '#e2e8f0', color: isCurrent ? 'white' : '#94a3b8', borderRadius: '50%', padding: '2px' }}>
-                                                    <CheckCircle2 size={14} />
+                                    <div style={{ flex: 1, marginBottom: '2.5rem' }}>
+                                        <p style={{ fontSize: '0.75rem', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>¿Qué incluye?</p>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                            {plan.features.map((feature, i) => (
+                                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', fontSize: '0.9rem', color: '#334155', fontWeight: '500' }}>
+                                                    <div style={{ marginTop: '2px', background: isCurrent ? 'var(--primary)' : '#f1f5f9', color: isCurrent ? 'white' : '#94a3b8', borderRadius: '50%', padding: '2px' }}>
+                                                        <CheckCircle2 size={14} strokeWidth={3} />
+                                                    </div>
+                                                    {feature}
                                                 </div>
-                                                {feature}
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
 
                                     <button 
                                         disabled={isCurrent}
                                         onClick={isCurrent ? null : handleUpgrade}
-                                        className={`btn ${isCurrent ? 'btn-secondary' : 'btn-primary'}`}
+                                        className="btn"
                                         style={{ 
                                             width: '100%', 
-                                            padding: '14px', 
-                                            borderRadius: '12px', 
-                                            fontWeight: '700',
-                                            fontSize: '0.95rem',
+                                            padding: '16px', 
+                                            borderRadius: '16px', 
+                                            fontWeight: '800',
+                                            fontSize: '1rem',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '8px',
-                                            opacity: isCurrent ? 0.7 : 1,
-                                            cursor: isCurrent ? 'default' : 'pointer',
-                                            background: isCurrent ? '#f1f5f9' : null,
-                                            color: isCurrent ? '#94a3b8' : null
+                                            gap: '10px',
+                                            transition: 'all 0.3s ease',
+                                            background: isCurrent ? '#f1f5f9' : (isGrowth ? 'var(--primary)' : '#0f172a'),
+                                            color: isCurrent ? '#94a3b8' : 'white',
+                                            border: 'none',
+                                            boxShadow: isCurrent ? 'none' : '0 10px 20px -5px rgba(0,0,0,0.1)',
+                                            cursor: isCurrent ? 'default' : 'pointer'
                                         }}
                                     >
-                                        {isCurrent ? 'Plan Activo' : key === 'starter' ? 'Cambiar a este' : <><Zap size={18} /> Mejorar Ahora</>}
+                                        {isCurrent ? 'Plan Activo' : (key === 'starter' ? 'Cambiar a Starter' : <><Zap size={20} fill="currentColor" /> Mejorar Plan</>)}
                                     </button>
                                 </div>
                             );
                         })}
                     </div>
 
-                    {/* Enterprise Banner */}
-                    <div style={{ marginTop: '2rem', padding: '2rem', borderRadius: '20px', background: '#0f172a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px', borderRadius: '12px' }}>
-                                <Building size={32} color="#94a3b8" />
+                    {/* Premium Enterprise Section */}
+                    <div style={{ marginTop: '4rem', padding: '3rem', borderRadius: '32px', background: '#0f172a', position: 'relative', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                        <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '300px', height: '300px', background: 'var(--primary)', filter: 'blur(80px)', opacity: '0.15' }}></div>
+                        
+                        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
+                            <div style={{ maxWidth: '500px' }}>
+                                <div style={{ background: 'rgba(255,255,255,0.1)', width: 'fit-content', padding: '6px 16px', borderRadius: '20px', color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800', marginBottom: '1.5rem', textTransform: 'uppercase' }}>Consulte un especialista</div>
+                                <h3 style={{ fontSize: '2rem', fontWeight: '800', color: 'white', marginBottom: '1rem', letterSpacing: '-0.02em' }}>Enterprise & Custom</h3>
+                                <p style={{ fontSize: '1rem', color: '#94a3b8', lineHeight: '1.6' }}>Soluciones escalables con infraestructura dedicada, seguridad avanzada y soporte de nivel corporativo para operaciones de alto volumen.</p>
                             </div>
-                            <div>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px' }}>Enterprise</h3>
-                                <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Personalización extrema y soporte 24/7 para equipos globales.</p>
-                            </div>
+                            <button className="btn" style={{ background: 'white', color: '#0f172a', fontWeight: '800', padding: '16px 36px', borderRadius: '16px', fontSize: '1.05rem', border: 'none', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', transition: 'all 0.3s ease' }}>
+                                Contactar Ventas
+                            </button>
                         </div>
-                        <button className="btn btn-secondary" style={{ background: 'white', color: '#0f172a', fontWeight: '700', padding: '10px 24px' }}>
-                            Contactar Ventas
-                        </button>
                     </div>
                 </section>
-
             </div>
         </div>
     );

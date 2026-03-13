@@ -85,7 +85,9 @@ const Dashboard = ({
   setFilters = () => { },
   loading = false,
   fetchError = null,
-  refreshData = () => { }
+  refreshData = () => { },
+  isDemoMode = false,
+  setIsDemoMode = () => { }
 }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();

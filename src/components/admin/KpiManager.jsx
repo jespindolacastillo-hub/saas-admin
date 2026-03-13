@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { KpiService } from '../../services/kpiService';
 import { tenantConfig } from '../../config/tenant';
+import { useTranslation } from 'react-i18next';
 import { Target, Save, Search, Calendar, Award, TrendingUp, Loader, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const KpiManager = () => {
+    const { t } = useTranslation();
     const [stores, setStores] = useState([]);
     const [goals, setGoals] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ const KpiManager = () => {
             setGoals(goalsData || []);
         } catch (err) {
             console.error('Error loading KPI data:', err);
-            setMessage({ type: 'error', text: 'Error al cargar datos: ' + err.message });
+            setMessage({ type: 'error', text: t('kpi.error_load') + ' ' + err.message });
         } finally {
             setLoading(false);
         }
@@ -69,10 +71,10 @@ const KpiManager = () => {
 
             await KpiService.setGoal(storeId, selectedMonth, selectedYear, targetNps, targetVol);
 
-            setMessage({ type: 'success', text: 'Meta guardada exitosamente' });
+            setMessage({ type: 'success', text: t('kpi.success_saved') });
             setTimeout(() => setMessage(null), 3000);
         } catch (err) {
-            setMessage({ type: 'error', text: 'Error al guardar: ' + err.message });
+            setMessage({ type: 'error', text: t('kpi.error_save') + ' ' + err.message });
         } finally {
             setSaving(null);
         }
@@ -91,7 +93,7 @@ const KpiManager = () => {
 
     if (loading) return (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-            <Loader size={24} className="spin" /> Cargando configuración de metas...
+            <Loader size={24} className="spin" /> {t('kpi.loading')}
         </div>
     );
 
@@ -100,10 +102,10 @@ const KpiManager = () => {
             <header style={{ marginBottom: '2rem' }}>
                 <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Target className="text-primary" size={32} />
-                    Gestor de Metas KPI
+                    {t('kpi.title')}
                 </h1>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    Define los objetivos mensuales de NPS y volumen de encuestas por tienda.
+                    {t('kpi.subtitle')}
                 </p>
             </header>
 
@@ -113,7 +115,7 @@ const KpiManager = () => {
                     <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                     <input
                         type="text"
-                        placeholder="Buscar tienda..."
+                        placeholder={t('kpi.search_placeholder')}
                         className="input"
                         style={{ paddingLeft: '2.5rem' }}
                         value={searchTerm}
@@ -123,7 +125,7 @@ const KpiManager = () => {
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.9rem' }}>
-                        <Calendar size={18} /> Período:
+                        <Calendar size={18} /> {t('kpi.period')}
                     </div>
                     <select
                         value={selectedMonth}
@@ -133,7 +135,7 @@ const KpiManager = () => {
                     >
                         {Array.from({ length: 12 }, (_, i) => (
                             <option key={i + 1} value={i + 1}>
-                                {new Date(0, i).toLocaleString('es-MX', { month: 'long' }).toUpperCase()}
+                                {t(`months.${i + 1}`).toUpperCase()}
                             </option>
                         ))}
                     </select>
@@ -182,11 +184,11 @@ const KpiManager = () => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {/* Target NPS Input */}
-                            <div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <span><Award size={14} style={{ verticalAlign: 'text-bottom' }} /> Meta NPS</span>
-                                    <span style={{ color: '#8b5cf6' }}>{getGoalValue(store.id, 'target_nps')} pts</span>
-                                </label>
+                             <div>
+                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                     <span><Award size={14} style={{ verticalAlign: 'text-bottom' }} /> {t('kpi.nps_meta')}</span>
+                                     <span style={{ color: '#8b5cf6' }}>{getGoalValue(store.id, 'target_nps')} {t('kpi.units.pts')}</span>
+                                 </label>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <input
                                         type="range"
@@ -207,11 +209,11 @@ const KpiManager = () => {
                             </div>
 
                             {/* Target Volume Input */}
-                            <div>
-                                <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <span><TrendingUp size={14} style={{ verticalAlign: 'text-bottom' }} /> Meta Volumen</span>
-                                    <span style={{ color: '#10b981' }}>{getGoalValue(store.id, 'target_volumen')} res.</span>
-                                </label>
+                             <div>
+                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                     <span><TrendingUp size={14} style={{ verticalAlign: 'text-bottom' }} /> {t('kpi.volumen_meta')}</span>
+                                     <span style={{ color: '#10b981' }}>{getGoalValue(store.id, 'target_volumen')} {t('kpi.units.res')}</span>
+                                 </label>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <input
                                         type="number"
@@ -224,14 +226,18 @@ const KpiManager = () => {
                             </div>
 
                             <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button
-                                    onClick={() => saveGoal(store.id)}
-                                    disabled={saving === store.id}
-                                    className="btn btn-primary btn-sm"
-                                    style={{ width: '100%', justifyContent: 'center' }}
-                                >
-                                    {saving === store.id ? <Loader size={16} className="spin" /> : <><Save size={16} /> Guardar Metas</>}
-                                </button>
+                                 <button
+                                     onClick={() => saveGoal(store.id)}
+                                     disabled={saving === store.id}
+                                     className="btn btn-primary btn-sm"
+                                     style={{ width: '100%', justifyContent: 'center' }}
+                                 >
+                                     {saving === store.id ? (
+                                         <><Loader size={16} className="spin" /> {t('kpi.saving')}</>
+                                     ) : (
+                                         <><Save size={16} /> {t('kpi.save_btn')}</>
+                                     )}
+                                 </button>
                             </div>
                         </div>
                     </div>

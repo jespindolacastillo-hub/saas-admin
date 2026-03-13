@@ -163,7 +163,7 @@ const OrganizationSettings = () => {
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                         <div style={{ background: 'var(--primary)', width: '32px', height: '6px', borderRadius: '3px' }}></div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('settings.administration', 'ADMINISTRACIÓN')}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('settings.administration')}</span>
                     </div>
                     <h1 style={{ fontFamily: 'Outfit', fontSize: '2.5rem', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em', lineHeight: '1.1' }}>{t('settings.title')}</h1>
                     <p style={{ color: '#64748b', fontSize: '1rem', marginTop: '0.5rem', fontWeight: '500' }}>{t('settings.subtitle')}</p>
@@ -182,7 +182,7 @@ const OrganizationSettings = () => {
                         <div className="card shadow-sm" style={{ border: '1px solid #e2e8f0', background: 'white', padding: '1.5rem' }}>
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                                 <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', marginBottom: '0.6rem', display: 'block', textTransform: 'uppercase' }}>{t('settings.org_name')}</label>
-                                <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder="Ej. Ultra Mobile Solutions" style={{ fontSize: '0.95rem', padding: '12px' }} />
+                                <input name="name" value={config.name || ''} onChange={handleChange} className="input" placeholder={t('settings.org_name_placeholder')} style={{ fontSize: '0.95rem', padding: '12px' }} />
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
@@ -208,7 +208,7 @@ const OrganizationSettings = () => {
                                 ) : (
                                     <div style={{ textAlign: 'center' }}>
                                         <Upload size={32} color="#94a3b8" style={{ marginBottom: '10px' }} />
-                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('settings.brand_logo_placeholder', 'Sube tu logo')}</p>
+                                        <p style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{t('settings.brand_logo_placeholder')}</p>
                                     </div>
                                 )}
                             </div>
@@ -314,7 +314,7 @@ const OrganizationSettings = () => {
                         
                         <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
                             <div style={{ maxWidth: '500px' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.1)', width: 'fit-content', padding: '6px 16px', borderRadius: '20px', color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800', marginBottom: '1.5rem', textTransform: 'uppercase' }}>{t('settings.consult_expert', 'Consulte un especialista')}</div>
+                                <div style={{ background: 'rgba(255,255,255,0.1)', width: 'fit-content', padding: '6px 16px', borderRadius: '20px', color: '#94a3b8', fontSize: '0.7rem', fontWeight: '800', marginBottom: '1.5rem', textTransform: 'uppercase' }}>{t('settings.consult_expert')}</div>
                                 <h3 style={{ fontSize: '2rem', fontWeight: '800', color: 'white', marginBottom: '1rem', letterSpacing: '-0.02em' }}>{t('settings.enterprise_title')}</h3>
                                 <p style={{ fontSize: '1rem', color: '#94a3b8', lineHeight: '1.6' }}>{t('settings.enterprise_desc')}</p>
                             </div>

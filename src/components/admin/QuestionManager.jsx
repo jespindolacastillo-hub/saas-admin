@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useTranslation } from 'react-i18next';
 import { Search, Plus, Save, X, Edit2, Trash2, Check, AlertCircle, Loader, PlusCircle, MinusCircle, Eye, Copy } from 'lucide-react';
 
 const QuestionManager = () => {
+    const { t } = useTranslation();
     const [questions, setQuestions] = useState([]);
     const [areas, setAreas] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -47,7 +49,7 @@ const QuestionManager = () => {
             setQuestions(questionsData || []);
         } catch (err) {
             console.error('Error loading data:', err);
-            setError('Error al cargar los datos: ' + err.message);
+            setError(t('questions.errors.load_fail') + ' ' + err.message);
         } finally {
             setLoading(false);
         }
@@ -95,7 +97,7 @@ const QuestionManager = () => {
         setEditForm({
             area_id: question.area_id,
             numero_pregunta: question.numero_pregunta,
-            texto_pregunta: question.texto_pregunta + ' (Copia)',
+            texto_pregunta: question.texto_pregunta + ' ' + t('questions.copy_suffix', '(Copy)'),
             tipo_respuesta: question.tipo_respuesta,
             opciones: question.opciones ? [...question.opciones] : [],
             mapeo_calificacion: question.mapeo_calificacion || getDefaultMapping(question.tipo_respuesta),
@@ -193,24 +195,24 @@ const QuestionManager = () => {
 
     const handleSave = async (questionId) => {
         if (!editForm.texto_pregunta?.trim()) {
-            setError('El texto de la pregunta es obligatorio');
+            setError(t('questions.errors.text_required'));
             return;
         }
 
         if (!editForm.area_id) {
-            setError('Debes seleccionar un área');
+            setError(t('questions.errors.area_required'));
             return;
         }
 
         // Validar opciones para tipo múltiple
         if (editForm.tipo_respuesta === 'multiple') {
             if (!editForm.opciones || editForm.opciones.length === 0) {
-                setError('Debes agregar al menos una opción');
+                setError(t('questions.errors.min_options'));
                 return;
             }
             const hasEmptyText = editForm.opciones.some(opt => !opt.texto?.trim());
             if (hasEmptyText) {
-                setError('Todas las opciones deben tener texto');
+                setError(t('questions.errors.empty_option'));
                 return;
             }
         }
@@ -219,7 +221,7 @@ const QuestionManager = () => {
         if (editForm.tipo_respuesta === 'escala') {
             const { min, max } = editForm.mapeo_calificacion;
             if (min >= max) {
-                setError('El valor máximo debe ser mayor que el mínimo');
+                setError(t('questions.errors.scale_range'));
                 return;
             }
         }
@@ -247,7 +249,7 @@ const QuestionManager = () => {
                     .insert([dataToSave]);
 
                 if (insertError) throw insertError;
-                setSuccessMessage('✓ Pregunta creada exitosamente');
+                setSuccessMessage(t('questions.success.created'));
             } else {
                 // Actualizar pregunta existente
                 const { error: updateError } = await supabase
@@ -256,7 +258,7 @@ const QuestionManager = () => {
                     .eq('id', questionId);
 
                 if (updateError) throw updateError;
-                setSuccessMessage('✓ Pregunta guardada exitosamente');
+                setSuccessMessage(t('questions.success.saved'));
             }
 
             setTimeout(() => setSuccessMessage(''), 3000);
@@ -266,7 +268,7 @@ const QuestionManager = () => {
             await loadData();
         } catch (err) {
             console.error('Error saving question:', err);
-            setError('Error al guardar: ' + err.message);
+            setError(t('questions.errors.save_fail') + ' ' + err.message);
         } finally {
             setSaving(false);
         }
@@ -292,12 +294,12 @@ const QuestionManager = () => {
 
             if (deleteError) throw deleteError;
 
-            setSuccessMessage('✓ Pregunta eliminada exitosamente');
+            setSuccessMessage(t('questions.success.deleted'));
             setTimeout(() => setSuccessMessage(''), 3000);
             await loadData();
         } catch (err) {
             console.error('Error deleting question:', err);
-            setError('Error al eliminar: ' + err.message);
+            setError(t('questions.errors.delete_fail') + ' ' + err.message);
         }
     };
 
@@ -315,12 +317,12 @@ const QuestionManager = () => {
 
             if (updateError) throw updateError;
 
-            setSuccessMessage(`✓ Pregunta ${!currentStatus ? 'activada' : 'desactivada'}`);
+            setSuccessMessage(t(!currentStatus ? 'questions.success.activated' : 'questions.success.deactivated'));
             setTimeout(() => setSuccessMessage(''), 3000);
             await loadData();
         } catch (err) {
             console.error('Error toggling active:', err);
-            setError('Error al cambiar estado: ' + err.message);
+            setError(t('questions.errors.toggle_fail') + ' ' + err.message);
         }
     };
 
@@ -341,7 +343,7 @@ const QuestionManager = () => {
                 color: '#64748b'
             }}>
                 <Loader size={24} className="spin" />
-                <span>Cargando preguntas...</span>
+                <span>{t('questions.loading')}</span>
             </div>
         );
     }
@@ -361,10 +363,10 @@ const QuestionManager = () => {
                             alignItems: 'center',
                             gap: '12px'
                         }}>
-                            📋 Gestión de Preguntas del Feedback
+                            {t('questions.title')}
                         </h1>
                         <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-                            Administra las preguntas que se muestran en el formulario de feedback por área
+                            {t('questions.subtitle')}
                         </p>
                     </div>
                     <button
@@ -386,7 +388,7 @@ const QuestionManager = () => {
                         }}
                     >
                         <Plus size={20} />
-                        Nueva Pregunta
+                        {t('questions.new')}
                     </button>
                 </div>
             </div>
@@ -434,7 +436,7 @@ const QuestionManager = () => {
                     marginBottom: '1.5rem'
                 }}>
                     <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: '600' }}>
-                        ➕ Nueva Pregunta
+                        {t('questions.title_new')}
                     </h3>
                     {renderEditForm('new')}
                 </div>
@@ -464,7 +466,7 @@ const QuestionManager = () => {
                         />
                         <input
                             type="text"
-                            placeholder="Buscar por área o pregunta..."
+                            placeholder={t('questions.search_placeholder')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             style={{
@@ -488,7 +490,7 @@ const QuestionManager = () => {
                         padding: '3rem',
                         color: '#94a3b8'
                     }}>
-                        {searchTerm ? 'No se encontraron preguntas' : 'No hay preguntas configuradas. Haz clic en "Nueva Pregunta" para crear una.'}
+                        {searchTerm ? t('questions.no_results') : t('questions.empty_state')}
                     </div>
                 ) : (
                     filteredQuestions.map((question) => (
@@ -556,12 +558,12 @@ const QuestionManager = () => {
                                 <AlertCircle size={24} color="#dc2626" />
                             </div>
                             <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
-                                Confirmar Eliminación
+                                {t('questions.delete_confirm_title')}
                             </h2>
                         </div>
 
                         <p style={{ fontSize: '1rem', color: '#4b5563', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                            ¿Estás seguro de eliminar la pregunta del área <strong>"{deleteConfirmation.areaName}"</strong>?
+                            {t('questions.delete_confirm_msg', { area: deleteConfirmation.areaName })}
                         </p>
 
                         <div style={{
@@ -571,7 +573,7 @@ const QuestionManager = () => {
                             marginBottom: '1.5rem'
                         }}>
                             <p style={{ fontSize: '0.9rem', color: '#92400e', margin: 0 }}>
-                                ⚠️ Esta acción no se puede deshacer. La pregunta será eliminada permanentemente.
+                                {t('questions.delete_warning')}
                             </p>
                         </div>
 
@@ -590,7 +592,7 @@ const QuestionManager = () => {
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                Cancelar
+                                {t('questions.cancel')}
                             </button>
                             <button
                                 onClick={confirmDelete}
@@ -610,7 +612,7 @@ const QuestionManager = () => {
                                 }}
                             >
                                 <Trash2 size={18} />
-                                Eliminar Pregunta
+                                {t('questions.delete_btn')}
                             </button>
                         </div>
                     </div>
@@ -660,13 +662,7 @@ const QuestionManager = () => {
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.05em'
                             }}>
-                                Pregunta {question.numero_pregunta} • {
-                                    question.tipo_respuesta === 'si_no' ? 'Sí/No' :
-                                        question.tipo_respuesta === 'multiple' ? 'Múltiple' :
-                                            question.tipo_respuesta === 'escala' ? 'Escala' :
-                                                question.tipo_respuesta === 'emoji' ? 'Emoji' :
-                                                    'Texto'
-                                }
+                                {t('questions.question_label')} {question.numero_pregunta} • {t(`questions.types.${question.tipo_respuesta}`)}
                             </span>
                         </div>
                     </div>
@@ -686,7 +682,7 @@ const QuestionManager = () => {
                                 transition: 'all 0.2s'
                             }}
                         >
-                            {question.activa ? '✓ Activa' : '○ Inactiva'}
+                            {question.activa ? t('questions.active') : t('questions.inactive')}
                         </button>
                         <button
                             onClick={() => handlePreview(question)}
@@ -701,7 +697,7 @@ const QuestionManager = () => {
                                 alignItems: 'center',
                                 transition: 'all 0.2s'
                             }}
-                            title="Vista Previa"
+                            title={t('questions.preview_tooltip')}
                         >
                             <Eye size={18} />
                         </button>
@@ -718,7 +714,7 @@ const QuestionManager = () => {
                                 alignItems: 'center',
                                 transition: 'all 0.2s'
                             }}
-                            title="Duplicar"
+                            title={t('questions.duplicate_tooltip')}
                         >
                             <Copy size={18} />
                         </button>
@@ -735,7 +731,7 @@ const QuestionManager = () => {
                                 alignItems: 'center',
                                 transition: 'all 0.2s'
                             }}
-                            title="Editar"
+                            title={t('questions.edit_tooltip')}
                         >
                             <Edit2 size={18} />
                         </button>
@@ -752,7 +748,7 @@ const QuestionManager = () => {
                                 alignItems: 'center',
                                 transition: 'all 0.2s'
                             }}
-                            title="Eliminar"
+                            title={t('questions.delete_tooltip')}
                         >
                             <Trash2 size={18} />
                         </button>
@@ -775,11 +771,11 @@ const QuestionManager = () => {
                 {question.tipo_respuesta === 'multiple' && question.opciones && question.opciones.length > 0 && (
                     <div style={{ marginTop: '1rem', paddingLeft: '1rem' }}>
                         <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', fontWeight: '600' }}>
-                            Opciones:
+                            {t('questions.options_label')}
                         </div>
                         {question.opciones.map((opt, idx) => (
                             <div key={idx} style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '0.25rem' }}>
-                                • {opt.texto} <span style={{ color: '#94a3b8' }}>(valor: {opt.valor})</span>
+                                • {opt.texto} <span style={{ color: '#94a3b8' }}>({t('questions.option_value').toLowerCase()} {opt.valor})</span>
                             </div>
                         ))}
                     </div>
@@ -789,7 +785,7 @@ const QuestionManager = () => {
                 {question.tipo_respuesta === 'escala' && question.mapeo_calificacion && (
                     <div style={{ marginTop: '1rem', paddingLeft: '1rem' }}>
                         <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600' }}>
-                            Escala: {question.mapeo_calificacion.min} - {question.mapeo_calificacion.max}
+                            {t('questions.scale_label')} {question.mapeo_calificacion.min} - {question.mapeo_calificacion.max}
                         </div>
                     </div>
                 )}
@@ -809,7 +805,7 @@ const QuestionManager = () => {
                         marginBottom: '0.5rem',
                         color: '#334155'
                     }}>
-                        Área
+                        {t('questions.area_label')}
                     </label>
                     <select
                         value={editForm.area_id}
@@ -840,13 +836,13 @@ const QuestionManager = () => {
                         marginBottom: '0.5rem',
                         color: '#334155'
                     }}>
-                        Texto de la Pregunta
+                        {t('questions.question_label')}
                     </label>
                     <textarea
                         value={editForm.texto_pregunta}
                         onChange={(e) => setEditForm({ ...editForm, texto_pregunta: e.target.value })}
                         rows={3}
-                        placeholder="Escribe la pregunta que se mostrará en el formulario..."
+                        placeholder={t('questions.text_placeholder')}
                         style={{
                             width: '100%',
                             padding: '0.75rem',
@@ -869,15 +865,15 @@ const QuestionManager = () => {
                         marginBottom: '0.5rem',
                         color: '#334155'
                     }}>
-                        Tipo de Respuesta
+                        {t('questions.type_label')}
                     </label>
                     <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                         {[
-                            { value: 'si_no', label: 'Sí/No' },
-                            { value: 'multiple', label: 'Múltiple' },
-                            { value: 'escala', label: 'Escala' },
-                            { value: 'emoji', label: 'Emoji' },
-                            { value: 'texto', label: 'Texto' }
+                            { value: 'si_no', label: t('questions.types.si_no') },
+                            { value: 'multiple', label: t('questions.types.multiple') },
+                            { value: 'escala', label: t('questions.types.escala') },
+                            { value: 'emoji', label: t('questions.types.emoji') },
+                            { value: 'texto', label: t('questions.types.texto') }
                         ].map(tipo => (
                             <label key={tipo.value} style={{
                                 display: 'flex',
@@ -909,12 +905,12 @@ const QuestionManager = () => {
                             marginBottom: '0.75rem',
                             display: 'block'
                         }}>
-                            Configuración de Escala
+                            {t('questions.scale_config')}
                         </label>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                             <div style={{ flex: 1 }}>
                                 <label style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '0.25rem' }}>
-                                    Valor Mínimo
+                                    {t('questions.min_value')}
                                 </label>
                                 <input
                                     type="number"
@@ -933,7 +929,7 @@ const QuestionManager = () => {
                             </div>
                             <div style={{ flex: 1 }}>
                                 <label style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '0.25rem' }}>
-                                    Valor Máximo
+                                    {t('questions.max_value')}
                                 </label>
                                 <input
                                     type="number"
@@ -953,7 +949,7 @@ const QuestionManager = () => {
                             </div>
                         </div>
                         <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
-                            💡 Las respuestas se normalizarán automáticamente a escala 1-5 para el dashboard
+                            {t('questions.scale_tip')}
                         </div>
                     </div>
                 )}
@@ -967,7 +963,7 @@ const QuestionManager = () => {
                                 fontWeight: '600',
                                 color: '#334155'
                             }}>
-                                Opciones de Respuesta
+                                {t('questions.options_label')}
                             </label>
                             <button
                                 onClick={handleAddOption}
@@ -987,7 +983,7 @@ const QuestionManager = () => {
                                 }}
                             >
                                 <PlusCircle size={16} />
-                                Agregar Opción
+                                {t('questions.add_option')}
                             </button>
                         </div>
                         {editForm.opciones && editForm.opciones.map((option, index) => (
@@ -1001,7 +997,7 @@ const QuestionManager = () => {
                                     type="text"
                                     value={option.texto}
                                     onChange={(e) => handleOptionChange(index, 'texto', e.target.value)}
-                                    placeholder="Texto de la opción"
+                                    placeholder={t('questions.option_placeholder')}
                                     style={{
                                         flex: 1,
                                         padding: '0.6rem',
@@ -1042,14 +1038,14 @@ const QuestionManager = () => {
                                         display: 'flex',
                                         alignItems: 'center'
                                     }}
-                                    title="Eliminar opción"
+                                    title={t('questions.delete_tooltip')}
                                 >
                                     <MinusCircle size={18} />
                                 </button>
                             </div>
                         ))}
                         <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.5rem' }}>
-                            💡 El valor determina la calificación (1-5) que se asignará a cada respuesta
+                            {t('questions.option_tip')}
                         </div>
                     </div>
                 )}
@@ -1068,7 +1064,7 @@ const QuestionManager = () => {
                             onChange={(e) => setEditForm({ ...editForm, activa: e.target.checked })}
                             style={{ cursor: 'pointer' }}
                         />
-                        <span style={{ fontSize: '0.9rem' }}>Pregunta activa</span>
+                        <span style={{ fontSize: '0.9rem' }}>{t('questions.active_checkbox')}</span>
                     </label>
                 </div>
 
@@ -1093,7 +1089,7 @@ const QuestionManager = () => {
                         }}
                     >
                         <X size={16} />
-                        Cancelar
+                        {t('questions.cancel')}
                     </button>
                     <button
                         onClick={() => handleSave(questionId)}
@@ -1116,12 +1112,12 @@ const QuestionManager = () => {
                         {saving ? (
                             <>
                                 <Loader size={16} className="spin" />
-                                Guardando...
+                                {t('questions.saving')}
                             </>
                         ) : (
                             <>
                                 <Save size={16} />
-                                Guardar
+                                {t('questions.save')}
                             </>
                         )}
                     </button>
@@ -1156,7 +1152,7 @@ const PreviewModal = ({ question, onClose }) => {
                                     transition: 'all 0.2s'
                                 }}
                             >
-                                {option}
+                                {option === 'Sí' ? t('questions.types.si', 'Sí') : t('questions.types.no', 'No')}
                             </button>
                         ))}
                     </div>
@@ -1239,7 +1235,7 @@ const PreviewModal = ({ question, onClose }) => {
                     <textarea
                         value={previewAnswer}
                         onChange={(e) => setPreviewAnswer(e.target.value)}
-                        placeholder="Escribe tu respuesta aquí..."
+                        placeholder={t('questions.preview_text_placeholder')}
                         rows={4}
                         style={{
                             width: '100%',
@@ -1284,7 +1280,7 @@ const PreviewModal = ({ question, onClose }) => {
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
-                        👁️ Vista Previa
+                        {t('questions.preview_title')}
                     </h2>
                     <button
                         onClick={onClose}
@@ -1320,7 +1316,7 @@ const PreviewModal = ({ question, onClose }) => {
 
                 <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fef3c7', borderRadius: '8px' }}>
                     <div style={{ fontSize: '0.85rem', color: '#92400e' }}>
-                        💡 Esta es una vista previa. Los cambios no se guardarán.
+                        {t('questions.preview_tip')}
                     </div>
                 </div>
             </div>

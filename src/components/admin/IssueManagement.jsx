@@ -4,10 +4,12 @@ import {
     AlertTriangle, MessageSquare, Bell, Frown, Smile, Meh,
     AlertCircle, CheckCircle2, Clock, Filter, Mail, Phone
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
-    const [filterStatus, setFilterStatus] = useState('Todos');
-    const [filterSeverity, setFilterSeverity] = useState('Todos');
+    const { t } = useTranslation();
+    const [filterStatus, setFilterStatus] = useState(t('issues.filters.all'));
+    const [filterSeverity, setFilterSeverity] = useState(t('issues.filters.all'));
     const [activeSubTab, setActiveSubTab] = useState('active'); // 'active' | 'closed'
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const [showResponseModal, setShowResponseModal] = useState(false);
@@ -27,7 +29,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
         try {
             const newIssue = {
                 feedback_id: feedbackData.id,
-                titulo: `Problema reportado en ${feedbackData.area_id || 'Área desconocida'}`,
+                titulo: t('issues.auto_generation.title', { area: feedbackData.area_id || t('issues.auto_generation.unknown_area') }),
                 descripcion: feedbackData.comentario,
                 categoria: 'Servicio',
                 severidad: feedbackData.satisfaccion === 1 ? 'Crítica' : 'Alta',
@@ -41,7 +43,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
             if (onIssueUpdate) onIssueUpdate();
         } catch (err) {
             console.error("Error creating issue:", err);
-            alert("Error al crear el issue: " + err.message);
+            alert(t('issues.alerts.create_error') + err.message);
         }
     };
 
@@ -81,7 +83,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
             setUpdateForm({ user: '', comment: '', evidence: '' });
         } catch (err) {
             console.error("Error updating issue:", err);
-            alert("Error al actualizar: " + err.message);
+            alert(t('issues.alerts.update_error') + err.message);
         }
     };
 
@@ -103,32 +105,40 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
             if (onIssueUpdate) onIssueUpdate();
             setShowResponseModal(false);
             setResponseForm({ respuesta: '', medio: 'Email', contacto: '' });
-            alert("Respuesta registrada exitosamente.");
+            alert(t('issues.alerts.response_success'));
         } catch (err) {
             console.error("Error sending response:", err);
-            alert("Error al registrar respuesta: " + err.message);
+            alert(t('issues.alerts.response_error') + err.message);
         }
     };
 
     const shareIssue = (issue, platform) => {
-        const text = `📌 ISSUE: ${issue.titulo}\n📍 Tienda: ${issue.tienda_id} | Área: ${issue.area_id}\n⚠️ Severidad: ${issue.severidad}\n📝 Descripción: ${issue.descripcion}\n\nEstado actual: ${issue.estado}`;
+        const text = t('issues.actions.share_text_header', {
+            title: issue.titulo,
+            store: issue.tienda_id,
+            area: issue.area_id,
+            severity: t(`issues.severity_labels.${issue.severidad}`),
+            desc: issue.descripcion,
+            status: t(`issues.status_labels.${issue.estado}`)
+        });
         const encodedText = encodeURIComponent(text);
 
         if (platform === 'whatsapp') {
             window.open(`https://wa.me/?text=${encodedText}`, '_blank');
         } else if (platform === 'email') {
-            window.location.href = `mailto:?subject=Seguimiento Issue: ${issue.titulo}&body=${encodedText}`;
+            const subject = t('issues.actions.tracking_subject', { title: issue.titulo });
+            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodedText}`;
         }
     };
 
     const filteredIssues = useMemo(() => {
         return issues.filter(issue => {
             if (!issue) return false;
-            const matchesStatus = filterStatus === 'Todos' || String(issue.estado).trim() === String(filterStatus).trim();
-            const matchesSeverity = filterSeverity === 'Todos' || String(issue.severidad).trim() === String(filterSeverity).trim();
+            const matchesStatus = filterStatus === t('issues.filters.all') || String(issue.estado).trim() === String(filterStatus).trim();
+            const matchesSeverity = filterSeverity === t('issues.filters.all') || String(issue.severidad).trim() === String(filterSeverity).trim();
             return matchesStatus && matchesSeverity;
         });
-    }, [issues, filterStatus, filterSeverity]);
+    }, [issues, filterStatus, filterSeverity, t]);
 
     const activeIssues = filteredIssues.filter(i => i.estado === 'Abierto' || i.estado === 'En Progreso');
     const closedIssues = filteredIssues.filter(i => i.estado === 'Resuelto' || i.estado === 'Verificado');
@@ -186,52 +196,45 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
         return {
             hoursLeft: Math.max(0, timeLeft),
             isExpired: timeLeft < 0,
-            text: timeLeft < 0 ? 'Vencido' : `${Math.floor(timeLeft)}h restantes`
+            text: timeLeft < 0 ? t('issues.sla.expired') : t('issues.sla.remaining', { hours: Math.floor(timeLeft) })
         };
     };
 
     const getAISuggestion = (issue) => {
         const category = issue.categoria || 'Servicio';
-        const suggestions = {
-            'Servicio': 'Priorizar contacto personal para ofrecer disculpa y compensación inmediata.',
-            'Atención': 'Programar sesión de refuerzo en protocolos de servicio al cliente con el equipo.',
-            'Limpieza': 'Escalar revisión de bitácoras de mantenimiento y aumentar frecuencia de rondas.',
-            'Producto': 'Realizar auditoría selectiva de stock y verificar calidad en piso de venta.',
-            'Rapidez': 'Analizar cuellos de botella en horarios pico y optimizar asignación de turnos.'
-        };
-        return suggestions[category] || 'Revisar antecedentes en esta área para identificar patrones recurrentes.';
+        return t(`issues.ai_suggestion.categories.${category}`, { defaultValue: t('issues.ai_suggestion.categories.default') });
     };
 
     return (
         <div className="animate-in fade-in duration-500">
             <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>Issue Management</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Sistema de seguimiento y resolución de problemas reportados.</p>
+                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('issues.title')}</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('issues.subtitle')}</p>
             </div>
 
             {/* Metrics Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderLeft: '4px solid var(--primary)' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Issues</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.total')}</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '2rem', fontWeight: '800', color: '#1e293b', fontFamily: 'Outfit' }}>{metrics.total}</span>
                     </div>
                 </div>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fef2f2 100%)', borderLeft: '4px solid #ef4444' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Críticos Abiertos</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.critical')}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '2rem', fontWeight: '800', color: '#991b1b', fontFamily: 'Outfit' }}>{metrics.criticos}</span>
                         <AlertTriangle size={20} color="#ef4444" />
                     </div>
                 </div>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)', borderLeft: '4px solid #f59e0b' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>En Progreso</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.status_labels.En Progreso')}</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '2rem', fontWeight: '800', color: '#92400e', fontFamily: 'Outfit' }}>{metrics.enProgreso}</span>
                     </div>
                 </div>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)', borderLeft: '4px solid #10b981' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Eficiencia</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.efficiency')}</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '2rem', fontWeight: '800', color: '#166534', fontFamily: 'Outfit' }}>
                             {metrics.total > 0 ? Math.round((metrics.resueltos / metrics.total) * 100) : 0}%
@@ -239,10 +242,10 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                     </div>
                 </div>
                 <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%)', borderLeft: '4px solid #db2777' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#9d174d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Resolución Promedio</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#9d174d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.avg_resolution')}</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '0.5rem' }}>
                         <span style={{ fontSize: '2rem', fontWeight: '800', color: '#831843', fontFamily: 'Outfit' }}>{Math.round(metrics.avgResolutionTime)}</span>
-                        <span style={{ fontSize: '0.8rem', color: '#9d174d', fontWeight: '600' }}>hrs</span>
+                        <span style={{ fontSize: '0.8rem', color: '#9d174d', fontWeight: '600' }}>{t('issues.metrics.hrs')}</span>
                     </div>
                 </div>
             </div>
@@ -251,18 +254,18 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                     <select className="filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                        <option value="Todos">Todos los Estados</option>
-                        <option value="Abierto">Abierto</option>
-                        <option value="En Progreso">En Progreso</option>
-                        <option value="Resuelto">Resuelto</option>
-                        <option value="Verificado">Verificado</option>
+                        <option value={t('issues.filters.all')}>{t('issues.filters.all_states')}</option>
+                        <option value="Abierto">{t('issues.status_labels.Abierto')}</option>
+                        <option value="En Progreso">{t('issues.status_labels.En Progreso')}</option>
+                        <option value="Resuelto">{t('issues.status_labels.Resuelto')}</option>
+                        <option value="Verificado">{t('issues.status_labels.Verificado')}</option>
                     </select>
                     <select className="filter-select" value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)}>
-                        <option value="Todos">Todas las Severidades</option>
-                        <option value="Crítica">Crítica</option>
-                        <option value="Alta">Alta</option>
-                        <option value="Media">Media</option>
-                        <option value="Baja">Baja</option>
+                        <option value={t('issues.filters.all')}>{t('issues.filters.all_severities')}</option>
+                        <option value="Crítica">{t('issues.severity_labels.Crítica')}</option>
+                        <option value="Alta">{t('issues.severity_labels.Alta')}</option>
+                        <option value="Media">{t('issues.severity_labels.Media')}</option>
+                        <option value="Baja">{t('issues.severity_labels.Baja')}</option>
                     </select>
                 </div>
             </div>
@@ -282,7 +285,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                     background: 'none', border: 'none', cursor: 'pointer'
                                 }}
                             >
-                                Issues Activos ({activeIssues.length})
+                                {t('issues.tabs.active', { count: activeIssues.length })}
                             </button>
                             <button
                                 onClick={() => setActiveSubTab('closed')}
@@ -295,7 +298,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                     background: 'none', border: 'none', cursor: 'pointer'
                                 }}
                             >
-                                Cerrados / Verificados ({closedIssues.length})
+                                {t('issues.tabs.closed', { count: closedIssues.length })}
                             </button>
                         </div>
                     </div>
@@ -303,7 +306,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                         {displayIssues.length === 0 ? (
                             <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                                No hay issues con los filtros seleccionados
+                                {t('issues.no_results')}
                             </div>
                         ) : (
                             displayIssues.map(issue => (
@@ -334,7 +337,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                                 fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
                                                             }}
                                                         >
-                                                            <MessageSquare size={12} /> WhatsApp
+                                                            <MessageSquare size={12} /> {t('issues.actions.whatsapp')}
                                                         </a>
                                                     )}
                                                     {issue.contact_email && (
@@ -347,25 +350,25 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                                 fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
                                                             }}
                                                         >
-                                                            <Bell size={12} /> Enviar Correo
+                                                            <Bell size={12} /> {t('issues.actions.send_email')}
                                                         </a>
                                                     )}
                                                 </div>
                                             )}
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={() => shareIssue(issue, 'whatsapp')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#10b981' }} title="Compartir por WhatsApp">
+                                            <button onClick={() => shareIssue(issue, 'whatsapp')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#10b981' }} title={t('issues.actions.share_whatsapp')}>
                                                 <MessageSquare size={16} />
                                             </button>
-                                            <button onClick={() => shareIssue(issue, 'email')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)' }} title="Compartir por Email">
+                                            <button onClick={() => shareIssue(issue, 'email')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)' }} title={t('issues.actions.share_email')}>
                                                 <Bell size={16} />
                                             </button>
                                         </div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
-                                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', background: getStatusColor(issue.estado) + '20', color: getStatusColor(issue.estado) }}>{issue.estado}</span>
-                                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', background: getSeverityColor(issue.severidad) + '20', color: getSeverityColor(issue.severidad) }}>{issue.severidad}</span>
+                                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', background: getStatusColor(issue.estado) + '20', color: getStatusColor(issue.estado) }}>{t(`issues.status_labels.${issue.estado}`)}</span>
+                                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', background: getSeverityColor(issue.severidad) + '20', color: getSeverityColor(issue.severidad) }}>{t(`issues.severity_labels.${issue.severidad}`)}</span>
                                         {issue.tienda_id && <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', background: '#f1f5f9', color: '#475569' }}>{issue.tienda_id}</span>}
 
                                         {/* SLA Badge */}
@@ -384,7 +387,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                 alignItems: 'center',
                                                 gap: '4px'
                                             }}>
-                                                <Clock size={10} /> SLA: {getSLALogic(issue).text}
+                                                <Clock size={10} /> {t('issues.sla.label', { text: getSLALogic(issue).text })}
                                             </span>
                                         )}
                                     </div>
@@ -405,7 +408,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                 <AlertCircle size={14} color="var(--primary)" />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '2px' }}>IA Suggestion</div>
+                                                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '2px' }}>{t('issues.ai_suggestion.label')}</div>
                                                 <div style={{ fontSize: '0.75rem', color: '#475569', fontStyle: 'italic' }}>{getAISuggestion(issue)}</div>
                                             </div>
                                         </div>
@@ -415,17 +418,17 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                         {issue.estado === 'Abierto' && (
                                             <button className="btn btn-primary" style={{ fontSize: '0.7rem', padding: '6px 12px' }} onClick={() => updateIssueStatus(issue.id, 'En Progreso')}>
-                                                Iniciar Trabajo
+                                                {t('issues.actions.start')}
                                             </button>
                                         )}
                                         {issue.estado === 'En Progreso' && (
                                             <button className="btn" style={{ fontSize: '0.7rem', padding: '6px 12px', background: '#10b981', color: 'white' }} onClick={() => { setUpdatingIssue({ id: issue.id, nextStatus: 'Resuelto' }); setShowUpdateModal(true); }}>
-                                                Marcar Resuelto
+                                                {t('issues.actions.resolve')}
                                             </button>
                                         )}
                                         {issue.estado === 'Resuelto' && (
                                             <button className="btn btn-primary btn-sm" onClick={() => { setUpdatingIssue({ id: issue.id, nextStatus: 'Verificado' }); setShowUpdateModal(true); }}>
-                                                Verificar
+                                                {t('issues.actions.verify')}
                                             </button>
                                         )}
 
@@ -448,7 +451,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                         justifyContent: 'center',
                                                         textDecoration: 'none'
                                                     }}
-                                                    title="Abrir WhatsApp"
+                                                    title={t('issues.actions.open_whatsapp')}
                                                 >
                                                     <MessageSquare size={16} />
                                                 </a>
@@ -467,7 +470,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                         justifyContent: 'center',
                                                         textDecoration: 'none'
                                                     }}
-                                                    title="Enviar Correo"
+                                                    title={t('issues.actions.send_email')}
                                                 >
                                                     <Mail size={16} />
                                                 </a>
@@ -477,10 +480,10 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                                 className="btn btn-secondary btn-sm"
                                                 onClick={() => { setUpdatingIssue(issue); setShowResponseModal(true); }}
                                                 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                title="Registrar respuesta en bitácora"
+                                                title={issue.respuesta_oficial ? t('issues.actions.view_log') : t('issues.actions.register')}
                                             >
                                                 <div style={{ width: '1px', height: '16px', background: '#cbd5e1', marginRight: '4px' }}></div>
-                                                {issue.respuesta_oficial ? 'Ver Bitácora' : 'Registrar'}
+                                                {issue.respuesta_oficial ? t('issues.actions.view_log') : t('issues.actions.register')}
                                             </button>
                                         </div>
                                     </div>
@@ -488,9 +491,9 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                     {/* Mostrar Respuesta Oficial si existe */}
                                     {issue.respuesta_oficial && (
                                         <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#166534', marginBottom: '2px' }}>✅ Respuesta Oficial Enviada</div>
+                                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#166534', marginBottom: '2px' }}>{t('issues.official_response.sent')}</div>
                                             <div style={{ fontSize: '0.7rem', color: '#15803d' }}>"{issue.respuesta_oficial}"</div>
-                                            <div style={{ fontSize: '0.65rem', color: '#86efac', marginTop: '2px' }}>vía {issue.medio_respuesta} • {new Date(issue.fecha_respuesta).toLocaleDateString()}</div>
+                                            <div style={{ fontSize: '0.65rem', color: '#86efac', marginTop: '2px' }}>{t('issues.official_response.via', { medium: t(`issues.modals.media.${issue.medio_respuesta}`), date: new Date(issue.fecha_respuesta).toLocaleDateString() })}</div>
                                         </div>
                                     )}
                                 </div>
@@ -501,10 +504,10 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
 
                 <div className="card">
                     <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
-                        Feedback Crítico
+                        {t('issues.critical_feedback')}
                         <div className="tooltip-wrapper" style={{ marginLeft: '8px' }}>
                             <AlertCircle size={14} color="#94a3b8" className="help-icon" />
-                            <span className="tooltip-content">Feedback con calificación baja (≤2) sin issue asignado</span>
+                            <span className="tooltip-content">{t('issues.no_critical')}</span>
                         </div>
                     </h3>
                     <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
@@ -519,7 +522,7 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                                 </div>
                                 <p style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.75rem', fontWeight: '500' }}>"{f.comentario}"</p>
                                 <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.75rem' }}>{getStoreName(f.tienda_id)} • {getAreaName(f.area_id)}</div>
-                                <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={() => createIssue(f)}>Crear Issue Correctivo</button>
+                                <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={() => createIssue(f)}>{t('issues.create_corrective')}</button>
                             </div>
                         ))}
                     </div>
@@ -542,8 +545,8 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowUpdateModal(false)}>Cancelar</button>
-                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => updateIssueStatus(updatingIssue.id, updatingIssue.nextStatus, updateForm)}>Confirmar</button>
+                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowUpdateModal(false)}>{t('issues.modals.cancel')}</button>
+                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => updateIssueStatus(updatingIssue.id, updatingIssue.nextStatus, updateForm)}>{t('issues.modals.confirm')}</button>
                         </div>
                     </div>
                 </div>
@@ -555,34 +558,34 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                     <div className="card" style={{ maxWidth: '450px', width: '100%', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
                         <h3 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <MessageSquare size={20} color="var(--primary)" />
-                            Respuesta Oficial al Cliente
+                            {t('issues.modals.official_title')}
                         </h3>
                         <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.5rem' }}>
-                            Registra la respuesta enviada al cliente para cerrar el ciclo de feedback.
+                            {t('issues.modals.official_desc')}
                         </p>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>Medio de contacto</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>{t('issues.modals.contact_medium')}</label>
                                 <select
                                     className="input"
                                     style={{ width: '100%' }}
                                     value={responseForm.medio}
                                     onChange={e => setResponseForm({ ...responseForm, medio: e.target.value })}
                                 >
-                                    <option value="Email">Email</option>
-                                    <option value="Teléfono">Llamada Telefónica</option>
-                                    <option value="WhatsApp">WhatsApp</option>
-                                    <option value="Presencial">Reunión Presencial</option>
+                                    <option value="Email">{t('issues.modals.media.Email')}</option>
+                                    <option value="Teléfono">{t('issues.modals.media.Teléfono')}</option>
+                                    <option value="WhatsApp">{t('issues.modals.media.WhatsApp')}</option>
+                                    <option value="Presencial">{t('issues.modals.media.Presencial')}</option>
                                 </select>
                             </div>
 
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>Respuesta / Acuerdos *</label>
+                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>{t('issues.modals.agreements')}</label>
                                 <textarea
                                     className="input"
                                     style={{ width: '100%', minHeight: '100px', padding: '0.75rem', fontSize: '0.85rem' }}
-                                    placeholder="Describe la solución ofrecida o la respuesta dada al cliente..."
+                                    placeholder={t('issues.modals.placeholder')}
                                     value={responseForm.respuesta}
                                     onChange={e => setResponseForm({ ...responseForm, respuesta: e.target.value })}
                                 />
@@ -590,14 +593,14 @@ const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowResponseModal(false)}>Cancelar</button>
+                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowResponseModal(false)}>{t('issues.modals.cancel')}</button>
                             <button
                                 className="btn btn-primary"
                                 style={{ flex: 1 }}
                                 disabled={!responseForm.respuesta}
                                 onClick={sendCheckResponse}
                             >
-                                Registrar Respuesta
+                                {t('issues.modals.register_btn')}
                             </button>
                         </div>
                     </div>

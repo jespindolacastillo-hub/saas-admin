@@ -7,8 +7,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { tenantConfig } from '../../config/tenant';
+import { useTranslation } from 'react-i18next';
 
 const EmailTemplateManager = () => {
+    const { t } = useTranslation();
     const [stores, setStores] = useState([]);
     const [selectedStore, setSelectedStore] = useState(null);
     const [viewMode, setViewMode] = useState('desktop');
@@ -43,11 +45,11 @@ const EmailTemplateManager = () => {
     const getRateUrl = (rating) => `${feedbackUrl}?t=${sfStoreId}&a=Email&c=Email&u=%%SubscriberKey%%&r=${rating}`;
 
     const emojis = [
-        { score: 1, icon: '😠', label: 'Mal' },
-        { score: 2, icon: '😕', label: 'Regular' },
-        { score: 3, icon: '😐', label: 'Bien' },
-        { score: 4, icon: '🙂', label: 'Muy Bien' },
-        { score: 5, icon: '😍', label: 'Excelente' }
+        { score: 1, icon: '😠', label: t('email.template.emojis.1') },
+        { score: 2, icon: '😕', label: t('email.template.emojis.2') },
+        { score: 3, icon: '😐', label: t('email.template.emojis.3') },
+        { score: 4, icon: '🙂', label: t('email.template.emojis.4') },
+        { score: 5, icon: '😍', label: t('email.template.emojis.5') }
     ];
 
     const fullTemplate = `
@@ -56,7 +58,7 @@ const EmailTemplateManager = () => {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tu opinión nos importa - \${tenantConfig.name}</title>
+    <title>${t('email.template.subject')} - \${tenantConfig.name}</title>
     <style>
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
         .container { width: 100%; max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 32px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
@@ -79,8 +81,8 @@ const EmailTemplateManager = () => {
             <img src="\${tenantConfig.logoUrl}" alt="\${tenantConfig.name}" width="140" style="display: block; margin: 0 auto; object-fit: contain;">
         </div>
         <div class="content">
-            <h1>¡Hola, %%First_Name%%!</h1>
-            <p>¿Qué te pareció tu visita reciente a nuestra tienda?</p>
+            <h1>${t('email.template.greeting')}</h1>
+            <p>${t('email.template.question')}</p>
             <div class="store-badge">${sfStoreName}</div>
             
             <table class="emoji-table">
@@ -95,10 +97,10 @@ const EmailTemplateManager = () => {
                 </tr>
             </table>
 
-            <p style="font-size: 14px; color: #94a3b8;">Tu calificación nos ayuda a brindarte el mejor servicio posible.</p>
+            <p style="font-size: 14px; color: #94a3b8;">${t('email.template.footer_tip')}</p>
         </div>
         <div class="footer">
-            \${tenantConfig.name} &copy; \${new Date().getFullYear()} • <a href="%%Subscription_Center_URL%%" style="color: #94a3b8;">Desuscribirse</a>
+            \${tenantConfig.name} &copy; \${new Date().getFullYear()} • <a href="%%Subscription_Center_URL%%" style="color: #94a3b8;">${t('email.template.unsubscribe')}</a>
         </div>
     </div>
 </body>
@@ -138,7 +140,7 @@ const EmailTemplateManager = () => {
                 satisfaccion: simRating,
                 canal: 'Email',
                 subscriber_key: 'sim_admin_user',
-                comentario: simComment || 'Simulación desde Panel Admin',
+                comentario: simComment || t('email.lab.sim_placeholder'),
                 device_id: 'admin_lab_v1',
                 tenant_id: tenantConfig.id
             };
@@ -156,8 +158,8 @@ const EmailTemplateManager = () => {
             if (simRating <= 2) {
                 const issuePayload = {
                     feedback_id: fbData[0].id,
-                    titulo: `Feedback Crítico: ${simRating} Estrellas`,
-                    descripcion: `Origen: Email Marketing (Simulado)\nComentario: ${payload.comentario}`,
+                    titulo: t('email.simulation.issue_title', { rating: simRating }),
+                    descripcion: t('email.simulation.issue_desc', { comment: payload.comentario }),
                     categoria: 'Servicio',
                     severidad: 'Crítica',
                     tienda_id: payload.tienda_id,
@@ -188,12 +190,12 @@ const EmailTemplateManager = () => {
             <header style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>Diseñador de Email Marketing</h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Genera plantillas inteligentes compatibles con Salesforce Marketing Cloud.</p>
+                        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>{t('email.title')}</h1>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('email.subtitle')}</p>
                     </div>
                     <div style={{ background: '#eff6ff', padding: '10px 16px', borderRadius: '12px', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Info size={18} color="#2563eb" />
-                        <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: '600' }}>Integración AMPScript Activa</span>
+                        <span style={{ fontSize: '0.75rem', color: '#1e40af', fontWeight: '600' }}>{t('email.ampscript_active')}</span>
                     </div>
                 </div>
 
@@ -211,7 +213,7 @@ const EmailTemplateManager = () => {
                             cursor: 'pointer'
                         }}
                     >
-                        Editor de Plantilla
+                        {t('email.tabs.editor')}
                     </button>
                     <button
                         onClick={() => setMode('lab')}
@@ -229,7 +231,7 @@ const EmailTemplateManager = () => {
                             gap: '6px'
                         }}
                     >
-                        <FlaskConical size={18} /> Laboratorio de Pruebas
+                        <FlaskConical size={18} /> {t('email.tabs.lab')}
                     </button>
                 </div>
             </header>
@@ -239,10 +241,10 @@ const EmailTemplateManager = () => {
                     {/* Sidebar: Config */}
                     <aside>
                         <div className="card shadow-sm" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: '800', marginBottom: '1.25rem' }}>Configuración</h3>
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: '800', marginBottom: '1.25rem' }}>{t('email.config.title')}</h3>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Tienda para previsualización</label>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: '700', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase' }}>{t('email.config.preview_store')}</label>
                                 <select
                                     value={selectedStore?.id || ''}
                                     onChange={(e) => setSelectedStore(stores.find(s => s.id === e.target.value))}
@@ -251,13 +253,11 @@ const EmailTemplateManager = () => {
                                 >
                                     {stores.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                                 </select>
-                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '6px' }}>
-                                    Se usará <code style={{ color: 'var(--primary)', fontWeight: 'bold' }}>%%Store_Id%%</code> en producción.
-                                </p>
+                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '6px' }} dangerouslySetInnerHTML={{ __html: t('email.config.production_hint') }} />
                             </div>
 
                             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
-                                <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>Variables Salesforce</h4>
+                                <h4 style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1e293b', marginBottom: '1rem' }}>{t('email.config.sf_variables')}</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {['%%First_Name%%', '%%Tienda_Nombre%%', '%%SubscriberKey%%'].map(v => (
                                         <div key={v} style={{ fontSize: '0.7rem', fontFamily: 'monospace', padding: '6px 10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', color: '#475569' }}>
@@ -273,7 +273,7 @@ const EmailTemplateManager = () => {
                             className={`btn ${copied ? 'btn-success' : 'btn-primary'}`}
                             style={{ width: '100%', padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                         >
-                            {copied ? <><CheckCircle size={20} /> ¡Copiado!</> : <><Copy size={20} /> Copiar Código {tab === 'full' ? 'HTML' : 'Snippet'}</>}
+                            {copied ? <><CheckCircle size={20} /> {t('email.actions.copied')}</> : <><Copy size={20} /> {t(tab === 'full' ? 'email.actions.copy_full' : 'email.actions.copy_snippet')}</>}
                         </button>
                     </aside>
 
@@ -285,13 +285,13 @@ const EmailTemplateManager = () => {
                                     onClick={() => setTab('full')}
                                     style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: tab === 'full' ? 'white' : 'transparent', boxShadow: tab === 'full' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', fontSize: '0.75rem', fontWeight: '700', color: tab === 'full' ? 'var(--primary)' : '#64748b' }}
                                 >
-                                    Plantilla Completa
+                                    {t('email.actions.full_template')}
                                 </button>
                                 <button
                                     onClick={() => setTab('snippet')}
                                     style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: tab === 'snippet' ? 'white' : 'transparent', boxShadow: tab === 'snippet' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', fontSize: '0.75rem', fontWeight: '700', color: tab === 'snippet' ? 'var(--primary)' : '#64748b' }}
                                 >
-                                    Botón (Snippet)
+                                    {t('email.actions.snippet')}
                                 </button>
                             </div>
 
@@ -347,9 +347,9 @@ const EmailTemplateManager = () => {
                     {/* Lab View: Preview */}
                     <div className="card shadow-sm" style={{ padding: '2rem', background: '#f8fafc', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ marginBottom: '1rem', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>Vista Previa Interactiva</h3>
+                            <h3 style={{ fontSize: '1rem', fontWeight: '800' }}>{t('email.preview.interactive_title')}</h3>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                                Los enlaces funcionarán como en un email real
+                                {t('email.preview.interactive_hint')}
                             </div>
                         </div>
 
@@ -372,18 +372,18 @@ const EmailTemplateManager = () => {
                     <div>
                         <div className="card shadow-md" style={{ padding: '1.5rem', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                             <h3 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Play size={20} color="#8b5cf6" /> Simulador de Backend
+                                <Play size={20} color="#8b5cf6" /> {t('email.lab.title')}
                             </h3>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>Tienda</label>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>{t('email.lab.store')}</label>
                                 <div style={{ padding: '10px', background: '#f1f5f9', borderRadius: '8px', fontSize: '0.85rem' }}>
-                                    {selectedStore?.nombre || 'Selecciona una tienda en el Editor'}
+                                    {selectedStore?.nombre || t('email.lab.no_store')}
                                 </div>
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>Calificación Simulada</label>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>{t('email.lab.sim_rating')}</label>
                                 <div style={{ display: 'flex', gap: '5px' }}>
                                     {[1, 2, 3, 4, 5].map(r => (
                                         <button
@@ -407,13 +407,13 @@ const EmailTemplateManager = () => {
                             </div>
 
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>Comentario (Opcional)</label>
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', marginBottom: '0.5rem' }}>{t('email.lab.sim_comment')}</label>
                                 <textarea
                                     value={simComment}
                                     onChange={(e) => setSimComment(e.target.value)}
                                     className="input"
                                     rows="3"
-                                    placeholder="Simula un comentario del cliente..."
+                                    placeholder={t('email.lab.sim_placeholder')}
                                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                                 />
                             </div>
@@ -438,14 +438,14 @@ const EmailTemplateManager = () => {
                                     gap: '8px'
                                 }}
                             >
-                                {simLoading ? 'Enviando...' : <><Send size={18} /> Enviar Feedback Test</>}
+                                {simLoading ? t('email.lab.sending') : <><Send size={18} /> {t('email.lab.send_test')}</>}
                             </button>
 
                             {simResult && (
                                 <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '12px', background: simResult.success ? '#f0fdf4' : '#fef2f2', border: simResult.success ? '1px solid #bbf7d0' : '1px solid #fecaca' }}>
                                     <h4 style={{ fontSize: '0.85rem', fontWeight: '800', color: simResult.success ? '#166534' : '#991b1b', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         {simResult.success ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-                                        {simResult.success ? 'Envío Exitoso' : 'Error'}
+                                        {simResult.success ? t('email.lab.success') : t('email.lab.error')}
                                     </h4>
                                     {simResult.success && (
                                         <div style={{ fontSize: '0.75rem', color: '#166534' }}>
@@ -458,7 +458,7 @@ const EmailTemplateManager = () => {
                                                     <p>Severidad: {simResult.data.issue.severidad}</p>
                                                 </div>
                                             ) : (
-                                                <p style={{ marginTop: '5px', color: '#64748b' }}>No se generó Issue (Calificación {'>'} 2)</p>
+                                                <p style={{ marginTop: '5px', color: '#64748b' }}>{t('email.lab.no_issue')}</p>
                                             )}
                                         </div>
                                     )}

@@ -87,6 +87,8 @@ const Dashboard = ({
   fetchError = null,
   refreshData = () => { }
 }) => {
+  const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
 
 
   const [metas, setMetas] = useState([]);
@@ -292,26 +294,24 @@ const Dashboard = ({
 
     const timeline = Object.entries(groups)
       .map(([dateKey, data]) => {
-        // Create display label in Spanish
+        // Create display label using locale
         const firstDate = new Date(data[0].created_at);
         const displayDate = isHourly
-          ? firstDate.toLocaleString('es-MX', {
-            timeZone: 'America/Mexico_City',
+          ? firstDate.toLocaleString(i18n.language, {
             day: 'numeric',
             month: 'short',
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
           })
-          : firstDate.toLocaleDateString('es-MX', {
-            timeZone: 'America/Mexico_City',
+          : firstDate.toLocaleDateString(i18n.language, {
             month: 'short',
             day: 'numeric'
           });
 
         return {
           date: dateKey, // ISO format for Recharts
-          displayDate, // Spanish format for labels
+          displayDate, // Localized format for labels
           nps: calculateNPS(data),
           nps_prev: stats.previousNPS, // Constant baseline for comparison
           total: data.length,
@@ -325,7 +325,7 @@ const Dashboard = ({
       });
 
     return timeline;
-  }, [finalFilteredData, previousPeriodData]);
+  }, [finalFilteredData, previousPeriodData, i18n.language]);
 
   // Phase 3: AI Concept Cloud Logic
   const aiConceptCloud = useMemo(() => {
@@ -378,11 +378,11 @@ const Dashboard = ({
     });
 
     return [
-      { name: 'Positivo', value: stats.Positivo, color: '#10b981', icon: <Smile size={18} /> },
-      { name: 'Neutral', value: stats.Neutral, color: '#f59e0b', icon: <Meh size={18} /> },
-      { name: 'Negativo', value: stats.Negativo, color: '#ef4444', icon: <Frown size={18} /> }
+      { name: t('common.positive'), value: stats.Positivo, color: '#10b981', icon: <Smile size={18} /> },
+      { name: t('common.neutral'), value: stats.Neutral, color: '#f59e0b', icon: <Meh size={18} /> },
+      { name: t('common.negative'), value: stats.Negativo, color: '#ef4444', icon: <Frown size={18} /> }
     ];
-  }, [finalFilteredData]);
+  }, [finalFilteredData, t]);
 
   // AI Smart Insights — 100% dinámico basado en datos reales
   const aiInsights = useMemo(() => {
@@ -394,13 +394,13 @@ const Dashboard = ({
       const bot = areaRanking[areaRanking.length - 1];
       if (top?.nps > 70) insights.push({
         type: 'success',
-        msg: `El área "${top.name}" lidera con NPS ${top.nps} y ${top.count} respuestas registradas.`,
+        msg: t('dashboard.insights.area_leader', { name: top.name, nps: top.nps, count: top.count }),
         icon: <CheckCircle2 size={16} />,
         highlight: { type: 'area', id: top.id }
       });
       if (bot?.nps < 10 && areaRanking.length > 1) insights.push({
         type: 'alert',
-        msg: `Atención crítica en "${bot.name}": NPS de ${bot.nps}. Se recomienda revisión urgente de procesos.`,
+        msg: t('dashboard.insights.critical_attention', { name: bot.name, nps: bot.nps }),
         icon: <AlertCircle size={16} />,
         highlight: { type: 'area', id: bot.id }
       });
@@ -413,13 +413,13 @@ const Dashboard = ({
       if (totalChange > 10) {
         insights.push({
           type: 'info',
-          msg: `Aumento en volumen esta semana: +${weeklyComparison.totalChange}% (${weeklyComparison.currentTotal} vs ${weeklyComparison.previousTotal} respuestas la semana pasada).`,
+          msg: t('dashboard.insights.volume_increase', { percent: weeklyComparison.totalChange, current: weeklyComparison.currentTotal, prev: weeklyComparison.previousTotal }),
           icon: <Lightbulb size={16} />
         });
       } else if (totalChange < -20) {
         insights.push({
           type: 'alert',
-          msg: `Caída en volumen esta semana: ${weeklyComparison.totalChange}% vs semana anterior. Verifica la operación de las tiendas.`,
+          msg: t('dashboard.insights.volume_decrease', { percent: weeklyComparison.totalChange }),
           icon: <AlertTriangle size={16} />
         });
       }
@@ -430,13 +430,13 @@ const Dashboard = ({
     if (npsChange > 10) {
       insights.push({
         type: 'success',
-        msg: `NPS mejoró +${npsChange} puntos esta semana vs la anterior. ¡Buen desempeño!`,
+        msg: t('dashboard.insights.nps_improved', { points: npsChange }),
         icon: <TrendingUp size={16} />
       });
     } else if (npsChange < -10) {
       insights.push({
         type: 'alert',
-        msg: `NPS cayó ${npsChange} puntos esta semana vs la anterior. Requiere atención.`,
+        msg: t('dashboard.insights.nps_dropped', { points: Math.abs(npsChange) }),
         icon: <TrendingDown size={16} />
       });
     }
@@ -447,13 +447,13 @@ const Dashboard = ({
       if (currentNPS >= targetNps) {
         insights.push({
           type: 'success',
-          msg: `¡Meta alcanzada! NPS actual (${currentNPS}) supera el objetivo corporativo de ${targetNps}.`,
+          msg: t('dashboard.insights.goal_reached', { current: currentNPS, target: targetNps }),
           icon: <CheckCircle2 size={16} />
         });
       } else if (currentNPS < targetNps * 0.5) {
         insights.push({
           type: 'alert',
-          msg: `NPS actual (${currentNPS}) está por debajo del 50% de la meta (${targetNps}). Se requiere acción inmediata.`,
+          msg: t('dashboard.insights.goal_below', { current: currentNPS, target: targetNps }),
           icon: <AlertCircle size={16} />
         });
       }
@@ -470,13 +470,13 @@ const Dashboard = ({
         if (negPercent > 40) {
           insights.push({
             type: 'alert',
-            msg: `${negPercent}% del feedback es negativo (${negVal} respuestas). Revisar procesos de atención al cliente.`,
+            msg: t('dashboard.insights.negative_feedback', { percent: negPercent, count: negVal }),
             icon: <Frown size={16} />
           });
         } else if (posPercent > 70) {
           insights.push({
             type: 'success',
-            msg: `${posPercent}% del feedback es positivo (${posVal} respuestas). Excelente desempeño del equipo.`,
+            msg: t('dashboard.insights.positive_feedback', { percent: posPercent, count: posVal }),
             icon: <Smile size={16} />
           });
         }
@@ -484,7 +484,7 @@ const Dashboard = ({
     }
 
     return insights;
-  }, [areaRanking, weeklyComparison, currentNPS, currentMeta, sentimentStats]);
+  }, [areaRanking, weeklyComparison, currentNPS, currentMeta, sentimentStats, t]);
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', padding: '5rem' }}>{t('menu.loading')}</div>;
 
@@ -511,9 +511,9 @@ const Dashboard = ({
     <div className="animate-fade-in">
       {window.location.hostname === 'localhost' && (
         <div className="dev-banner">
-          <span className="dev-badge">Modo Desarrollo</span>
+          <span className="dev-badge">{t('common.dev_mode')}</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={16} /> Estás trabajando en entorno local (localhost).
+            <AlertCircle size={16} /> {t('common.localhost_warning')}
           </span>
         </div>
       )}
@@ -523,20 +523,20 @@ const Dashboard = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
           <div>
             <h1 style={{ fontFamily: 'Outfit', fontSize: '2.2rem', fontWeight: '800', letterSpacing: '-0.03em', color: '#1e293b', marginBottom: '0.25rem' }}>
-              Organization <span style={{ color: 'var(--primary)' }}>Pro</span>
+              {t('dashboard.title')} <span style={{ color: 'var(--primary)' }}>Pro</span>
             </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: '500' }}>Reporte Ejecutivo de Performance y Satisfacción Corporativa</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: '500' }}>{t('dashboard.subtitle')}</p>
           </div>
 
           <div style={{ display: 'flex', gap: '1rem' }}>
             <button className={`btn ${isSnapshotMode ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setIsSnapshotMode(!isSnapshotMode)}>
-              <Eye size={18} /> {isSnapshotMode ? 'Vista Normal' : 'Modo Snapshot'}
+              <Eye size={18} /> {isSnapshotMode ? t('common.normal_view') : t('common.snapshot_mode')}
             </button>
             <button className="btn btn-secondary" onClick={refreshData}>
-              <History size={18} /> Sincronizar
+              <History size={18} /> {t('common.sync')}
             </button>
             <button className="btn btn-primary" onClick={() => exportToCSV(finalFilteredData, 'feedback_export.csv')}>
-              <Download size={18} /> Exportar Data
+              <Download size={18} /> {t('common.export')}
             </button>
           </div>
         </div>
@@ -546,16 +546,16 @@ const Dashboard = ({
           <div className="snapshot-pill">
             <div className="snapshot-icon"><MessageSquare size={16} /></div>
             <div className="snapshot-info">
-              <span className="snapshot-label">Feedback Hoy</span>
+              <span className="snapshot-label">{t('dashboard.feedback_today')}</span>
               <span className="snapshot-data">
-                {finalFilteredData.filter(f => new Date(f.created_at).toDateString() === new Date().toDateString()).length} entradas
+                {finalFilteredData.filter(f => new Date(f.created_at).toDateString() === new Date().toDateString()).length} {t('dashboard.entries')}
               </span>
             </div>
           </div>
           <div className="snapshot-pill">
             <div className="snapshot-icon"><Trophy size={16} /></div>
             <div className="snapshot-info">
-              <span className="snapshot-label">Área Líder</span>
+              <span className="snapshot-label">{t('dashboard.top_area')}</span>
               <span className="snapshot-data">
                 {areaRanking.length > 0 ? areaRanking[0].name : '--'}
               </span>
@@ -564,15 +564,15 @@ const Dashboard = ({
           <div className="snapshot-pill">
             <div className="snapshot-icon"><Smile size={16} /></div>
             <div className="snapshot-info">
-              <span className="snapshot-label">Sentimiento</span>
-              <span className="snapshot-data">Dominante Positivo</span>
+              <span className="snapshot-label">{t('dashboard.sentiment')}</span>
+              <span className="snapshot-data">{t('dashboard.dominant_positive')}</span>
             </div>
           </div>
           <div className="snapshot-pill">
             <div className="snapshot-icon" style={{ background: '#fef2f2', color: '#ef4444' }}><AlertTriangle size={16} /></div>
             <div className="snapshot-info">
-              <span className="snapshot-label">Urgencia IA</span>
-              <span className="snapshot-data">0 Críticos</span>
+              <span className="snapshot-label">{t('dashboard.ia_urgency')}</span>
+              <span className="snapshot-data">{t('dashboard.critical_count', { count: 0 })}</span>
             </div>
           </div>
         </div>
@@ -581,7 +581,7 @@ const Dashboard = ({
       {/* Exit Snapshot Mode Floating Button */}
       <div className="snapshot-mode-overlay">
         <button className="btn btn-primary" style={{ borderRadius: '100px', padding: '12px 24px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={() => setIsSnapshotMode(false)}>
-          <X size={18} /> Salir de Modo Snapshot
+          <X size={18} /> {t('common.exit_snapshot')}
         </button>
       </div>
 
@@ -775,7 +775,7 @@ const Dashboard = ({
                 <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '10px' }}>
                   <Lightbulb size={20} color="#f59e0b" />
                 </div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Análisis Predictivo IA</h3>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.ia_predictive')}</h3>
               </div>
               <span className="badge badge-warning" style={{ borderRadius: '20px', padding: '4px 12px' }}>Beta Pro</span>
             </div>
@@ -822,7 +822,7 @@ const Dashboard = ({
               ))}
               {aiInsights.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                  Analizando tendencias para generar insights ejecutivos...
+                  {t('dashboard.analyzing_trends')}
                 </div>
               )}
             </div>
@@ -834,8 +834,8 @@ const Dashboard = ({
           <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Ranking de Performance</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Comparativa de NPS por área operativa</p>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.performance_ranking')}</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{t('dashboard.comp_operational')}</p>
               </div>
               <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
                 <TrendingUp size={18} color="var(--primary)" />
@@ -896,7 +896,7 @@ const Dashboard = ({
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Analizando desempeño...</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>{t('dashboard.analyzing')}</div>
               )}
             </div>
           </div>
@@ -909,8 +909,8 @@ const Dashboard = ({
           <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Análisis de Empatía</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Clasificación emocional del feedback</p>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.empathy_analysis')}</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{t('dashboard.emotional_class')}</p>
               </div>
               <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
                 <Users size={18} color="var(--primary)" />
@@ -948,7 +948,7 @@ const Dashboard = ({
                 <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1e293b', fontFamily: 'Outfit' }}>
                   {Math.round(((sentimentStats[0]?.value ?? 0) / (stats.total || 1)) * 100)}%
                 </div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>Positivo</div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>{t('common.positive')}</div>
               </div>
             </div>
           </div>
@@ -957,8 +957,8 @@ const Dashboard = ({
           <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Conceptos Clave</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>Top términos en comentarios</p>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.key_concepts')}</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{t('dashboard.top_terms')}</p>
               </div>
               <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '10px' }}>
                 <Lightbulb size={18} color="#f59e0b" />
@@ -987,7 +987,7 @@ const Dashboard = ({
               ))}
               {aiConceptCloud.length === 0 && (
                 <div style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center', width: '100%', padding: '2rem' }}>
-                  Analizando...
+                  {t('dashboard.analyzing')}
                 </div>
               )}
             </div>
@@ -997,7 +997,7 @@ const Dashboard = ({
           {/* Top Categories Card */}
           <div className="card">
             <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={18} color="#8b5cf6" /> Top Categorías Detectadas
+              <Award size={18} color="#8b5cf6" /> {t('dashboard.top_categories')}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {['Atención', 'Limpieza', 'Rapidez', 'Producto', 'Precio'].map(cat => {
@@ -1052,11 +1052,11 @@ const Dashboard = ({
         <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '480px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem' }}>Evolución del NPS en el Tiempo</h3>
+              <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem' }}>{t('dashboard.nps_evolution')}</h3>
               <div className="tooltip-wrapper">
                 <AlertCircle size={14} color="#94a3b8" className="help-icon" />
                 <span className="tooltip-content">
-                  Muestra la tendencia histórica del NPS día a día. Permite identificar patrones, picos y caídas en la satisfacción del cliente.
+                  {t('dashboard.nps_trend_desc')}
                 </span>
               </div>
             </div>
@@ -1065,12 +1065,12 @@ const Dashboard = ({
                 {npsTimeline[npsTimeline.length - 1].nps > npsTimeline[0].nps ? (
                   <>
                     <TrendingUp size={14} color="#10b981" />
-                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '700' }}>Mejorando</span>
+                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '700' }}>{t('dashboard.improving')}</span>
                   </>
                 ) : (
                   <>
                     <TrendingDown size={14} color="#ef4444" />
-                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '700' }}>Requiere atención</span>
+                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '700' }}>{t('dashboard.needs_attention')}</span>
                   </>
                 )}
               </div>
@@ -1127,14 +1127,14 @@ const Dashboard = ({
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '16px' }}
                     formatter={(value, name) => [
                       `${value} pts`,
-                      name === 'nps' ? 'NPS Actual' : 'Meta/Promedio Anterior'
+                      name === 'nps' ? t('dashboard.actual_nps') : t('dashboard.prev_target')
                     ]}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Generando línea de tiempo estratégica...
+                {t('dashboard.generating_timeline')}
               </div>
             )}
           </div>
@@ -1146,27 +1146,27 @@ const Dashboard = ({
               <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
                 <History size={18} color="#64748b" />
               </div>
-              <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>Log Auditable de Feedback</h3>
+              <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.audit_log')}</h3>
             </div>
             <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--primary)', background: '#eff6ff', padding: '4px 12px', borderRadius: '20px' }}>
-              Últimos {finalFilteredData.length > 50 ? 50 : finalFilteredData.length} registros
+              {t('dashboard.last_records', { count: finalFilteredData.length > 50 ? 50 : finalFilteredData.length })}
             </span>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', z_index: 10 }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10 }}>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #f1f5f9' }}>
-                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Timestamp</th>
-                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tienda / Área</th>
-                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Insight / Opinión</th>
+                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.timestamp')}</th>
+                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dashboard.entries')}</th>
+                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.insight_opinion')}</th>
                 </tr>
               </thead>
               <tbody>
                 {finalFilteredData.slice(0, 50).map((f) => {
                   const dateObj = new Date(f.created_at);
-                  const dateLabel = dateObj.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: '2-digit' });
-                  const timeLabel = dateObj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+                  const dateLabel = dateObj.toLocaleDateString(i18n.language, { day: '2-digit', month: '2-digit', year: '2-digit' });
+                  const timeLabel = dateObj.toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
 
                   return (
                     <tr key={f.id} style={{ borderBottom: '1px solid #f8fafc' }} className="hover-row-subtle">
@@ -1180,11 +1180,11 @@ const Dashboard = ({
                       </td>
                       <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
                         <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0, fontStyle: f.comentario ? 'normal' : 'italic', lineHeight: '1.4' }}>
-                          {f.comentario || 'Audit: Sin comentario detallado'}
+                          {f.comentario || t('common.no_comment')}
                         </p>
                         <div style={{ marginTop: '8px' }}>
                           <span className={`badge ${f.satisfaccion >= 4 ? 'badge-success' : f.satisfaccion <= 2 ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
-                            {f.satisfaccion >= 4 ? 'Promotor' : f.satisfaccion <= 2 ? 'Detractor' : 'Pasivo'}
+                            {f.satisfaccion >= 4 ? t('common.promoter') : f.satisfaccion <= 2 ? t('common.detractor') : t('common.passive')}
                           </span>
                         </div>
                       </td>
@@ -1195,7 +1195,7 @@ const Dashboard = ({
                   <tr>
                     <td colSpan="3" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                       <History size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                      <p style={{ fontSize: '0.85rem' }}>No hay datos para auditar.</p>
+                      <p style={{ fontSize: '0.85rem' }}>{t('dashboard.no_audit_data')}</p>
                     </td>
                   </tr>
                 )}
@@ -1211,6 +1211,7 @@ const Dashboard = ({
 // ... QRGenerator and UserManagement updated for simplified Pro UI
 // QR Studio Component: Generación y Gestión de QRs
 const QRGenerator = () => {
+  const { t } = useTranslation();
   const [stores, setStores] = useState([]);
   const [areas, setAreas] = useState([]);
   const [tiendaAreas, setTiendaAreas] = useState([]);
@@ -1272,21 +1273,22 @@ const QRGenerator = () => {
     console.log('printAllQRs called', { selectedStore, activeAreasLength: activeAreas.length });
 
     if (!selectedStore || activeAreas.length === 0) {
-      alert('Selecciona una tienda con áreas activas');
+      alert(t('qr.alerts.select_store_active'));
       return;
     }
 
-    const storeName = stores.find(s => s.id === selectedStore)?.nombre || 'Tienda';
+    const storeName = stores.find(s => s.id === selectedStore)?.nombre || t('qr.select_store_placeholder');
 
     try {
       await printQRCodes(
         activeAreas,
         storeName,
-        (areaId) => getQRUrl(selectedStore, areaId)
+        (areaId) => getQRUrl(selectedStore, areaId),
+        t
       );
     } catch (error) {
       console.error('Error al generar QR codes:', error);
-      alert('Hubo un error al generar los códigos QR. Por favor intenta de nuevo.');
+      alert(t('qr.alerts.error_generating'));
     }
   };
 
@@ -1406,50 +1408,50 @@ const QRGenerator = () => {
     printWindow.document.close();
   };
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando Studio...</div>;
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('menu.loading')}...</div>;
 
   return (
     <div className="animate-in fade-in duration-500">
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>QR Studio</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Generador inteligente de puntos de feedback.</p>
+          <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('qr.studio_title')}</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('qr.studio_desc')}</p>
         </div>
         <button
           className="btn"
           onClick={() => setBatchMode(!batchMode)}
           style={{ background: batchMode ? 'var(--primary)' : 'white', color: batchMode ? 'white' : 'var(--primary)', border: '1px solid var(--primary)' }}
         >
-          {batchMode ? '✨ Modo Individual' : '📦 Generación Masiva'}
+          {batchMode ? t('qr.individual_mode') : t('qr.batch_mode')}
         </button>
       </div>
 
       {!batchMode ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
           <div className="card">
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem' }}>Configuración</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem' }}>{t('qr.config')}</h3>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>1. Seleccionar Tienda</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>{t('qr.select_store')}</label>
               <select
                 value={selectedStore}
                 onChange={(e) => { setSelectedStore(e.target.value); setSelectedArea(''); }}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
               >
-                <option value="">Seleccionar tienda...</option>
+                <option value="">{t('qr.select_store_placeholder')}</option>
                 {stores.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
               </select>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>2. Seleccionar Área</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>{t('qr.select_area')}</label>
               <select
                 value={selectedArea}
                 onChange={(e) => setSelectedArea(e.target.value)}
                 disabled={!selectedStore}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', opacity: selectedStore ? 1 : 0.5 }}
               >
-                <option value="">Seleccionar área...</option>
+                <option value="">{t('qr.select_area_placeholder')}</option>
                 {activeAreas.map(ta => (
                   <option key={ta.area_id} value={ta.area_id}>{ta.Areas_Catalogo.nombre}</option>
                 ))}
@@ -1458,7 +1460,7 @@ const QRGenerator = () => {
 
             <div style={{ padding: '1rem', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bae6fd' }}>
               <p style={{ fontSize: '0.75rem', color: '#0369a1', margin: 0 }}>
-                💡 <strong>Tip:</strong> El QR generado dirigirá automáticamente al cliente a la encuesta de esta área específica.
+                💡 <strong>{t('qr.tip_title')}</strong> {t('qr.tip_desc')}
               </p>
             </div>
           </div>
@@ -1488,18 +1490,18 @@ const QRGenerator = () => {
                     {stores.find(s => s.id === selectedStore)?.nombre}
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                    Área: {areas.find(a => a.id === selectedArea)?.nombre}
+                    {t('common.area')}: {areas.find(a => a.id === selectedArea)?.nombre}
                   </p>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    <button className="btn btn-primary" onClick={() => downloadQR('single-qr')}>Descargar PNG</button>
-                    <button className="btn btn-secondary" onClick={() => window.print()}>Imprimir</button>
+                    <button className="btn btn-primary" onClick={() => downloadQR('single-qr')}>{t('qr.download_png')}</button>
+                    <button className="btn btn-secondary" onClick={() => window.print()}>{t('qr.print')}</button>
                   </div>
                 </div>
               </>
             ) : (
               <div style={{ color: '#94a3b8' }}>
                 <QrCode size={64} strokeWidth={1} style={{ marginBottom: '1rem' }} />
-                <p style={{ fontSize: '0.9rem' }}>Selecciona tienda y área para previsualizar</p>
+                <p style={{ fontSize: '0.9rem' }}>{t('qr.preview_placeholder')}</p>
               </div>
             )}
           </div>
@@ -1507,13 +1509,13 @@ const QRGenerator = () => {
       ) : (
         <div className="card">
           <div style={{ marginBottom: '2rem' }}>
-            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>Seleccionar Tienda para exportación masiva</label>
+            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>{t('qr.batch_select_label')}</label>
             <select
               value={selectedStore}
               onChange={(e) => setSelectedStore(e.target.value)}
               style={{ maxWidth: '400px', width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
             >
-              <option value="">Seleccionar tienda...</option>
+              <option value="">{t('qr.select_store_placeholder')}</option>
               {stores.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
             </select>
           </div>
@@ -1523,10 +1525,10 @@ const QRGenerator = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: '0.9rem', color: '#0369a1', marginBottom: '0.5rem' }}>
-                    <strong>✨ Listo para imprimir:</strong> {activeAreas.length} código{activeAreas.length !== 1 ? 's' : ''} QR
+                    <strong>{t('qr.ready_to_print')}</strong> {t('qr.qr_count', { count: activeAreas.length, suffix: activeAreas.length !== 1 ? 's' : '' })}
                   </p>
                   <p style={{ fontSize: '0.75rem', color: '#0369a1', marginBottom: 0 }}>
-                    💡 <strong>Tip:</strong> Se imprimirán 4 QR por página en formato 2x2. Si tienes más de 4 áreas, se distribuirán automáticamente en múltiples páginas.
+                    💡 <strong>{t('qr.tip_title')}</strong> {t('qr.batch_tip')}
                   </p>
                 </div>
                 <button
@@ -1534,7 +1536,7 @@ const QRGenerator = () => {
                   onClick={printAllQRs}
                   style={{ padding: '0.75rem 1.5rem', fontSize: '0.9rem' }}
                 >
-                  🖨️ Imprimir
+                  🖨️ {t('qr.print')}
                 </button>
               </div>
             </div>
@@ -1559,14 +1561,14 @@ const QRGenerator = () => {
                     style={{ width: '100%' }}
                     onClick={() => downloadQR(`batch-qr-${ta.area_id}`)}
                   >
-                    Descargar
+                    {t('qr.download')}
                   </button>
                 </div>
               ))}
             </div>
           ) : (
             <div style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8' }}>
-              <p>Selecciona una tienda para generar todos sus códigos QR</p>
+              <p>{t('qr.no_store_selected')}</p>
             </div>
           )}
         </div>
@@ -1582,7 +1584,8 @@ const QRGenerator = () => {
 
 
 
-const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {} }) => {
+const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {}, loading = false }) => {
+  const { t } = useTranslation();
 
   const getStoreName = (id) => stores.find(s => s.id === id)?.nombre || id;
 
@@ -1615,61 +1618,60 @@ const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {} }) =>
   }, [rawData, filters.dateRange, stores]);
 
 
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('menu.loading')}...</div>;
 
   return (
     <div className="animate-in fade-in duration-500">
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>Regional Leaderboard</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Ranking de desempeño y competitividad territorial.</p>
+        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('leaderboard.title')}</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('leaderboard.subtitle')}</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
-        {storeRankings.map((store, index) => (
-          <div key={store.id} className="card tier1-card" style={{ position: 'relative', overflow: 'hidden' }}>
-            {index < 3 && (
-              <div style={{ position: 'absolute', top: '15px', right: '15px', fontSize: '1.5rem' }}>
-                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '10px', background: 'var(--primary)',
-                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800'
-              }}>
-                {index + 1}
-              </div>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '2px' }}>{store.name}</h3>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tienda Oficial</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              <div className="stat-group">
-                <span className="stat-label" style={{ fontSize: '0.6rem' }}>NPS SCORE</span>
-                <div style={{
-                  fontSize: '1.8rem', fontWeight: '900',
+      <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead style={{ background: '#f8fafc' }}>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('leaderboard.rank')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('common.store')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>NPS</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('leaderboard.volume')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('leaderboard.status')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {storeRankings.map((store, index) => (
+              <tr key={store.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', color: '#1e293b' }}>
+                  {index + 1}
+                  {index === 0 && ' 🥇'}
+                  {index === 1 && ' 🥈'}
+                  {index === 2 && ' 🥉'}
+                </td>
+                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+                  {store.name}
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('leaderboard.official_store')}</div>
+                </td>
+                <td style={{
+                  padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '700',
                   color: store.nps > 40 ? '#10b981' : store.nps > 0 ? '#f59e0b' : '#ef4444'
                 }}>
                   {store.nps}
-                </div>
-              </div>
-              <div className="stat-group">
-                <span className="stat-label" style={{ fontSize: '0.6rem' }}>VOLUMEN</span>
-                <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#1e293b' }}>{store.volume}</div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: '1.5rem', height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
-              <div style={{
-                width: `${Math.max(5, Math.min(100, (store.nps + 100) / 2))}%`,
-                height: '100%',
-                background: 'linear-gradient(90deg, var(--primary) 0%, #60a5fa 100%)',
-                borderRadius: '3px'
-              }}></div>
-            </div>
-          </div>
-        ))}
+                </td>
+                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', color: '#1e293b' }}>{store.volume}</td>
+                <td style={{ padding: '1rem 1.5rem' }}>
+                  <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden', width: '80px' }}>
+                    <div style={{
+                      width: `${Math.max(5, Math.min(100, (store.nps + 100) / 2))}%`,
+                      height: '100%',
+                      background: 'linear-gradient(90deg, var(--primary) 0%, #60a5fa 100%)',
+                      borderRadius: '3px'
+                    }}></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1687,6 +1689,7 @@ const formatDateMX = (dateStr) => {
 };
 
 const AuditTrail = () => {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState(null);
@@ -1701,13 +1704,13 @@ const AuditTrail = () => {
   }, []);
 
 
-  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando bitácora de seguridad...</div>;
+  if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('menu.loading')}...</div>;
 
   return (
     <div className="animate-in fade-in duration-500">
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>Audit Trail</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Registro histórico de modificaciones y acceso al sistema. Haga clic en un registro para ver detalles forenses.</p>
+        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>{t('audit.title')}</h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('audit.subtitle')}</p>
       </div>
 
       <div className="card">
@@ -1715,11 +1718,11 @@ const AuditTrail = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>FECHA</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>USUARIO</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>ACCIÓN</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>TABLA</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>DETALLES</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.date')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.user')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.action')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.table')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.details')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1741,8 +1744,10 @@ const AuditTrail = () => {
                     </span>
                   </td>
                   <td style={{ padding: '1rem', color: '#64748b' }}>{log.tabla_afectada}</td>
-                  <td style={{ padding: '1rem', color: '#94a3b8', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {log.detalles?.mensaje || (typeof log.detalles === 'string' ? log.detalles : JSON.stringify(log.detalles))}
+                  <td style={{ padding: '1rem 1.5rem' }}>
+                    <button className="btn btn-sm" style={{ padding: '4px 12px' }} onClick={() => setSelectedLog(log)}>
+                      {t('audit.view_details')}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1764,8 +1769,8 @@ const AuditTrail = () => {
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', margin: 0 }}>Evidencia Forense</h2>
-                <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'monospace' }}>ID: {selectedLog.id}</span>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', margin: 0 }}>{t('audit.forensic_evidence')}</h2>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'monospace' }}>{t('common.id')}: {selectedLog.id}</span>
               </div>
               <button onClick={() => setSelectedLog(null)} style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', lineHeight: 0 }}>×</button>
             </div>
@@ -1773,34 +1778,34 @@ const AuditTrail = () => {
             {/* Metadata Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>USUARIO RESPONSABLE</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{t('audit.responsible_user')}</div>
                 <div style={{ fontWeight: '600' }}>{selectedLog.usuario_email}</div>
               </div>
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>FECHA Y HORA</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{t('audit.date_time')}</div>
                 <div style={{ fontWeight: '600' }}>{formatDateMX(selectedLog.created_at)}</div>
               </div>
               <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DISPOSITIVO / USER AGENT</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{t('audit.device_user_agent')}</div>
                 <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', wordBreak: 'break-all' }}>
-                  {selectedLog.detalles?.meta?.userAgent || 'No registrado'}
+                  {selectedLog.detalles?.meta?.userAgent || t('common.not_registered')}
                 </div>
               </div>
             </div>
 
             {/* Changes Analysis */}
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>Análisis de Cambios</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>{t('audit.changes_analysis')}</h3>
 
             {selectedLog.detalles?.changes ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem' }}>ESTADO ANTERIOR</div>
+                  <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem' }}>{t('audit.previous_state')}</div>
                   <pre style={{ padding: '1rem', margin: 0, fontSize: '0.8rem', overflowX: 'auto', background: '#fff' }}>
                     {JSON.stringify(selectedLog.detalles.changes.before, null, 2)}
                   </pre>
                 </div>
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ background: '#dcfce7', color: '#166534', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem' }}>NUEVO ESTADO</div>
+                  <div style={{ background: '#dcfce7', color: '#166534', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem' }}>{t('audit.new_state')}</div>
                   <pre style={{ padding: '1rem', margin: 0, fontSize: '0.8rem', overflowX: 'auto', background: '#fff' }}>
                     {JSON.stringify(selectedLog.detalles.changes.after, null, 2)}
                   </pre>
@@ -1964,20 +1969,20 @@ function AdminPanel() {
   const handleMasterBypass = () => {
     if (masterMode) {
       // Desactivar modo maestro
-      if (window.confirm('¿Desactivar Modo Maestro?')) {
+      if (window.confirm(t('admin.master_mode_deactivate_confirm'))) {
         localStorage.removeItem('ps_master_mode');
         setMasterMode(false);
-        alert('Modo Maestro desactivado.');
+        alert(t('admin.master_mode_deactivated'));
       }
     } else {
       // Activar modo maestro
-      const pass = prompt('Modo Maestro - Ingrese contraseña:');
+      const pass = prompt(t('admin.master_mode_password_prompt'));
       if (pass === '1972') {
         localStorage.setItem('ps_master_mode', 'active');
         setMasterMode(true);
-        alert('¡Modo Maestro Activado!');
+        alert(t('admin.master_mode_activated'));
       } else if (pass !== null) {
-        alert('Contraseña incorrecta');
+        alert(t('admin.master_mode_incorrect_password'));
       }
     }
   };
@@ -2134,13 +2139,13 @@ function AdminPanel() {
               <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)', borderRadius: '16px', border: '1px solid #dbeafe' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#1e40af' }}>
                   <HelpCircle size={16} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: '800' }}>{t('menu.help', 'Centro de Ayuda')}</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '800' }}>{t('menu.help')}</span>
                 </div>
                 <p style={{ fontSize: '0.65rem', color: '#60a5fa', lineHeight: '1.4', marginBottom: '8px' }}>
-                  {t('menu.help_desc', '¿Necesitas ayuda para escalar tu negocio?')}
+                  {t('menu.help_desc')}
                 </p>
                 <button className="btn btn-sm btn-primary" style={{ width: '100%', fontSize: '0.65rem' }}>
-                  {t('menu.contact_support', 'Soporte 24/7')}
+                  {t('menu.contact_support')}
                 </button>
               </div>
             </li>
@@ -2183,7 +2188,11 @@ function AdminPanel() {
                     activeTab === 'backup' ? t('menu.backup') :
                       activeTab === 'kpi' ? t('menu.kpi') :
                         activeTab === 'qr' ? t('menu.qr') :
-                        activeTab === 'org' ? t('menu.settings') : t('menu.structure')}
+                        activeTab === 'org' ? t('menu.settings') :
+                        activeTab === 'leaderboard' ? t('menu.leaderboard') :
+                        activeTab === 'users' ? t('menu.structure') :
+                        activeTab === 'questions' ? t('menu.questions') :
+                        activeTab === 'audit' ? t('menu.audit') : t('menu.structure')}
             </h2>
           </div>
 
@@ -2192,57 +2201,66 @@ function AdminPanel() {
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '4px 12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
               {/* Language Selector */}
               <div style={{ display: 'flex', gap: '4px', background: '#e2e8f0', padding: '2px', borderRadius: '8px', marginRight: '8px' }}>
-                <button 
-                  onClick={() => i18n.changeLanguage('es')} 
-                  style={{ 
-                    padding: '4px 8px', borderRadius: '6px', border: 'none', 
-                    background: i18n.language.startsWith('es') ? 'white' : 'transparent', 
-                    fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer',
-                    boxShadow: i18n.language.startsWith('es') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                <button
+                  onClick={() => i18n.changeLanguage('es')}
+                  style={{
+                    padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: i18n.language.startsWith('es') ? 'white' : 'transparent',
+                    fontWeight: i18n.language.startsWith('es') ? '700' : '500',
+                    boxShadow: i18n.language.startsWith('es') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                   }}
-                >ES</button>
-                <button 
-                  onClick={() => i18n.changeLanguage('en')} 
-                  style={{ 
-                    padding: '4px 8px', borderRadius: '6px', border: 'none', 
-                    background: i18n.language.startsWith('en') ? 'white' : 'transparent', 
-                    fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer',
-                    boxShadow: i18n.language.startsWith('en') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  title={t('common.spanish')}
+                >
+                  ES
+                </button>
+                <button
+                  onClick={() => i18n.changeLanguage('en')}
+                  style={{
+                    padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: i18n.language.startsWith('en') ? 'white' : 'transparent',
+                    fontWeight: i18n.language.startsWith('en') ? '700' : '500',
+                    boxShadow: i18n.language.startsWith('en') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                   }}
-                >EN</button>
-                <button 
-                  onClick={() => i18n.changeLanguage('pt')} 
-                  style={{ 
-                    padding: '4px 8px', borderRadius: '6px', border: 'none', 
-                    background: i18n.language.startsWith('pt') ? 'white' : 'transparent', 
-                    fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer',
-                    boxShadow: i18n.language.startsWith('pt') ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                  title={t('common.english')}
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => i18n.changeLanguage('pt')}
+                  style={{
+                    padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    background: i18n.language.startsWith('pt') ? 'white' : 'transparent',
+                    fontWeight: i18n.language.startsWith('pt') ? '700' : '500',
+                    boxShadow: i18n.language.startsWith('pt') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                   }}
-                >PT</button>
+                  title={t('common.portuguese')}
+                >
+                  PT
+                </button>
               </div>
               
               <Filter size={16} color="var(--primary)" />
               <select className="filter-select-mini" value={filters.dateRange} onChange={e => setFilters({ ...filters, dateRange: e.target.value })}>
-                <option value="last7days">Últimos 7 días</option>
-                <option value="last30days">Últimos 30 días</option>
-                <option value="all">Todo</option>
+                <option value="last7days">{t('common.last_7_days')}</option>
+                <option value="last30days">{t('common.last_30_days')}</option>
+                <option value="all">{t('common.all_time')}</option>
               </select>
               <select className="filter-select-mini" value={filters.store} onChange={e => handleStoreChange(e.target.value)}>
-                <option value="Todas">Todas las Tiendas</option>
+                <option value="Todas">{t('common.all_stores')}</option>
                 {[...new Set(dateFilteredData.map(f => f.tienda_id).filter(Boolean))].map(s => <option key={s} value={s}>{getStoreName(s)}</option>)}
               </select>
               <select className="filter-select-mini" value={filters.area} onChange={e => setFilters({ ...filters, area: e.target.value })}>
-                <option value="Todas">Todas las Áreas</option>
+                <option value="Todas">{t('common.all_areas')}</option>
                 {[...new Set(storeFilteredData.map(f => f.area_id).filter(Boolean))].map(a => <option key={a} value={a}>{getAreaName(a)}</option>)}
               </select>
               <select className="filter-select-mini" value={filters.sentiment} onChange={e => setFilters({ ...filters, sentiment: e.target.value })}>
-                <option value="Todos">Sentimiento: Todos</option>
-                <option value="Positivo">Positivo 🟢</option>
-                <option value="Neutral">Neutral 🟡</option>
-                <option value="Negativo">Negativo 🔴</option>
+                <option value="Todos">{t('common.sentiment')}: {t('common.all')}</option>
+                <option value="Positivo">{t('common.positive')} 🟢</option>
+                <option value="Neutral">{t('common.neutral')} 🟡</option>
+                <option value="Negativo">{t('common.negative')} 🔴</option>
               </select>
               <select className="filter-select-mini" value={filters.canal} onChange={e => setFilters({ ...filters, canal: e.target.value })}>
-                <option value="Todos">Origen: Todos</option>
+                <option value="Todos">{t('common.origin')}: {t('common.all')}</option>
                 <option value="QR">QR Code 📱</option>
                 <option value="Email">Email Marketing 📧</option>
               </select>
@@ -2263,7 +2281,7 @@ function AdminPanel() {
                   cursor: 'pointer',
                   zIndex: 9999
                 }}
-                title={masterMode ? "Modo Maestro (ACTIVO)" : "Modo Maestro (Inactivo)"}
+                title={masterMode ? t('admin.master_mode_active_tooltip') : t('admin.master_mode_inactive_tooltip')}
               >
                 <Fingerprint size={24} />
               </button>
@@ -2344,6 +2362,7 @@ function AdminPanel() {
               stores={stores}
               areas={areas}
               filters={filters}
+              loading={loading}
             />
           )}
           {activeTab === 'issues' && (

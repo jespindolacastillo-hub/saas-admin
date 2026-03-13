@@ -5,12 +5,14 @@
     "visual_identity": "Visual Identity",
     "visual_identity_desc": "Configure how your customers will see the platform. Changes apply in real-time.",
     "org_name": "Organization Name",
+    "org_name_placeholder": "e.g., Ultra Mobile Solutions",
     "corporate_color": "Corporate Color",
     "save_identity": "Save Identity",
     "save_success": "Configuration saved successfully.",
     "save_error": "Error saving configuration",
     "payment_error": "Payment error",
     "brand_logo": "Brand Logo",
+    "brand_logo_placeholder": "Upload your logo",
     "select_file": "Select File",
     "supported_formats": "Supported formats: PNG, JPG, SVG.",
     "scale_potential": "Scale your Potential",
@@ -22,7 +24,228 @@
     "choose_starter": "Choose Starter",
     "enterprise_title": "Enterprise & Custom",
     "enterprise_desc": "Scalable solutions with dedicated infrastructure, advanced security, and corporate-level support.",
+    "consult_expert": "Consult an expert",
     "contact_sales": "Contact Sales"
+  },
+  "auth": {
+    "login_title": "Administration Portal",
+    "signup_title": "Create Admin Account",
+    "subtitle": "Exclusive access for employees of {{name}}",
+    "email_label": "Institutional Email",
+    "email_placeholder": "your-email@example.com",
+    "password_label": "Password",
+    "password_placeholder": "••••••••",
+    "name_label": "Full Name",
+    "name_placeholder": "John Doe",
+    "login_btn": "Enter System",
+    "signup_btn": "Sign Up",
+    "processing": "Processing...",
+    "new_admin_question": "Are you a new administrator?",
+    "have_account_question": "Already have an account?",
+    "create_account_btn": "Create an account",
+    "login_link": "Log In",
+    "force_change_title": "Password Change",
+    "force_change_desc": "For security, you must update your password the first time.",
+    "new_password_label": "New Password",
+    "confirm_password_label": "Confirm Password",
+    "update_btn": "Update and Enter",
+    "updating": "Updating...",
+    "alerts": {
+      "domain_restricted": "Access restricted to authorized domains.",
+      "signup_success": "Registration successful. Check your email to confirm your account.",
+      "password_mismatch": "Passwords do not match",
+      "password_too_short": "Password must be at least 6 characters long",
+      "password_updated": "Password updated successfully. Redirecting..."
+    }
+  },
+  "feedback": {
+    "title": "Your opinion matters",
+    "subtitle": "Rate your experience at:",
+    "general_service": "General Service",
+    "rating_question": "How would you rate the treatment and kindness of the person who attended to you today?",
+    "scores": {
+      "mal": "Poor",
+      "regular": "Fair",
+      "bien": "Good",
+      "muy_bien": "Very Good",
+      "excelente": "Excellent"
+    },
+    "improve_label": "How can we improve? (Required)",
+    "improve_placeholder": "Tell us more details...",
+    "whatsapp_label": "📱 WhatsApp (Optional)",
+    "whatsapp_placeholder": "e.g., 5512345678",
+    "email_label": "✉️ Email (Optional)",
+    "email_placeholder": "example@email.com",
+    "submit_btn": "Submit Rating",
+    "submitting": "Submitting...",
+    "success_title": "Thank you so much!",
+    "success_desc": "Your feedback helps us be better for you.",
+    "cooldown_title": "We've already heard you!",
+    "cooldown_desc": "We recently received your opinion. We value your time.",
+    "alerts": {
+      "select_rating": "Please select a rating",
+      "more_details": "Please tell us a little more so we can improve.",
+      "error_sending": "Error sending. Please try again."
+    },
+    "master_mode": {
+      "prompt": "Master Mode - Enter password:",
+      "activated": "Master Mode Activated! 12h block disabled.",
+      "wrong_password": "Incorrect password"
+    }
+  },
+  "dashboard": {
+    "title": "Organization",
+    "subtitle": "Executive Report on Performance and Corporate Satisfaction",
+    "executive_snapshot": "Executive Snapshot",
+    "feedback_today": "Feedback Today",
+    "entries": "entries",
+    "top_area": "Leading Area",
+    "sentiment": "Sentiment",
+    "dominant_positive": "Dominant Positive",
+    "ia_urgency": "AI Urgency",
+    "critical_count": "{{count}} Critical",
+    "strategic_metrics": "Strategic Metrics",
+    "global_nps": "Global Network NPS",
+    "global_nps_desc": "Global Net Promoter Score",
+    "loyalty_range": "Net loyalty range calculated across all business units.",
+    "goal_completion": "Goal Completion",
+    "nps_vs_target": "NPS vs Target",
+    "volumen_vs_quota": "Volume vs Quota",
+    "operational_performance": "Operational Performance",
+    "ia_sentiment": "AI Sentiment",
+    "sentiment_analysis": "Sentiment Analysis",
+    "sentiment_desc": "Automatic classification of the emotional tone of comments.",
+    "categories": "Categories:",
+    "promoter_desc": "😊 Positive: High satisfaction (4-5★)",
+    "neutral_desc": "😐 Neutral: Medium satisfaction (3★)",
+    "detractor_desc": "☹️ Negative: Dissatisfaction (1-2★)",
+    "positive_percent": "The bar shows the % of positive feedback.",
+    "total_feedback": "Total Feedback",
+    "response_volume": "Response Volume",
+    "volume_desc": "Total number of feedback received in the selected period.",
+    "indicator": "Indicator:",
+    "trend_desc": "The arrow shows the change vs. the previous week.",
+    "trend_up": "📈 Green: Increase",
+    "trend_down": "📉 Red: Decrease",
+    "representativeness": "Higher volume = Higher data representativeness",
+    "analyzed_interactions": "Total analyzed interactions",
+    "average_rating": "Average Rating",
+    "avg_rating_desc": "Average of all satisfaction ratings.",
+    "calculation": "Calculation:",
+    "calc_desc": "Sum of all ratings / Total responses",
+    "scale": "Scale:",
+    "scale_1": "⭐ 1 = Very dissatisfied",
+    "scale_5": "⭐⭐⭐⭐⭐ 5 = Very satisfied",
+    "ia_predictive": "AI Predictive Analysis",
+    "analyzing_trends": "Analyzing trends to generate executive insights...",
+    "performance_ranking": "Performance Ranking",
+    "comp_operational": "Comparative NPS by operational area",
+    "empathy_analysis": "Empathy Analysis",
+    "emotional_class": "Emotional classification of feedback",
+    "key_concepts": "Key Concepts",
+    "top_terms": "Top terms in comments",
+    "analyzing": "Analyzing...",
+    "top_categories": "Top Detected Categories",
+    "nps_evolution": "NPS Evolution Over Time",
+    "nps_trend_desc": "Shows the historical NPS trend day by day. Allows identifying patterns, peaks, and drops in customer satisfaction.",
+    "improving": "Improving",
+    "needs_attention": "Needs attention",
+    "actual_nps": "Current NPS",
+    "prev_target": "Previous Target/Average",
+    "audit_log": "Auditable Feedback Log",
+    "last_records": "Last {{count}} records",
+    "no_audit_data": "No data to audit.",
+    "insights": {
+      "area_leader": "The \"{{name}}\" area leads with NPS {{nps}} and {{count}} recorded responses.",
+      "critical_attention": "Critical attention in \"{{name}}\": NPS of {{nps}}. Urgent process review recommended.",
+      "volume_increase": "Volume increase this week: +{{percent}}% ({{current}} vs {{prev}} responses last week).",
+      "volume_decrease": "Volume drop this week: {{percent}}% vs previous week. Check store operations.",
+      "nps_improved": "NPS improved +{{points}} points this week vs the previous one. Good performance!",
+      "nps_dropped": "NPS dropped {{points}} points this week vs the previous one. Requires attention.",
+      "goal_reached": "Goal reached! Current NPS ({{current}}) exceeds the corporate target of {{target}}.",
+      "goal_below": "Current NPS ({{current}}) is below 50% of the target ({{target}}). Immediate action required.",
+      "negative_feedback": "{{percent}}% of feedback is negative ({{count}} responses). Review customer service processes.",
+      "positive_feedback": "{{percent}}% of feedback is positive ({{count}} responses). Excellent team performance."
+    }
+  },
+  "qr": {
+    "studio_title": "QR Studio",
+    "studio_desc": "Intelligent generator of feedback points.",
+    "individual_mode": "✨ Individual Mode",
+    "batch_mode": "📦 Batch Generation",
+    "config": "Configuration",
+    "select_store": "1. Select Store",
+    "select_store_placeholder": "Select store...",
+    "select_area": "2. Select Area",
+    "select_area_placeholder": "Select area...",
+    "tip_title": "Tip:",
+    "tip_desc": "The generated QR will automatically direct the customer to the survey for this specific area.",
+    "download_png": "Download PNG",
+    "print": "Print",
+    "preview_placeholder": "Select store and area to preview",
+    "batch_select_label": "Select Store for mass export",
+    "ready_to_print": "✨ Ready to print:",
+    "qr_count": "{{count}} QR code{{suffix}}",
+    "batch_tip": "4 QRs per page will be printed in 2x2 format. If you have more than 4 areas, they will be automatically distributed across multiple pages.",
+    "download": "Download",
+    "no_store_selected": "Select a store to generate all its QR codes",
+    "alerts": {
+      "select_store_active": "Select a store with active areas",
+      "error_generating": "There was an error generating the QR codes. Please try again.",
+      "no_areas": "No areas to print",
+      "popup_blocked": "Please allow pop-ups to print"
+    }
+  },
+  "leaderboard": {
+    "title": "Regional Leaderboard",
+    "desc": "Territorial performance and competitiveness ranking.",
+    "official_store": "Official Store",
+    "nps_score": "NPS SCORE",
+    "volume": "VOLUME"
+  },
+  "audit": {
+    "title": "Audit Trail",
+    "desc": "Historical record of modifications and system access. Click on a record to see forensic details.",
+    "timestamp": "Timestamp",
+    "user": "User",
+    "action": "Action",
+    "table": "Table",
+    "details": "Details",
+    "forensic_title": "Forensic Evidence",
+    "id": "ID",
+    "responsible_user": "RESPONSIBLE USER",
+    "date_time": "DATE AND TIME",
+    "device": "DEVICE / USER AGENT",
+    "no_record": "Not recorded",
+    "changes_analysis": "Changes Analysis",
+    "prev_state": "PREVIOUS STATE",
+    "new_state": "NEW STATE",
+    "loading": "Loading security log..."
+  },
+  "common": {
+    "all": "All",
+    "all_stores": "All Stores",
+    "all_areas": "All Areas",
+    "all_sentiments": "Sentiment: All",
+    "all_origins": "Origin: All",
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "negative": "Negative",
+    "origin_qr": "QR Code",
+    "origin_email": "Email Marketing",
+    "last_7_days": "Last 7 days",
+    "last_30_days": "Last 30 days",
+    "sync": "Sync",
+    "export": "Export Data",
+    "normal_view": "Normal View",
+    "snapshot_mode": "Snapshot Mode",
+    "exit_snapshot": "Exit Snapshot Mode",
+    "dev_mode": "Dev Mode",
+    "localhost_warning": "You are working in a local environment (localhost).",
+    "promoter": "Promoter",
+    "detractor": "Detractor",
+    "passive": "Passive",
+    "no_comment": "Audit: No detailed comment"
   },
   "plans": {
     "starter": { "description": "Ideal for small businesses starting their journey." },
@@ -42,14 +265,14 @@
     }
   },
   "menu": {
-    "dashboard": "Organization Pro",
+    "dashboard": "Dashboard",
     "settings": "Settings & Plans",
     "issues": "Issue Management",
     "qr": "QR Studio",
     "leaderboard": "Leaderboard",
-    "structure": "Structure",
+    "structure": "Organizational Structure",
     "marketing": "Email Marketing",
-    "questions": "Questions",
+    "questions": "Question Management",
     "kpi": "KPI Goals",
     "backup": "Restore Points",
     "audit": "Audit Trail",
@@ -76,5 +299,366 @@
     "step3_desc": "See NPS in real-time on your Dashboard.",
     "next": "Next",
     "finish": "Get Started"
+  },
+  "questions": {
+    "loading": "Loading questions...",
+    "title": "📋 Feedback Questions Management",
+    "subtitle": "Manage the questions shown in the feedback form per area",
+    "new": "New Question",
+    "search_placeholder": "Search by area or question...",
+    "no_results": "No questions found",
+    "empty_state": "No questions configured. Click \"New Question\" to create one.",
+    "delete_confirm_title": "Confirm Deletion",
+    "delete_confirm_msg": "Are you sure you want to delete the question from area \"{{area}}\"?",
+    "delete_warning": "⚠️ This action cannot be undone. The question will be permanently deleted.",
+    "cancel": "Cancel",
+    "delete_btn": "Delete Question",
+    "active": "✓ Active",
+    "inactive": "○ Inactive",
+    "preview_tooltip": "Preview",
+    "duplicate_tooltip": "Duplicate",
+    "edit_tooltip": "Edit",
+    "delete_tooltip": "Delete",
+    "question_label": "Question",
+    "area_label": "Area",
+    "title_new": "➕ New Question",
+    "text_placeholder": "Write the question that will be displayed in the form...",
+    "type_label": "Response Type",
+    "scale_config": "Scale Configuration",
+    "min_value": "Minimum Value",
+    "max_value": "Maximum Value",
+    "scale_tip": "💡 Responses will be automatically normalized to a 1-5 scale for the dashboard",
+    "options_label": "Response Options",
+    "add_option": "Add Option",
+    "option_placeholder": "Option text",
+    "option_value": "Value:",
+    "option_tip": "💡 The value determines the rating (1-5) assigned to each response",
+    "active_checkbox": "Active question",
+    "save": "Save",
+    "saving": "Saving...",
+    "preview_title": "👁️ Preview",
+    "preview_tip": "💡 This is a preview. Changes will not be saved.",
+    "preview_text_placeholder": "Write your answer here...",
+    "copy_suffix": "(Copy)",
+    "types": {
+      "si_no": "Yes/No",
+      "multiple": "Multiple",
+      "escala": "Scale",
+      "emoji": "Emoji",
+      "texto": "Text",
+      "si": "Yes",
+      "no": "No"
+    },
+    "errors": {
+      "load_fail": "Error loading data:",
+      "text_required": "Question text is required",
+      "area_required": "You must select an area",
+      "min_options": "You must add at least one option",
+      "empty_option": "All options must have text",
+      "scale_range": "Maximum value must be greater than minimum",
+      "save_fail": "Error saving:",
+      "delete_fail": "Error deleting:",
+      "toggle_fail": "Error toggling status:"
+    },
+    "success": {
+      "created": "✓ Question created successfully",
+      "saved": "✓ Question saved successfully",
+      "deleted": "✓ Question deleted successfully",
+      "activated": "✓ Question activated",
+      "deactivated": "✓ Question deactivated"
+    }
+  },
+  "kpi": {
+    "title": "KPI Goals Manager",
+    "subtitle": "Define monthly NPS and survey volume goals per store.",
+    "loading": "Loading goal configuration...",
+    "search_placeholder": "Search store...",
+    "period": "Period:",
+    "nps_meta": "NPS Goal",
+    "volumen_meta": "Volume Goal",
+    "save_btn": "Save Goals",
+    "saving": "Saving...",
+    "success_saved": "Goal saved successfully",
+    "error_load": "Error loading data:",
+    "error_save": "Error saving:",
+    "units": {
+      "pts": "pts",
+      "res": "res."
+    }
+  },
+  "months": {
+    "1": "January", "2": "February", "3": "March", "4": "April", "5": "May", "6": "June",
+    "7": "July", "8": "August", "9": "September", "10": "October", "11": "November", "12": "December"
+  },
+  "users": {
+    "restricted_access": "Restricted Access",
+    "restricted_desc": "Only the Main Administrator can manage users.",
+    "back_btn": "Back",
+    "loading": "Loading administrator...",
+    "title": "System Administration",
+    "subtitle": "Centralized management of infrastructure and access.",
+    "sections": {
+      "tiendas": "🏢 Stores",
+      "areas": "📍 Areas",
+      "usuarios": "👥 Users"
+    },
+    "new_tienda": "New Store",
+    "new_area": "New Area",
+    "new_usuario": "New User",
+    "edit": "Edit",
+    "delete": "Delete",
+    "table": {
+      "name": "FULL NAME",
+      "email": "EMAIL",
+      "role": "ROLE",
+      "state": "STATUS",
+      "actions": "ACTIONS"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "roles": {
+      "Admin": "Administrator",
+      "Gerente": "Store Manager",
+      "Usuario": "Operator / Reception"
+    },
+    "modal": {
+      "edit_title": "Edit {{type}}",
+      "new_title": "New {{type}}",
+      "name": "NAME",
+      "lastname": "LAST NAME",
+      "email": "EMAIL",
+      "role": "ACCESS ROLE",
+      "password": "PASSWORD",
+      "password_hint": "(Leave blank to keep current)",
+      "password_placeholder": "Password (min 6 chars)",
+      "description": "DESCRIPTION",
+      "color": "DISTINCTIVE COLOR",
+      "cancel": "Cancel",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "types": {
+        "tienda": "Store",
+        "area": "Area",
+        "usuario": "User"
+      }
+    },
+    "delete_confirm": {
+      "title": "Are you sure you want to delete it?",
+      "message": "You are about to permanently delete <strong>{{name}}</strong>. This action cannot be undone.",
+      "cancel": "No, cancel",
+      "confirm": "Yes, delete"
+    },
+    "alerts": {
+      "name_required": "Name is required",
+      "save_success": "{{type}} saved successfully",
+      "save_error": "Error saving {{type}}:",
+      "delete_error": "Error deleting:",
+      "status_error": "Error updating status:"
+    }
+  },
+  "email": {
+    "title": "Email Marketing Designer",
+    "subtitle": "Generate smart templates compatible with Salesforce Marketing Cloud.",
+    "ampscript_active": "AMPScript Integration Active",
+    "tabs": {
+      "editor": "Template Editor",
+      "lab": "Test Lab"
+    },
+    "config": {
+      "title": "Configuration",
+      "preview_store": "Preview store",
+      "production_hint": "Will use <code style=\"color: var(--primary); font-weight: bold;\">%%Store_Id%%</code> in production.",
+      "sf_variables": "Salesforce Variables"
+    },
+    "actions": {
+      "copied": "Copied!",
+      "copy_full": "Copy HTML Code",
+      "copy_snippet": "Copy Snippet Code",
+      "full_template": "Full Template",
+      "snippet": "Button (Snippet)"
+    },
+    "preview": {
+      "interactive_title": "Interactive Preview",
+      "interactive_hint": "Links will work as in a real email"
+    },
+    "lab": {
+      "title": "Backend Simulator",
+      "store": "Store",
+      "no_store": "Select a store in the Editor",
+      "sim_rating": "Simulated Rating",
+      "sim_comment": "Comment (Optional)",
+      "sim_placeholder": "Simulate a customer comment...",
+      "sending": "Sending...",
+      "send_test": "Send Test Feedback",
+      "success": "Submission Successful",
+      "error": "Error",
+      "feedback_id": "Feedback ID",
+      "status": "Status",
+      "saved_db": "Saved in DB",
+      "issue_created": "⚠️ Issue Created:",
+      "id": "ID",
+      "severity": "Severity",
+      "no_issue": "No Issue generated (Rating > 2)"
+    },
+    "template": {
+      "subject": "Your opinion matters to us",
+      "greeting": "Hello, %%First_Name%%!",
+      "question": "How was your recent visit to our store?",
+      "footer_tip": "Your rating helps us provide you with the best possible service.",
+      "unsubscribe": "Unsubscribe",
+      "emojis": {
+        "1": "Bad",
+        "2": "Fair",
+        "3": "Good",
+        "4": "Very Good",
+        "5": "Excellent"
+      }
+    },
+    "simulation": {
+      "issue_title": "Critical Feedback: {{rating}} Stars",
+      "issue_desc": "Source: Email Marketing (Simulated)\nComment: {{comment}}"
+    }
+  },
+  "issues": {
+    "title": "Issue Management",
+    "subtitle": "Reporting tracking and problem resolution system.",
+    "metrics": {
+      "total": "Total Issues",
+      "critical": "Critical Open",
+      "efficiency": "Efficiency",
+      "avg_resolution": "Avg Resolution",
+      "hrs": "hrs"
+    },
+    "filters": {
+      "all_states": "All Statuses",
+      "all_severities": "All Severities",
+      "all": "All"
+    },
+    "tabs": {
+      "active": "Active Issues ({{count}})",
+      "closed": "Closed / Verified ({{count}})"
+    },
+    "no_results": "No issues with the selected filters",
+    "no_critical": "Low rating feedback (≤2) without assigned issue",
+    "create_corrective": "Create Corrective Issue",
+    "critical_feedback": "Critical Feedback",
+    "ai_suggestion": {
+      "label": "AI Suggestion",
+      "categories": {
+        "Servicio": "Prioritize personal contact to offer an apology and immediate compensation.",
+        "Atención": "Schedule reinforcement session on customer service protocols with the team.",
+        "Limpieza": "Escalate review of maintenance logs and increase frequency of rounds.",
+        "Producto": "Perform selective stock audit and verify quality on sales floor.",
+        "Rapidez": "Analyze bottlenecks at peak times and optimize shift allocation.",
+        "default": "Review history in this area to identify recurring patterns."
+      }
+    },
+    "sla": {
+      "expired": "Expired",
+      "remaining": "{{hours}}h left",
+      "label": "SLA: {{text}}"
+    },
+    "actions": {
+      "start": "Start Work",
+      "resolve": "Mark Resolved",
+      "verify": "Verify",
+      "register": "Register",
+      "view_log": "View Log",
+      "whatsapp": "WhatsApp",
+      "send_email": "Send Email",
+      "open_whatsapp": "Open WhatsApp",
+      "share_whatsapp": "Share via WhatsApp",
+      "share_email": "Share via Email",
+      "tracking_subject": "Issue Tracking: {{title}}",
+      "share_text_header": "📌 ISSUE: {{title}}\n📍 Store: {{store}} | Area: {{area}}\n⚠️ Severity: {{severity}}\n📝 Description: {{desc}}\n\nStatus: {{status}}"
+    },
+    "status_labels": {
+      "Abierto": "Open",
+      "En Progreso": "In Progress",
+      "Resuelto": "Resolved",
+      "Verificado": "Verified"
+    },
+    "severity_labels": {
+      "Crítica": "Critical",
+      "Alta": "High",
+      "Media": "Medium",
+      "Baja": "Low"
+    },
+    "official_response": {
+      "sent": "✅ Official Response Sent",
+      "via": "via {{medium}} • {{date}}"
+    },
+    "modals": {
+      "update_title": "Update Issue",
+      "responsible": "Responsible *",
+      "close_comment": "Closing Comment *",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "official_title": "Official Customer Response",
+      "official_desc": "Register the response sent to the customer to close the feedback loop.",
+      "contact_medium": "Contact medium",
+      "media": {
+        "Email": "Email",
+        "Teléfono": "Phone Call",
+        "WhatsApp": "WhatsApp",
+        "Presencial": "In-person Meeting"
+      },
+      "agreements": "Response / Agreements *",
+      "placeholder": "Describe the solution offered or response given to the customer...",
+      "register_btn": "Register Response"
+    },
+    "auto_generation": {
+      "title": "Problem reported in {{area}}",
+      "unknown_area": "Unknown Area"
+    },
+    "alerts": {
+      "create_error": "Error creating issue: ",
+      "update_error": "Error updating: ",
+      "response_success": "Response registered successfully.",
+      "response_error": "Error registering response: "
+    }
+  },
+  "backups": {
+    "title": "Restore Points",
+    "subtitle": "Manage and restore the state of your catalogs.",
+    "new_btn": "Create Restore Point",
+    "loading": "Loading backup history...",
+    "table": {
+      "date": "Date and Source",
+      "summary": "Data Summary",
+      "description": "Description",
+      "actions": "Actions"
+    },
+    "stats": {
+      "stores": "Stores",
+      "areas": "Areas"
+    },
+    "empty_desc": "(No description)",
+    "actions": {
+      "restore": "Restore",
+      "delete": "Delete"
+    },
+    "modals": {
+      "create_title": "New Restore Point",
+      "name_label": "Backup Name",
+      "name_placeholder": "e.g., Before price update",
+      "desc_label": "Description (Optional)",
+      "cancel": "Cancel",
+      "create_confirm": "Create Backup",
+      "restore_title": "Restore Configuration?",
+      "restore_desc": "You are about to overwrite all current catalogs with the data from <strong>\"{{name}}\"</strong>. This action is irreversible and will affect all stores in real-time.",
+      "restore_btn": "Yes, Restore All"
+    },
+    "alerts": {
+      "load_error": "Error loading backups: ",
+      "create_success": "Backup created successfully",
+      "create_error": "Error creating backup: ",
+      "restore_success": "System restored successfully",
+      "restore_error": "Error restoring: ",
+      "delete_confirm": "Delete this restore point?",
+      "delete_error": "Error deleting: "
+    }
   }
 }

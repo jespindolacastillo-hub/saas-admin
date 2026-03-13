@@ -6,9 +6,11 @@ import {
     Plus, Edit2, Trash2, ShieldCheck,
     UserPlus, X, Save, AlertCircle
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { tenantConfig } from '../../config/tenant';
 
 const UserManagement = ({ session }) => {
+    const { t } = useTranslation();
     // --- Configuration ---
     const superUsers = ['jorge.espindola@priceshoes.com', 'admin@priceshoes.com', 'jec@priceshoes.com', tenantConfig.supportEmail];
     const isSuperUser = superUsers.includes(session?.user?.email);
@@ -95,7 +97,7 @@ const UserManagement = ({ session }) => {
     const handleSave = async () => {
         const { type, item } = modal;
         if (!item.nombre || item.nombre.trim() === '') {
-            alert('El nombre es obligatorio');
+            alert(t('users.alerts.name_required'));
             return;
         }
 
@@ -118,7 +120,7 @@ const UserManagement = ({ session }) => {
             // but keeping a simple console log here for confirmation
             console.log(`✅ ${type} guardado con éxito:`, result.id);
         } catch (err) {
-            alert(`❌ Error al guardar ${type}: ` + err.message);
+            alert(t('users.alerts.save_error', { type: t(`users.modal.types.${type}`) }) + ' ' + err.message);
         } finally {
             setModal(prev => ({ ...prev, loading: false }));
         }
@@ -146,7 +148,7 @@ const UserManagement = ({ session }) => {
 
             fetchAllData();
         } catch (err) {
-            alert('❌ Error al eliminar: ' + err.message);
+            alert(t('users.alerts.delete_error') + ' ' + err.message);
         } finally {
             setLoading(false);
             setDeleteConfirm({ show: false, target: null });
@@ -165,7 +167,7 @@ const UserManagement = ({ session }) => {
             await UserService.toggleStatus(id, !currentStatus);
         } catch (err) {
             // 2. Revert on error
-            alert('⚠️ Error al actualizar estado: ' + err.message);
+            alert(t('users.alerts.status_error') + ' ' + err.message);
             setData(prev => ({
                 ...prev,
                 usuarios: prev.usuarios.map(u => u.id === id ? { ...u, activo: currentStatus } : u)
@@ -184,20 +186,20 @@ const UserManagement = ({ session }) => {
         return (
             <div style={{ padding: '3rem', textAlign: 'center', background: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                 <ShieldCheck size={48} style={{ color: '#dc2626', marginBottom: '1rem' }} />
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.5rem' }}>Acceso Restringido</h2>
-                <p style={{ color: '#64748b' }}>Solo el Administrador Principal puede gestionar usuarios.</p>
-                <button onClick={() => setActiveSection('tiendas')} className="btn btn-primary" style={{ marginTop: '1rem' }}>Volver</button>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.5rem' }}>{t('users.restricted_access')}</h2>
+                <p style={{ color: '#64748b' }}>{t('users.restricted_desc')}</p>
+                <button onClick={() => setActiveSection('tiendas')} className="btn btn-primary" style={{ marginTop: '1rem' }}>{t('users.back_btn')}</button>
             </div>
         );
     }
 
-    if (loading && !data.tiendas.length) return <div style={{ padding: '2rem', textAlign: 'center' }}>Cargando administrador...</div>;
+    if (loading && !data.tiendas.length) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('users.loading')}</div>;
 
     return (
         <div className="animate-in fade-in duration-500">
             <header style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>Administración de Sistema</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Gestión centralizada de infraestructura y accesos.</p>
+                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('users.title')}</h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('users.subtitle')}</p>
             </header>
 
             {/* Navigation Tabs */}
@@ -215,7 +217,7 @@ const UserManagement = ({ session }) => {
                             cursor: 'pointer', textTransform: 'capitalize'
                         }}
                     >
-                        {section === 'tiendas' ? '🏢' : section === 'areas' ? '📍' : '👥'} {section}
+                        {t(`users.sections.${section}`)}
                     </button>
                 ))}
             </nav>
@@ -224,15 +226,15 @@ const UserManagement = ({ session }) => {
             {activeSection === 'tiendas' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
                     <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                        <button className="btn btn-primary" onClick={() => openModal('tienda')}><Plus size={18} /> Nueva Tienda</button>
+                        <button className="btn btn-primary" onClick={() => openModal('tienda')}><Plus size={18} /> {t('users.new_tienda')}</button>
                     </div>
                     {data.tiendas.map(tienda => (
                         <div key={tienda.id} className="card shadow-sm hover-grow">
                             <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{tienda.nombre}</h3>
                             <p style={{ fontSize: '0.8rem', color: '#64748b', minHeight: '2.4rem' }}>{tienda.direccion}</p>
                             <div style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
-                                <button onClick={() => openModal('tienda', tienda)} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>Editar</button>
-                                <button onClick={() => openDelete('tienda', tienda.id, tienda.nombre)} className="btn btn-danger btn-sm">Eliminar</button>
+                                <button onClick={() => openModal('tienda', tienda)} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>{t('users.edit')}</button>
+                                <button onClick={() => openDelete('tienda', tienda.id, tienda.nombre)} className="btn btn-danger btn-sm">{t('users.delete')}</button>
                             </div>
                         </div>
                     ))}
@@ -243,14 +245,14 @@ const UserManagement = ({ session }) => {
             {activeSection === 'areas' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
                     <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                        <button className="btn btn-primary" onClick={() => openModal('area')}><Plus size={18} /> Nueva Área</button>
+                        <button className="btn btn-primary" onClick={() => openModal('area')}><Plus size={18} /> {t('users.new_area')}</button>
                     </div>
                     {data.areas.map(area => (
                         <div key={area.id} className="card shadow-sm" style={{ borderLeft: `4px solid ${area.color}` }}>
                             <h3 style={{ fontWeight: 700 }}>{area.nombre}</h3>
                             <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{area.descripcion}</p>
                             <div style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
-                                <button onClick={() => openModal('area', area)} className="btn btn-secondary btn-sm">Editar</button>
+                                <button onClick={() => openModal('area', area)} className="btn btn-secondary btn-sm">{t('users.edit')}</button>
                                 <button onClick={() => openDelete('area', area.id, area.nombre)} className="btn btn-danger btn-sm"><Trash2 size={16} /></button>
                             </div>
                         </div>
@@ -262,16 +264,16 @@ const UserManagement = ({ session }) => {
             {activeSection === 'usuarios' && (
                 <div className="card shadow-sm" style={{ overflowX: 'auto' }}>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                        <button className="btn btn-primary" onClick={() => openModal('usuario')}><UserPlus size={18} /> Nuevo Usuario</button>
+                        <button className="btn btn-primary" onClick={() => openModal('usuario')}><UserPlus size={18} /> {t('users.new_usuario')}</button>
                     </div>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left', fontSize: '0.7rem', color: '#94a3b8', letterSpacing: '0.05em' }}>
-                                <th style={{ padding: '1rem' }}>NOMBRE COMPLETO</th>
-                                <th>EMAIL</th>
-                                <th>ROL</th>
-                                <th>ESTADO</th>
-                                <th>ACCIONES</th>
+                                <th style={{ padding: '1rem' }}>{t('users.table.name')}</th>
+                                <th>{t('users.table.email')}</th>
+                                <th>{t('users.table.role')}</th>
+                                <th>{t('users.table.state')}</th>
+                                <th>{t('users.table.actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -285,7 +287,7 @@ const UserManagement = ({ session }) => {
                                             background: getRolColor(u.rol) + '15', color: getRolColor(u.rol),
                                             fontSize: '0.75rem', fontWeight: 600
                                         }}>
-                                            {u.rol}
+                                            {t(`users.roles.${u.rol}`)}
                                         </span>
                                     </td>
                                     <td>
@@ -294,13 +296,13 @@ const UserManagement = ({ session }) => {
                                             className={u.activo ? 'badge badge-success' : 'badge'}
                                             style={{ transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}
                                         >
-                                            {u.activo ? 'Activo' : 'Inactivo'}
+                                            {u.activo ? t('users.status.active') : t('users.status.inactive')}
                                         </button>
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => openModal('usuario', u)} className="btn btn-secondary btn-sm" title="Editar"><Edit2 size={14} /></button>
-                                            <button onClick={() => openDelete('usuario', u.id, `${u.nombre} ${u.apellido}`)} className="btn btn-danger btn-sm" title="Eliminar"><Trash2 size={14} /></button>
+                                            <button onClick={() => openModal('usuario', u)} className="btn btn-secondary btn-sm" title={t('users.edit')}><Edit2 size={14} /></button>
+                                            <button onClick={() => openDelete('usuario', u.id, `${u.nombre} ${u.apellido}`)} className="btn btn-danger btn-sm" title={t('users.delete')}><Trash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -316,38 +318,38 @@ const UserManagement = ({ session }) => {
                     <div className="card scale-in shadow-xl" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                             <h2 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b' }}>
-                                {modal.original ? 'Editar' : 'Nuevo'} {modal.type.charAt(0).toUpperCase() + modal.type.slice(1)}
+                                {t(`users.modal.${modal.original ? 'edit_title' : 'new_title'}`, { type: t(`users.modal.types.${modal.type}`) })}
                             </h2>
                             <button onClick={closeModal} className="hover-rotate" style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} color="#94a3b8" /></button>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div className="form-group">
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>NOMBRE</label>
-                                <input placeholder="Nombre" value={modal.item.nombre || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, nombre: e.target.value } })} className="input" />
+                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.name')}</label>
+                                <input placeholder={t('users.modal.name')} value={modal.item.nombre || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, nombre: e.target.value } })} className="input" />
                             </div>
 
                             {modal.type === 'usuario' && (
                                 <>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>APELLIDO</label>
-                                        <input placeholder="Apellido" value={modal.item.apellido || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, apellido: e.target.value } })} className="input" />
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.lastname')}</label>
+                                        <input placeholder={t('users.modal.lastname')} value={modal.item.apellido || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, apellido: e.target.value } })} className="input" />
                                     </div>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>EMAIL</label>
-                                        <input placeholder="Email" disabled={!!modal.original} value={modal.item.email || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, email: e.target.value } })} className="input" />
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.email')}</label>
+                                        <input placeholder={t('users.modal.email')} disabled={!!modal.original} value={modal.item.email || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, email: e.target.value } })} className="input" />
                                     </div>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>ROL DE ACCESO</label>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.role')}</label>
                                         <select value={modal.item.rol || 'Usuario'} onChange={e => setModal({ ...modal, item: { ...modal.item, rol: e.target.value } })} className="input">
-                                            <option value="Admin">Administrador</option>
-                                            <option value="Gerente">Gerente de Tienda</option>
-                                            <option value="Usuario">Operador / Recepción</option>
+                                            <option value="Admin">{t('users.roles.Admin')}</option>
+                                            <option value="Gerente">{t('users.roles.Gerente')}</option>
+                                            <option value="Usuario">{t('users.roles.Usuario')}</option>
                                         </select>
                                     </div>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>CONTRASEÑA {modal.original && '(Dejar en blanco para no cambiar)'}</label>
-                                        <input type="password" placeholder="Contraseña (mín 6 caps)" value={modal.item.password || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, password: e.target.value } })} className="input" />
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.password')} {modal.original && t('users.modal.password_hint')}</label>
+                                        <input type="password" placeholder={t('users.modal.password_placeholder')} value={modal.item.password || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, password: e.target.value } })} className="input" />
                                     </div>
                                 </>
                             )}
@@ -355,20 +357,20 @@ const UserManagement = ({ session }) => {
                             {modal.type === 'area' && (
                                 <>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>DESCRIPCIÓN</label>
-                                        <textarea placeholder="Descripción del área" value={modal.item.descripcion || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, descripcion: e.target.value } })} className="input" rows={3} />
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.description')}</label>
+                                        <textarea placeholder={t('users.modal.description')} value={modal.item.descripcion || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, descripcion: e.target.value } })} className="input" rows={3} />
                                     </div>
                                     <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>COLOR DISTINTIVO</label>
+                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.color')}</label>
                                         <input type="color" value={modal.item.color || '#3b82f6'} onChange={e => setModal({ ...modal, item: { ...modal.item, color: e.target.value } })} style={{ height: 50, width: '100%', cursor: 'pointer', borderRadius: '8px', border: '2px solid #f1f5f9' }} />
                                     </div>
                                 </>
                             )}
 
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                                <button onClick={closeModal} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                                <button onClick={closeModal} className="btn btn-secondary" style={{ flex: 1 }}>{t('users.modal.cancel')}</button>
                                 <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1 }} disabled={modal.loading}>
-                                    {modal.loading ? 'Guardando...' : <><Save size={18} style={{ marginRight: '8px' }} /> Guardar Cambios</>}
+                                    {modal.loading ? t('users.modal.saving') : <><Save size={18} style={{ marginRight: '8px' }} /> {t('users.modal.save')}</>}
                                 </button>
                             </div>
                         </div>
@@ -383,13 +385,13 @@ const UserManagement = ({ session }) => {
                         <div style={{ width: '64px', height: '64px', background: '#fef2f2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                             <AlertCircle size={32} color="#dc2626" />
                         </div>
-                        <h3 style={{ fontWeight: 800, fontSize: '1.5rem', color: '#1e293b', marginBottom: '0.75rem' }}>¿Seguro que quieres eliminarlo?</h3>
+                        <h3 style={{ fontWeight: 800, fontSize: '1.5rem', color: '#1e293b', marginBottom: '0.75rem' }}>{t('users.delete_confirm.title')}</h3>
                         <p style={{ fontSize: '0.95rem', color: '#64748b', lineHeight: 1.5 }}>
-                            Estás a punto de eliminar permanentemente a <strong>{deleteConfirm.target.name}</strong>. Esta acción no se puede deshacer.
+                            {t('users.delete_confirm.message', { name: deleteConfirm.target.name })}
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button onClick={() => setDeleteConfirm({ show: false, target: null })} className="btn btn-secondary" style={{ flex: 1 }}>No, cancelar</button>
-                            <button onClick={confirmDelete} className="btn btn-danger" style={{ flex: 1 }}>Sí, eliminar</button>
+                            <button onClick={() => setDeleteConfirm({ show: false, target: null })} className="btn btn-secondary" style={{ flex: 1 }}>{t('users.delete_confirm.cancel')}</button>
+                            <button onClick={confirmDelete} className="btn btn-danger" style={{ flex: 1 }}>{t('users.delete_confirm.confirm')}</button>
                         </div>
                     </div>
                 </div>

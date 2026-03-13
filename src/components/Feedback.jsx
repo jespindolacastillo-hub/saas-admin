@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Send, CheckCircle2, Loader, Clock, Fingerprint } from 'lucide-react';
 import { tenantConfig } from '../config/tenant';
+import { useTranslation } from 'react-i18next';
 
 const Feedback = () => {
+    const { t } = useTranslation();
     const [searchParams] = useSearchParams();
 
     // URL Params
@@ -170,8 +172,8 @@ const Feedback = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (rating === 0) { setError('Por favor selecciona una calificación'); return; }
-        if (rating <= 2 && !extraInfo) { setError('Por favor cuéntanos un poco más para poder mejorar.'); return; }
+        if (rating === 0) { setError(t('feedback.alerts.select_rating')); return; }
+        if (rating <= 2 && !extraInfo) { setError(t('feedback.alerts.more_details')); return; }
 
         setSubmitting(true);
         setError('');
@@ -220,7 +222,7 @@ const Feedback = () => {
             setSubmitted(true);
         } catch (err) {
             console.error('Submission Error:', err);
-            let msg = 'Error al enviar. Intenta de nuevo.';
+            let msg = t('feedback.alerts.error_sending');
             if (err.message) msg += ` Detalle: ${err.message}`;
             if (err.details) msg += ` (${err.details})`;
             setError(msg);
@@ -244,8 +246,8 @@ const Feedback = () => {
                     <div style={{ width: '80px', height: '80px', background: submitted ? '#dcfce7' : '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
                         {submitted ? <CheckCircle2 size={40} color="#166534" /> : <Clock size={40} color="#92400e" />}
                     </div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.5rem' }}>{submitted ? '¡Muchas gracias!' : '¡Ya te escuchamos!'}</h2>
-                    <p style={{ color: '#64748b' }}>{submitted ? 'Tus comentarios nos ayudan a ser mejores para ti.' : 'Ya recibimos tu opinión recientemente. Valoramos mucho tu tiempo.'}</p>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '0.5rem' }}>{submitted ? t('feedback.success_title') : t('feedback.cooldown_title')}</h2>
+                    <p style={{ color: '#64748b' }}>{submitted ? t('feedback.success_desc') : t('feedback.cooldown_desc')}</p>
                 </div>
             </div>
         );
@@ -265,10 +267,10 @@ const Feedback = () => {
                 <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <img src={tenantConfig.logoUrl} alt={tenantConfig.name} style={{ maxWidth: '120px', marginBottom: '1.5rem', objectFit: 'contain' }} />
                     <h1 style={{ fontSize: '1.6rem', fontWeight: '800', marginBottom: '0.5rem', color: '#1e293b' }}>
-                        Tu opinión es importante
+                        {t('feedback.title')}
                     </h1>
                     <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-                        Califica tu experiencia en:
+                        {t('feedback.subtitle')}
                     </p>
                     <div style={{
                         marginTop: '0.75rem',
@@ -280,22 +282,22 @@ const Feedback = () => {
                         fontWeight: '700',
                         color: '#475569'
                     }}>
-                        {storeName || areaDisplayName ? `${storeName || storeId} • ${areaDisplayName || areaId}` : 'Servicio General'}
+                        {storeName || areaDisplayName ? `${storeName || storeId} • ${areaDisplayName || areaId}` : t('feedback.general_service')}
                     </div>
                 </div>
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: '2.5rem' }}>
                         <label style={{ display: 'block', fontSize: '1rem', fontWeight: '700', marginBottom: '1.25rem', color: '#334155', textAlign: 'center' }}>
-                            ¿Cómo calificaría el trato y amabilidad de la persona que le atendió hoy?
+                            {t('feedback.rating_question')}
                         </label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                             {[
-                                { score: 1, icon: '😠', label: 'Mal' },
-                                { score: 2, icon: '😕', label: 'Regular' },
-                                { score: 3, icon: '😐', label: 'Bien' },
-                                { score: 4, icon: '🙂', label: 'Muy Bien' },
-                                { score: 5, icon: '😍', label: 'Excelente' }
+                                { score: 1, icon: '😠', label: t('feedback.scores.mal') },
+                                { score: 2, icon: '😕', label: t('feedback.scores.regular') },
+                                { score: 3, icon: '😐', label: t('feedback.scores.bien') },
+                                { score: 4, icon: '🙂', label: t('feedback.scores.muy_bien') },
+                                { score: 5, icon: '😍', label: t('feedback.scores.excelente') }
                             ].map((e) => (
                                 <button
                                     key={e.score}
@@ -345,7 +347,7 @@ const Feedback = () => {
                                                 minWidth: '90px'
                                             }}
                                         >
-                                            {opt}
+                                            {opt === 'Sí' ? t('questions.types.si') : t('questions.types.no')}
                                         </button>
                                     ))}
                                 </div>
@@ -356,31 +358,31 @@ const Feedback = () => {
                     {rating > 0 && rating <= 2 && (
                         <div style={{ marginBottom: '2rem', animation: 'fadeIn 0.3s ease-out' }}>
                             <div style={{ marginBottom: '1.25rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#475569' }}>¿Cómo podemos mejorar? (Obligatorio)</label>
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#475569' }}>{t('feedback.improve_label')}</label>
                                 <textarea
                                     value={extraInfo}
                                     onChange={(e) => setExtraInfo(e.target.value)}
-                                    placeholder="Cuéntanos más detalles..."
+                                    placeholder={t('feedback.improve_placeholder')}
                                     style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', minHeight: '100px', fontSize: '0.9rem', outline: 'none' }}
                                 />
                             </div>
                             <div style={{ marginBottom: '1.25rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#475569' }}>📱 WhatsApp (Opcional)</label>
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#475569' }}>{t('feedback.whatsapp_label')}</label>
                                 <input
                                     type="text"
                                     value={whatsapp}
                                     onChange={(e) => setWhatsapp(e.target.value)}
-                                    placeholder="Ej: 5512345678"
+                                    placeholder={t('feedback.whatsapp_placeholder')}
                                     style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }}
                                 />
                             </div>
                             <div style={{ marginBottom: '1.25rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#475569' }}>✉️ Correo electrónico (Opcional)</label>
+                                <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.5rem', color: '#475569' }}>{t('feedback.email_label')}</label>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="ejemplo@correo.com"
+                                    placeholder={t('feedback.email_placeholder')}
                                     style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '12px', border: '1.5px solid #e2e8f0', fontSize: '0.9rem', outline: 'none' }}
                                 />
                             </div>
@@ -410,7 +412,7 @@ const Feedback = () => {
                             transition: 'all 0.2s'
                         }}
                     >
-                        {submitting ? <Loader size={20} className="spin" /> : <>Enviar Calificación <Send size={20} /></>}
+                        {submitting ? <Loader size={20} className="spin" /> : <>{t('feedback.submit_btn')} <Send size={20} /></>}
                     </button>
                 </form>
             </div>

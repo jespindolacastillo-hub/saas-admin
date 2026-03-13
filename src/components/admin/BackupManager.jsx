@@ -5,8 +5,10 @@ import {
     Trash2, AlertTriangle, CheckCircle2, Clock,
     ChevronRight, Save, Loader
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const BackupManager = () => {
+    const { t } = useTranslation();
     const [snapshots, setSnapshots] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -28,7 +30,7 @@ const BackupManager = () => {
             const data = await ConfigService.listSnapshots();
             setSnapshots(data);
         } catch (err) {
-            setError('Error al cargar respaldos: ' + err.message);
+            setError(t('backups.alerts.load_error') + err.message);
         } finally {
             setLoading(false);
         }
@@ -39,12 +41,12 @@ const BackupManager = () => {
         setActionLoading(true);
         try {
             await ConfigService.createSnapshot(newSnapshot.nombre, newSnapshot.descripcion);
-            setSuccess('Respaldo creado con éxito');
+            setSuccess(t('backups.alerts.create_success'));
             setShowCreateModal(false);
             setNewSnapshot({ nombre: '', descripcion: '' });
             await loadSnapshots();
         } catch (err) {
-            setError('Error al crear respaldo: ' + err.message);
+            setError(t('backups.alerts.create_error') + err.message);
         } finally {
             setActionLoading(false);
         }
@@ -55,30 +57,30 @@ const BackupManager = () => {
         setActionLoading(true);
         try {
             await ConfigService.restoreSnapshot(restoreConfirmation.id);
-            setSuccess('Sistema restaurado exitosamente');
+            setSuccess(t('backups.alerts.restore_success'));
             setRestoreConfirmation(null);
             // Podríamos forzar un reload de la app si es necesario
             setTimeout(() => window.location.reload(), 2000);
         } catch (err) {
-            setError('Error al restaurar: ' + err.message);
+            setError(t('backups.alerts.restore_error') + err.message);
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('¿Eliminar este punto de restauración?')) return;
+        if (!window.confirm(t('backups.alerts.delete_confirm'))) return;
         try {
             await ConfigService.deleteSnapshot(id);
             await loadSnapshots();
         } catch (err) {
-            setError('Error al eliminar: ' + err.message);
+            setError(t('backups.alerts.delete_error') + err.message);
         }
     };
 
     if (loading) return (
         <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-            <Loader size={24} className="spin" /> Cargando historial de respaldos...
+            <Loader size={24} className="spin" /> {t('backups.loading')}
         </div>
     );
 
@@ -86,15 +88,15 @@ const BackupManager = () => {
         <div className="animate-in fade-in duration-500">
             <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                    <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>Puntos de Restauración</h1>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Administra y restaura el estado de tus catálogos.</p>
+                    <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>{t('backups.title')}</h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('backups.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => setShowCreateModal(true)}
                     className="btn btn-primary"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                    <Plus size={20} /> Crear Punto de Restauración
+                    <Plus size={20} /> {t('backups.new_btn')}
                 </button>
             </header>
 
@@ -114,10 +116,10 @@ const BackupManager = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                         <tr>
-                            <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>Fecha y Origen</th>
-                            <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>Resumen de Datos</th>
-                            <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>Descripción</th>
-                            <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>Acciones</th>
+                            <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>{t('backups.table.date')}</th>
+                            <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>{t('backups.table.summary')}</th>
+                            <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>{t('backups.table.description')}</th>
+                            <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b' }}>{t('backups.table.actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -138,12 +140,12 @@ const BackupManager = () => {
                                 </td>
                                 <td style={{ padding: '1rem' }}>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#f1f5f9', borderRadius: '20px', color: '#64748b' }}>{snap.num_tiendas} Tiendas</span>
-                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#f1f5f9', borderRadius: '20px', color: '#64748b' }}>{snap.num_areas} Áreas</span>
+                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#f1f5f9', borderRadius: '20px', color: '#64748b' }}>{snap.num_tiendas} {t('backups.stats.stores')}</span>
+                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', background: '#f1f5f9', borderRadius: '20px', color: '#64748b' }}>{snap.num_areas} {t('backups.stats.areas')}</span>
                                     </div>
                                 </td>
                                 <td style={{ padding: '1rem', fontSize: '0.8rem', color: '#64748b' }}>
-                                    {snap.descripcion || '(Sin descripción)'}
+                                    {snap.descripcion || t('backups.empty_desc')}
                                 </td>
                                 <td style={{ padding: '1rem', textAlign: 'right' }}>
                                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -152,7 +154,7 @@ const BackupManager = () => {
                                             className="btn btn-secondary-outline"
                                             style={{ color: '#2563eb', borderColor: '#bfdbfe', padding: '6px 12px', fontSize: '0.75rem' }}
                                         >
-                                            <RotateCcw size={14} style={{ marginRight: '4px' }} /> Restaurar
+                                            <RotateCcw size={14} style={{ marginRight: '4px' }} /> {t('backups.actions.restore')}
                                         </button>
                                         <button
                                             onClick={() => handleDelete(snap.id)}
@@ -172,21 +174,21 @@ const BackupManager = () => {
             {showCreateModal && (
                 <div className="modal-overlay">
                     <div className="modal-content animate-in zoom-in" style={{ width: '400px' }}>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1.5rem' }}>Nuevo Punto de Restauración</h2>
+                        <h2 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1.5rem' }}>{t('backups.modals.create_title')}</h2>
 
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
-                            <label className="label">Nombre del Respaldo</label>
+                            <label className="label">{t('backups.modals.name_label')}</label>
                             <input
                                 type="text"
                                 className="input"
                                 value={newSnapshot.nombre}
                                 onChange={e => setNewSnapshot({ ...newSnapshot, nombre: e.target.value })}
-                                placeholder="Ej: Antes de actualización de precios"
+                                placeholder={t('backups.modals.name_placeholder')}
                             />
                         </div>
 
                         <div className="form-group" style={{ marginBottom: '2rem' }}>
-                            <label className="label">Descripción (Opcional)</label>
+                            <label className="label">{t('backups.modals.desc_label')}</label>
                             <textarea
                                 className="input"
                                 value={newSnapshot.descripcion}
@@ -196,9 +198,9 @@ const BackupManager = () => {
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button onClick={() => setShowCreateModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                            <button onClick={() => setShowCreateModal(false)} className="btn btn-secondary" style={{ flex: 1 }}>{t('backups.modals.cancel')}</button>
                             <button onClick={handleCreate} disabled={actionLoading} className="btn btn-primary" style={{ flex: 1 }}>
-                                {actionLoading ? <Loader className="spin" /> : 'Crear Respaldo'}
+                                {actionLoading ? <Loader className="spin" /> : t('backups.modals.create_confirm')}
                             </button>
                         </div>
                     </div>
@@ -213,17 +215,14 @@ const BackupManager = () => {
                             <div style={{ width: '60px', height: '60px', borderRadius: '30px', background: '#fee2e2', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#ef4444', marginBottom: '1.5rem' }}>
                                 <AlertTriangle size={32} />
                             </div>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>¿Restaurar Configuración?</h2>
-                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }}>
-                                Estás a punto de sobrescribir todos los catálogos actuales con los datos de <strong>"{restoreConfirmation.nombre}"</strong>.
-                                Esta acción es irreversible y afectará a todas las tiendas en tiempo real.
-                            </p>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>{t('backups.modals.restore_title')}</h2>
+                            <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '1.5rem' }} dangerouslySetInnerHTML={{ __html: t('backups.modals.restore_desc', { name: restoreConfirmation.nombre }) }} />
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button onClick={() => setRestoreConfirmation(null)} className="btn btn-secondary" style={{ flex: 1 }}>Cancelar</button>
+                            <button onClick={() => setRestoreConfirmation(null)} className="btn btn-secondary" style={{ flex: 1 }}>{t('backups.modals.cancel')}</button>
                             <button onClick={handleRestore} disabled={actionLoading} className="btn" style={{ flex: 1, background: '#ef4444', color: 'white' }}>
-                                {actionLoading ? <Loader className="spin" /> : 'Sí, Restaurar Todo'}
+                                {actionLoading ? <Loader className="spin" /> : t('backups.modals.restore_btn')}
                             </button>
                         </div>
                     </div>

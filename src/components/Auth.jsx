@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { LogIn, UserPlus, Mail, Lock, ShieldCheck, AlertCircle } from 'lucide-react';
 import { tenantConfig } from '../config/tenant';
+import { useTranslation } from 'react-i18next';
 const Auth = ({ onLogin }) => {
+    const { t } = useTranslation();
     const [isSignUp, setIsSignUp] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -25,7 +27,7 @@ const Auth = ({ onLogin }) => {
         setMessage(null);
 
         if (!validateDomain(email)) {
-            setError('Acceso restringido a dominios autorizados.');
+            setError(t('auth.alerts.domain_restricted'));
             setLoading(false);
             return;
         }
@@ -42,7 +44,7 @@ const Auth = ({ onLogin }) => {
                     },
                 });
                 if (error) throw error;
-                setMessage('Registro exitoso. Revisa tu correo para confirmar tu cuenta.');
+                setMessage(t('auth.alerts.signup_success'));
             } else {
                 const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                     email,
@@ -74,11 +76,11 @@ const Auth = ({ onLogin }) => {
     const handleForceChange = async (e) => {
         e.preventDefault();
         if (newPassword !== confirmPassword) {
-            setError('Las contraseñas no coinciden');
+            setError(t('auth.alerts.password_mismatch'));
             return;
         }
         if (newPassword.length < 6) {
-            setError('La contraseña debe tener al menos 6 caracteres');
+            setError(t('auth.alerts.password_too_short'));
             return;
         }
 
@@ -90,14 +92,13 @@ const Auth = ({ onLogin }) => {
             const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
             if (updateError) throw updateError;
 
-            // 2. Clear flag in custom table
             const { error: dbError } = await supabase
                 .from('Usuarios')
                 .update({ debe_cambiar_password: false })
                 .eq('email', email);
             if (dbError) throw dbError;
 
-            setMessage('Contraseña actualizada exitosamente. Redirigiendo...');
+            setMessage(t('auth.alerts.password_updated'));
             setTimeout(() => {
                 if (onLogin) onLogin();
             }, 1500);
@@ -114,13 +115,13 @@ const Auth = ({ onLogin }) => {
                 <div style={{ maxWidth: '450px', width: '100%', background: 'white', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.1)', padding: '2.5rem', border: '1px solid #f1f5f9' }}>
                     <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                         <ShieldCheck size={48} style={{ color: 'var(--primary)', marginBottom: '1rem', display: 'inline-block' }} />
-                        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>Cambio de Contraseña</h1>
-                        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.5rem' }}>Por seguridad, debes actualizar tu contraseña la primera vez.</p>
+                        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>{t('auth.force_change_title')}</h1>
+                        <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.5rem' }}>{t('auth.force_change_desc')}</p>
                     </div>
 
                     <form onSubmit={handleForceChange} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div>
-                            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>Nueva Contraseña</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>{t('auth.new_password_label')}</label>
                             <input
                                 type="password"
                                 required
@@ -130,7 +131,7 @@ const Auth = ({ onLogin }) => {
                             />
                         </div>
                         <div>
-                            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>Confirmar Contraseña</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>{t('auth.confirm_password_label')}</label>
                             <input
                                 type="password"
                                 required
@@ -144,7 +145,7 @@ const Auth = ({ onLogin }) => {
                         {message && <div style={{ color: '#16a34a', fontSize: '0.8rem' }}>{message}</div>}
 
                         <button type="submit" disabled={loading} className="btn btn-primary" style={{ padding: '0.85rem', borderRadius: '12px', fontWeight: '700' }}>
-                            {loading ? 'Actualizando...' : 'Actualizar y Entrar'}
+                            {loading ? t('auth.updating') : t('auth.update_btn')}
                         </button>
                     </form>
                 </div>
@@ -173,23 +174,23 @@ const Auth = ({ onLogin }) => {
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                     <img src={tenantConfig.logoUrl} alt={tenantConfig.name} style={{ width: '160px', marginBottom: '1.5rem', objectFit: 'contain' }} />
                     <h1 style={{ fontFamily: 'Outfit', fontSize: '1.5rem', fontWeight: '800', color: '#1e293b' }}>
-                        {isSignUp ? 'Crear Cuenta Admin' : 'Portal de Administración'}
+                        {isSignUp ? t('auth.signup_title') : t('auth.login_title')}
                     </h1>
                     <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-                        Acceso exclusivo para colaboradores de {tenantConfig.name}
+                        {t('auth.subtitle', { name: tenantConfig.name })}
                     </p>
                 </div>
 
                 <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {isSignUp && (
                         <div>
-                            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>Nombre Completo</label>
+                            <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>{t('auth.name_label')}</label>
                             <div style={{ position: 'relative' }}>
                                 <ShieldCheck size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94a3b8' }} />
                                 <input
                                     type="text"
                                     required
-                                    placeholder="Juan Pérez"
+                                    placeholder={t('auth.name_placeholder')}
                                     value={nombre}
                                     onChange={(e) => setNombre(e.target.value)}
                                     style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
@@ -199,13 +200,13 @@ const Auth = ({ onLogin }) => {
                     )}
 
                     <div>
-                        <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>Correo Institucional</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>{t('auth.email_label')}</label>
                         <div style={{ position: 'relative' }}>
                             <Mail size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94a3b8' }} />
                             <input
                                 type="email"
                                 required
-                                placeholder="tu-correo@ejemplo.com"
+                                placeholder={t('auth.email_placeholder')}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
@@ -214,13 +215,13 @@ const Auth = ({ onLogin }) => {
                     </div>
 
                     <div>
-                        <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>Contraseña</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block', color: '#475569' }}>{t('auth.password_label')}</label>
                         <div style={{ position: 'relative' }}>
                             <Lock size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94a3b8' }} />
                             <input
                                 type="password"
                                 required
-                                placeholder="••••••••"
+                                placeholder={t('auth.password_placeholder')}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.9rem' }}
@@ -248,18 +249,18 @@ const Auth = ({ onLogin }) => {
                         className="btn btn-primary"
                         style={{ padding: '0.85rem', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                     >
-                        {loading ? 'Procesando...' : isSignUp ? <><UserPlus size={20} /> Registrarse</> : <><LogIn size={20} /> Entrar al Sistema</>}
+                        {loading ? t('auth.processing') : isSignUp ? <><UserPlus size={20} /> {t('auth.signup_btn')}</> : <><LogIn size={20} /> {t('auth.login_btn')}</>}
                     </button>
                 </form>
 
                 <div style={{ marginTop: '2rem', textAlign: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
                     <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                        {isSignUp ? '¿Ya tienes una cuenta?' : '¿Eres un nuevo administrador?'}
+                        {isSignUp ? t('auth.have_account_question') : t('auth.new_admin_question')}
                         <button
                             onClick={() => setIsSignUp(!isSignUp)}
                             style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: '700', marginLeft: '6px', cursor: 'pointer' }}
                         >
-                            {isSignUp ? 'Inicia Sesión' : 'Crea una cuenta'}
+                            {isSignUp ? t('auth.login_link') : t('auth.create_account_btn')}
                         </button>
                     </p>
                 </div>

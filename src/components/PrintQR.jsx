@@ -1,9 +1,9 @@
 // Utility function to print QR codes
 import QRCode from 'qrcode';
 
-export const printQRCodes = async (areas, storeName, getQRUrl) => {
+export const printQRCodes = async (areas, storeName, getQRUrl, t) => {
   if (!areas || areas.length === 0) {
-    alert('No hay áreas para imprimir');
+    alert(t('qr.alerts.no_areas'));
     return;
   }
 
@@ -46,7 +46,7 @@ export const printQRCodes = async (areas, storeName, getQRUrl) => {
   console.log('Generated', qrData.length, 'QR codes');
 
   if (qrData.length === 0) {
-    alert('No se pudieron generar los códigos QR');
+    alert(t('qr.alerts.error_generating'));
     return;
   }
 
@@ -91,7 +91,7 @@ export const printQRCodes = async (areas, storeName, getQRUrl) => {
   const printWindow = window.open('', '_blank', 'width=800,height=600');
 
   if (!printWindow) {
-    alert('Por favor permite las ventanas emergentes para imprimir');
+    alert(t('qr.alerts.popup_blocked'));
     return;
   }
 

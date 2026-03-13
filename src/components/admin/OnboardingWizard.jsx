@@ -139,18 +139,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
   const [savedStoreId, setSavedStoreId] = useState(null);
   const [savedAreaId, setSavedAreaId] = useState(null);
 
-  // 1-TIME CLEANUP: Si entramos al wizard y el tenant_id actual es basura, limpiamos localstorage
-  useEffect(() => {
-    const tid = getTenantId();
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    
-    // Si el ID es '0000...' pero hay algo guardado en localStorage, podría estar corrupto.
-    // O si por algún motivo getTenantId devolviera algo que no sea UUID (aunque lo blindamos), lo forzamos.
-    if (tid === '00000000-0000-0000-0000-000000000000' || !uuidRegex.test(tid)) {
-        console.warn('Detectado estado inconsistente en Tenant ID. Limpiando para evitar errores "centro".');
-        localStorage.removeItem('saas_tenant_config');
-    }
-  }, []);
+
 
   // Effect to restore IDs if starting mid-flow
   useEffect(() => {

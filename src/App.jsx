@@ -111,6 +111,8 @@ const Dashboard = ({
   }, [isSnapshotMode]);
 
   useEffect(() => {
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
+
     const fetchMetas = async () => {
       if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') return;
       const { data } = await supabase.from('Metas_KPI').select('*').eq('tenant_id', tenant?.id);
@@ -1988,6 +1990,11 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
       setIssuesLoading(false);
       return;
     }
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
+      setIssues([]);
+      return;
+    }
+
     let query = supabase.from('Issues').select('*').eq('tenant_id', tenant?.id);
     if (filters.store !== 'Todas') query = query.eq('tienda_id', filters.store);
     if (filters.area !== 'Todas') query = query.eq('area_id', filters.area);
@@ -2010,7 +2017,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
   };
 
   const refreshData = async () => {
-    if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') {
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
       setLoading(false);
       return;
     }

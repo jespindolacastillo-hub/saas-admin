@@ -145,12 +145,12 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
   useEffect(() => {
     if (initialStep > 1 && stores.length > 0) {
       // Pick the first store as default if none specified (checklist launch)
-      setSavedStoreId(stores[0].id);
-      setStoreName(stores[0].nombre);
+      setSavedStoreId(stores[0]?.id || null);
+      setStoreName(stores[0]?.nombre || '');
     }
     if (initialStep > 2 && areas.length > 0) {
-      setSavedAreaId(areas[0].id);
-      setAreaName(areas[0].nombre);
+      setSavedAreaId(areas[0]?.id || null);
+      setAreaName(areas[0]?.nombre || '');
     }
   }, [initialStep, stores, areas]);
 
@@ -196,7 +196,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
           .select('id').single();
         
         if (tenantErr) throw tenantErr;
-        validTid = newTenant.id;
+        validTid = newTenant?.id;
 
         // Link user to new tenant
         const { error: userUpdateErr } = await supabase
@@ -219,18 +219,18 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
       if (existingStore && uuidRegex.test(existingStore.id)) {
         storeIdToUse = existingStore.id;
       } else {
-        const { data: newStore, error: storeErr } = await supabase
+        const { data: newStore, error: newStoreErr } = await supabase
           .from('Tiendas_Catalogo')
           .insert([{ nombre: storeName.trim(), tenant_id: validTid }])
           .select('id').single();
-        if (storeErr) throw storeErr;
-        storeIdToUse = newStore.id;
+        if (newStoreErr) throw newStoreErr;
+        storeIdToUse = newStore?.id;
       }
       setSavedStoreId(storeIdToUse);
 
       // 2. Create Area (Simplified Model - NO JUNCTION)
       if (areaName.trim()) {
-        const { data: newArea, error: areaErr } = await supabase
+        const { data: newArea, error: newAreaErr } = await supabase
           .from('Areas_Catalogo')
           .insert([{ 
             nombre: areaName.trim(), 
@@ -239,8 +239,9 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
           }])
           .select('id').single();
         
-        if (areaErr) throw areaErr;
-        setSavedAreaId(newArea.id);
+        if (newAreaErr) throw newAreaErr;
+        setSavedAreaId(newArea?.id);
+        setAreaName(newArea?.nombre);
       }
 
       await refreshData();
@@ -268,7 +269,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
       }
 
       // Use existing IDs if mid-flow
-      const finalAreaId = savedAreaId || (areas.length > 0 ? areas[0].id : null);
+      const finalAreaId = savedAreaId || (areas.length > 0 ? areas[0]?.id : null);
 
       if (finalAreaId && validTid && validTid !== '00000000-0000-0000-0000-000000000000') {
         const { error: qErr } = await supabase.from('Area_Preguntas').insert([{
@@ -595,10 +596,10 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🎉</div>
                 <h1 style={{ fontFamily: 'Outfit', fontSize: '2.25rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.04em', margin: '0 0 0.75rem' }}>
-                  {t('onboarding.done_title', '¡Estás listo para despegar!')}
+                  {t('onboarding.done_title', '¡Todo listo para empezar!')}
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.65', maxWidth: '380px', margin: '0 auto 2rem' }}>
-                  {t('onboarding.done_desc', 'Tu plataforma de feedback inteligente está configurada. Cada QR genera datos reales.')}
+                  {t('onboarding.done_desc', 'Tu configuración ha sido guardada con éxito. El código QR de la derecha ya está activo y puedes empezar a recibir feedback ahora mismo.')}
                 </p>
 
                 {/* Summary & QR Preview */}
@@ -639,11 +640,11 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button onClick={() => handleFinish('/qr')}
                     style={{ padding: '1rem 2rem', borderRadius: '16px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '800', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(59,130,246,0.3)' }}>
-                    <QrCode size={20} /> {t('onboarding.go_qr', 'Generar mi primer QR')}
+                    <QrCode size={20} /> {t('onboarding.go_qr', 'Ver mis Códigos QR')}
                   </button>
                   <button onClick={() => handleFinish(null)}
                     style={{ padding: '0.9rem', borderRadius: '16px', background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '700' }}>
-                    {t('onboarding.go_dash', 'Ir al Dashboard primero')}
+                    {t('onboarding.go_dash', 'Ir al Dashboard de métricas')}
                   </button>
                 </div>
               </div>

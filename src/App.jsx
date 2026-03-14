@@ -112,12 +112,12 @@ const Dashboard = ({
 
   useEffect(() => {
     const fetchMetas = async () => {
-      if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
-      const { data } = await supabase.from('Metas_KPI').select('*').eq('tenant_id', tenant.id);
+      if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') return;
+      const { data } = await supabase.from('Metas_KPI').select('*').eq('tenant_id', tenant?.id);
       if (data) setMetas(data);
     };
     fetchMetas();
-  }, []);
+  }, [tenant?.id]);
 
   // Filtrado por fecha
   const dateFilteredData = useMemo(() => {
@@ -167,13 +167,13 @@ const Dashboard = ({
   // Helper functions to convert IDs to display names
   const getStoreName = (storeId) => {
     if (!Array.isArray(stores)) return storeId;
-    const store = stores.find(s => s.id === storeId);
+    const store = stores.find(s => s?.id === storeId);
     return store?.nombre || storeId;
   };
 
 
   const getAreaName = (areaId) => {
-    const area = areas.find(a => a.id === areaId);
+    const area = areas.find(a => a?.id === areaId);
     return area?.nombre || areaId;
   };
 
@@ -401,15 +401,15 @@ const Dashboard = ({
       const bot = areaRanking[areaRanking.length - 1];
       if (top?.nps > 70) insights.push({
         type: 'success',
-        msg: t('dashboard.insights.area_leader', { name: top.name, nps: top.nps, count: top.count }),
+        msg: t('dashboard.insights.area_leader', { name: top?.name, nps: top?.nps, count: top?.count }),
         icon: <CheckCircle2 size={16} />,
-        highlight: { type: 'area', id: top.id }
+        highlight: { type: 'area', id: top?.id }
       });
       if (bot?.nps < 10 && areaRanking.length > 1) insights.push({
         type: 'alert',
-        msg: t('dashboard.insights.critical_attention', { name: bot.name, nps: bot.nps }),
+        msg: t('dashboard.insights.critical_attention', { name: bot?.name, nps: bot?.nps }),
         icon: <AlertCircle size={16} />,
-        highlight: { type: 'area', id: bot.id }
+        highlight: { type: 'area', id: bot?.id }
       });
     }
 
@@ -1320,14 +1320,17 @@ const QRGenerator = () => {
   const [batchMode, setBatchMode] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (tenant?.id) {
+      fetchData();
+    }
+  }, [tenant?.id]);
 
   const fetchData = async () => {
+    if (!tenant?.id) return;
     setLoading(true);
     const [storesRes, areasRes] = await Promise.all([
-      supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant.id).order('nombre'),
-      supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant.id).order('orden')
+      supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant?.id).order('nombre'),
+      supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant?.id).order('orden')
     ]);
 
     if (storesRes.data) setStores(storesRes.data);
@@ -1376,7 +1379,7 @@ const QRGenerator = () => {
       return;
     }
 
-    const storeName = stores.find(s => s.id === selectedStore)?.nombre || t('qr.select_store_placeholder');
+    const storeName = stores.find(s => s?.id === selectedStore)?.nombre || t('qr.select_store_placeholder');
 
     try {
       await printQRCodes(
@@ -1415,7 +1418,7 @@ const QRGenerator = () => {
     // Generate QR codes HTML
     let qrCodesHTML = '';
     activeAreas.forEach((ta, index) => {
-      const qrUrl = getQRUrl(selectedStore, ta.id); // Use ta.id for area_id
+      const qrUrl = getQRUrl(selectedStore, ta?.id); // Use ta.id for area_id
       const isLastOnPage = (index + 1) % itemsPerPage === 0;
       const pageBreak = isLastOnPage && index < activeAreas.length - 1 ? 'page-break-after: always;' : '';
 
@@ -1539,7 +1542,7 @@ const QRGenerator = () => {
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
               >
                 <option value="">{t('qr.select_store_placeholder')}</option>
-                {stores.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                {stores.map(s => <option key={s?.id} value={s?.id}>{s?.nombre}</option>)}
               </select>
             </div>
 
@@ -1616,7 +1619,7 @@ const QRGenerator = () => {
               style={{ maxWidth: '400px', width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
             >
               <option value="">{t('qr.select_store_placeholder')}</option>
-              {stores.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+              {stores.map(s => <option key={s?.id} value={s?.id}>{s?.nombre}</option>)}
             </select>
           </div>
 
@@ -1645,21 +1648,21 @@ const QRGenerator = () => {
           {selectedStore ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
               {activeAreas.map(area => (
-                <div key={area.id} className="card" style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc' }}>
+                <div key={area?.id} className="card" style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc' }}>
                   <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', display: 'inline-block', marginBottom: '1rem' }}>
                     <QRCodeSVG
-                      id={`batch-qr-${area.id}`}
-                      value={getQRUrl(selectedStore, area.id)}
+                      id={`batch-qr-${area?.id}`}
+                      value={getQRUrl(selectedStore, area?.id)}
                       size={120}
                       level="H"
                       includeMargin={true}
                     />
                   </div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>{area.nombre}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>{area?.nombre}</div>
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ width: '100%' }}
-                    onClick={() => downloadQR(`batch-qr-${area.id}`)}
+                    onClick={() => downloadQR(`batch-qr-${area?.id}`)}
                   >
                     {t('qr.download')}
                   </button>
@@ -1797,13 +1800,13 @@ const AuditTrail = () => {
 
   useEffect(() => {
     const fetchLogs = async () => {
-      if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
-      const { data } = await supabase.from('Auditoria').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }).limit(50);
+      if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') return;
+      const { data } = await supabase.from('Auditoria').select('*').eq('tenant_id', tenant?.id).order('created_at', { ascending: false }).limit(50);
       if (data) setLogs(data);
       setLoading(false);
     };
     fetchLogs();
-  }, []);
+  }, [tenant?.id]);
 
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('menu.loading')}...</div>;
@@ -1981,11 +1984,11 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 
   const fetchIssues = async () => {
     setIssuesLoading(true);
-    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
+    if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') {
       setIssuesLoading(false);
       return;
     }
-    let query = supabase.from('Issues').select('*').eq('tenant_id', tenant.id);
+    let query = supabase.from('Issues').select('*').eq('tenant_id', tenant?.id);
     if (filters.store !== 'Todas') query = query.eq('tienda_id', filters.store);
     if (filters.area !== 'Todas') query = query.eq('area_id', filters.area);
     const { data } = await query.order('fecha_reporte', { ascending: false });
@@ -1998,7 +2001,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
     const safeRawData = Array.isArray(rawData) ? rawData : [];
     const criticalFeedback = safeRawData.filter(f => f && f.satisfaccion <= 2 && f.comentario);
     setFeedback(criticalFeedback);
-  }, [filters.store, filters.area, rawData]);
+  }, [filters.store, filters.area, rawData, tenant?.id]);
 
 
   const handleLaunchWizard = (stepIndex) => {
@@ -2007,7 +2010,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
   };
 
   const refreshData = async () => {
-    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
+    if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') {
       setLoading(false);
       return;
     }
@@ -2017,9 +2020,9 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 
       // Simple, direct fetch with current tenant
       const [fRes, sRes, aRes] = await Promise.all([
-        supabase.from('Feedback').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }),
-        supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant.id),
-        supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant.id)
+        supabase.from('Feedback').select('*').eq('tenant_id', tenant?.id).order('created_at', { ascending: false }),
+        supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant?.id),
+        supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant?.id)
       ]);
 
       if (fRes.error) throw fRes.error;
@@ -2146,22 +2149,23 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
         supabase.removeChannel(channel);
       };
     }
-  }, [session]);
+  }, [session, tenant?.id]);
 
   const fetchNotifications = async () => {
-    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
+    if (!tenant?.id || tenant?.id === '00000000-0000-0000-0000-000000000000') return;
     const { data } = await supabase
       .from('Alerts')
       .select('*')
-      .eq('tenant_id', tenant.id)
+      .eq('tenant_id', tenant?.id)
       .order('created_at', { ascending: false })
       .limit(10);
     if (data) setNotifications(data);
   };
 
   const markAsRead = async (id) => {
-    await supabase.from('Alerts').update({ leida: true }).eq('id', id).eq('tenant_id', tenant.id);
-    setNotifications(notifications.map(n => n.id === id ? { ...n, leida: true } : n));
+    if (!tenant?.id) return;
+    await supabase.from('Alerts').update({ leida: true }).eq('id', id).eq('tenant_id', tenant?.id);
+    setNotifications(notifications.map(n => n?.id === id ? { ...n, leida: true } : n));
   };
 
   const handleLogout = async () => {

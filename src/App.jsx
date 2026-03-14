@@ -1344,7 +1344,7 @@ const QRGenerator = () => {
     // Usar variable de entorno para la URL base del feedback, fallback a producción
     const baseUrl = window.location.origin + '/feedback';
     console.log('App - Base URL used for QR:', baseUrl);
-    return `${baseUrl}?t=${storeId}&a=${areaId}`;
+    return `${baseUrl}?tid=${tenant?.id}&t=${storeId}&a=${areaId}`;
   };
 
   const activeAreas = useMemo(() => {

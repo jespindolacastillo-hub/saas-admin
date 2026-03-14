@@ -136,6 +136,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
   const [error, setError] = useState('');
 
   // Saved IDs
+  const [savedTenantId, setSavedTenantId] = useState(null);
   const [savedStoreId, setSavedStoreId] = useState(null);
   const [savedAreaId, setSavedAreaId] = useState(null);
 
@@ -197,6 +198,9 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
         
         if (tenantErr) throw tenantErr;
         validTid = newTenant?.id;
+        
+        // Save tenant ID so the QR step can use it before App.jsx refreshes
+        setSavedTenantId(validTid);
 
         // 1. Link user to new tenant (UPSERT ensures row creation if missing)
         const { error: userUpdateErr } = await supabase
@@ -248,7 +252,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
         
         if (newAreaErr) throw newAreaErr;
         setSavedAreaId(newArea?.id);
-        setAreaName(newArea?.nombre);
+        // removed setAreaName as it was causing it to be undefined
       }
 
       await refreshData();
@@ -318,8 +322,9 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
   const canProceed = step === 0 ? !!orgName.trim() : step === 1 ? !!storeName.trim() : step === 2 ? !!questionText.trim() : true;
 
   const baseUrl = window.location.origin + '/feedback';
+  const tid = savedTenantId || getTenantId() || '00000000-0000-0000-0000-000000000000';
   console.log('Wizard - Base URL used for QR:', baseUrl);
-  const qrUrl = savedStoreId ? `${baseUrl}?t=${savedStoreId}${savedAreaId ? `&a=${savedAreaId}` : ''}` : baseUrl;
+  const qrUrl = savedStoreId ? `${baseUrl}?tid=${tid}&t=${savedStoreId}${savedAreaId ? `&a=${savedAreaId}` : ''}` : baseUrl;
 
   return (
     <div style={{

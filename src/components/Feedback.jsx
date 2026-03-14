@@ -10,7 +10,7 @@ const Feedback = () => {
     const [searchParams] = useSearchParams();
 
     // URL Params
-    // URL Params & Persistence
+    const [tenantId] = useState(searchParams.get('tid') || tenantConfig.id);
     const [storeId] = useState(searchParams.get('t') || searchParams.get('tienda_id') || localStorage.getItem('ps_store_id') || '');
     const [areaId] = useState(searchParams.get('a') || searchParams.get('area_id') || localStorage.getItem('ps_area_id') || '');
     const [qrId] = useState(searchParams.get('id_qr') || localStorage.getItem('ps_qr_id') || '');
@@ -36,6 +36,7 @@ const Feedback = () => {
     const [extraInfo, setExtraInfo] = useState('');
 
     // Catalog & Device State
+    const [tenantData, setTenantData] = useState(null);
     const [storeName, setStoreName] = useState('');
     const [areaDisplayName, setAreaDisplayName] = useState('');
     const [deviceId, setDeviceId] = useState('');
@@ -68,7 +69,7 @@ const Feedback = () => {
         ctx.font = "14px 'Arial'";
         ctx.fillStyle = "#f60";
         ctx.fillRect(125, 1, 62, 20);
-        ctx.fillText(`\${tenantConfig.name}Fingerprint`, 2, 15);
+        ctx.fillText(`${tenantData?.name || tenantConfig.name}Fingerprint`, 2, 15);
         components.push(canvas.toDataURL());
         const str = components.join('###');
         let hash = 0;
@@ -94,6 +95,19 @@ const Feedback = () => {
 
     useEffect(() => {
         const loadInitialData = async () => {
+            // Load tenant metadata first
+            if (tenantId && tenantId !== '00000000-0000-0000-0000-000000000000') {
+              try {
+                const { data: tData } = await supabase.from('tenants').select('name, logo_url, primary_color').eq('id', tenantId).single();
+                if (tData) {
+                  setTenantData(tData);
+                  if (tData.primary_color) {
+                    document.documentElement.style.setProperty('--primary', tData.primary_color);
+                  }
+                }
+              } catch(e) { console.error("Could not fetch tenant metadata", e); }
+            }
+
             const fingerprint = await getFingerprint();
             setDeviceId(fingerprint);
 
@@ -118,7 +132,7 @@ const Feedback = () => {
                     .eq('device_id', fingerprint)
                     .eq('tienda_id', storeId)
                     .eq('area_id', areaId)
-                    .eq('tenant_id', tenantConfig.id)
+                    .eq('tenant_id', tenantId)
                     .gt('created_at', twelveHoursAgo)
                     .limit(1);
 
@@ -130,30 +144,11 @@ const Feedback = () => {
             }
 
             try {
-                if (!masterMode) {
-                    const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
-                    const { data: existing } = await supabase
-                        .from('Feedback')
-                        .select('id')
-                        .eq('device_id', deviceId)
-                        .eq('tienda_id', storeId)
-                        .eq('area_id', areaId)
-                        .eq('tenant_id', tenantConfig.id)
-                        .gt('created_at', twelveHoursAgo)
-                        .limit(1);
-
-                    if (existing && existing.length > 0) {
-                        setCooldown(true);
-                        setLoadingData(false);
-                        return;
-                    }
-                }
-
                 // 3. Load Names and Questions
                 const [storeRes, areaRes, questionRes] = await Promise.all([
-                    storeId ? supabase.from('Tiendas_Catalogo').select('nombre').eq('id', storeId).eq('tenant_id', tenantConfig.id).single() : Promise.resolve({ data: null }),
-                    areaId ? supabase.from('Areas_Catalogo').select('nombre').eq('id', areaId).eq('tenant_id', tenantConfig.id).single() : Promise.resolve({ data: null }),
-                    areaId ? supabase.from('Area_Preguntas').select('*').eq('area_id', areaId).eq('numero_pregunta', 2).eq('activa', true).eq('tenant_id', tenantConfig.id).single() : Promise.resolve({ data: null })
+                    storeId ? supabase.from('Tiendas_Catalogo').select('nombre').eq('id', storeId).eq('tenant_id', tenantId).single() : Promise.resolve({ data: null }),
+                    areaId ? supabase.from('Areas_Catalogo').select('nombre').eq('id', areaId).eq('tenant_id', tenantId).single() : Promise.resolve({ data: null }),
+                    areaId ? supabase.from('Area_Preguntas').select('*').eq('area_id', areaId).eq('numero_pregunta', 2).eq('activa', true).eq('tenant_id', tenantId).single() : Promise.resolve({ data: null })
                 ]);
 
                 if (storeRes.data) setStoreName(storeRes.data.nombre);
@@ -168,7 +163,7 @@ const Feedback = () => {
             }
         };
         loadInitialData();
-    }, [storeId, areaId, masterMode]);
+    }, [storeId, areaId, masterMode, tenantId]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -191,7 +186,7 @@ const Feedback = () => {
                     device_id: deviceId,
                     canal: canal,
                     subscriber_key: subscriberKey,
-                    tenant_id: tenantConfig.id
+                    tenant_id: tenantId
                 }])
                 .select();
 
@@ -214,7 +209,7 @@ const Feedback = () => {
                     notas: contactInfo,
                     contact_whatsapp: whatsapp || null,
                     contact_email: email || null,
-                    tenant_id: tenantConfig.id
+                    tenant_id: tenantId
                 }]);
             }
 
@@ -265,7 +260,7 @@ const Feedback = () => {
         }}>
             <div style={{ maxWidth: '450px', width: '100%', background: 'white', padding: '2.5rem 1.5rem', borderRadius: '32px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08)', position: 'relative' }}>
                 <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-                    <img src={tenantConfig.logoUrl} alt={tenantConfig.name} style={{ maxWidth: '120px', marginBottom: '1.5rem', objectFit: 'contain' }} />
+                    <img src={tenantData?.logo_url || tenantConfig.logoUrl} alt={tenantData?.name || tenantConfig.name} style={{ maxWidth: '120px', marginBottom: '1.5rem', objectFit: 'contain', maxHeight: '60px' }} onError={(e) => e.target.style.display = 'none'} />
                     <h1 style={{ fontSize: '1.6rem', fontWeight: '800', marginBottom: '0.5rem', color: '#1e293b' }}>
                         {t('feedback.title')}
                     </h1>
@@ -309,7 +304,7 @@ const Feedback = () => {
                                         alignItems: 'center',
                                         padding: '12px 2px',
                                         background: rating === e.score ? '#f0f9ff' : '#ffffff',
-                                        border: rating === e.score ? '2.5px solid #2563eb' : '1px solid #e2e8f0',
+                                        border: rating === e.score ? '2.5px solid var(--primary, #2563eb)' : '1px solid #e2e8f0',
                                         borderRadius: '16px',
                                         cursor: 'pointer',
                                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -317,7 +312,7 @@ const Feedback = () => {
                                     }}
                                 >
                                     <span style={{ fontSize: '1.8rem', marginBottom: '4px', filter: rating && rating !== e.score ? 'grayscale(100%) opacity(0.5)' : 'none' }}>{e.icon}</span>
-                                    <span style={{ fontSize: '0.55rem', fontWeight: '800', textTransform: 'uppercase', color: rating === e.score ? '#2563eb' : '#94a3b8' }}>{e.label}</span>
+                                    <span style={{ fontSize: '0.55rem', fontWeight: '800', textTransform: 'uppercase', color: rating === e.score ? 'var(--primary, #2563eb)' : '#94a3b8' }}>{e.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -338,9 +333,9 @@ const Feedback = () => {
                                             style={{
                                                 padding: '0.75rem 1.8rem',
                                                 borderRadius: '24px',
-                                                border: pregunta2Respuesta === opt ? '2.5px solid #2563eb' : '1.5px solid #e2e8f0',
+                                                border: pregunta2Respuesta === opt ? '2.5px solid var(--primary, #2563eb)' : '1.5px solid #e2e8f0',
                                                 background: pregunta2Respuesta === opt ? '#eff6ff' : 'white',
-                                                color: pregunta2Respuesta === opt ? '#2563eb' : '#64748b',
+                                                color: pregunta2Respuesta === opt ? 'var(--primary, #2563eb)' : '#64748b',
                                                 fontWeight: '800',
                                                 cursor: 'pointer',
                                                 transition: 'all 0.2s',
@@ -397,7 +392,7 @@ const Feedback = () => {
                         style={{
                             width: '100%',
                             padding: '1.25rem',
-                            background: '#2563eb',
+                            background: 'var(--primary, #2563eb)',
                             color: 'white',
                             border: 'none',
                             borderRadius: '16px',
@@ -418,7 +413,7 @@ const Feedback = () => {
             </div>
 
             <div style={{ marginTop: '2.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem' }}>
-                <p>{tenantConfig.name} © {new Date().getFullYear()} • v1.7</p>
+                <p>{tenantData?.name || tenantConfig.name} © {new Date().getFullYear()} • v1.7</p>
             </div>
             <style>{`
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

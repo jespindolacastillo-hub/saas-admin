@@ -1930,7 +1930,7 @@ const AuditTrail = () => {
   );
 };
 
-function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from props
+function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' directly from props
   const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -1957,7 +1957,7 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [masterMode, setMasterMode] = useState(localStorage.getItem('ps_master_mode') === 'active');
-  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_complete'));
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_complete') || (tenant?.id === '00000000-0000-0000-0000-000000000000'));
 
 
   // Shared Filtering State
@@ -2202,7 +2202,11 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
         stores={stores}
         areas={areas}
         refreshData={refreshData}
-        onComplete={() => { setShowOnboarding(false); setWizardStep(0); }} 
+        onComplete={async () => {
+          if (tenantRefresh) await tenantRefresh();
+          setShowOnboarding(false); 
+          setWizardStep(0); 
+        }} 
       />
     );
   }
@@ -2548,12 +2552,12 @@ function AdminPanel({ tenant, tenantLoading }) { // Use 'tenant' directly from p
 }
 
 export default function App() {
-  const { tenant, loading: tenantLoading } = useTenant();
+  const { tenant, loading: tenantLoading, refresh: tenantRefresh } = useTenant();
   
   return (
     <Routes>
       <Route path="/feedback" element={<Feedback />} />
-      <Route path="/*" element={<AdminPanel tenant={tenant} tenantLoading={tenantLoading} />} />
+      <Route path="/*" element={<AdminPanel tenant={tenant} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
     </Routes>
   );
 }

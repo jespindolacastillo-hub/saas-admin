@@ -198,11 +198,18 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
         if (tenantErr) throw tenantErr;
         validTid = newTenant?.id;
 
-        // Link user to new tenant
+        // 1. Link user to new tenant (UPSERT ensures row creation if missing)
         const { error: userUpdateErr } = await supabase
           .from('Usuarios')
-          .update({ tenant_id: validTid })
-          .eq('email', user.email);
+          .upsert({ 
+            id: user.id,
+            email: user.email,
+            tenant_id: validTid,
+            nombre: user.user_metadata?.nombre || '',
+            rol: 'admin',
+            activo: true,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
         
         if (userUpdateErr) throw userUpdateErr;
       }

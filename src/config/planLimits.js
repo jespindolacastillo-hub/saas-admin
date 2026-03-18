@@ -1,51 +1,118 @@
 export const PLAN_LIMITS = {
-    starter: {
-        name: 'Starter',
-        price: '0',
-        description: 'Ideal para pequeños negocios empezando su camino.',
-        maxStores: 1,
-        maxAreas: 3,
-        maxMonthlyResponses: 50,
-        customBranding: false,
-        prioritySupport: false,
-        features: ['1 Sucursal', 'Hasta 3 Áreas', '50 Respuestas/mes']
-    },
-    growth: {
-        name: 'Growth',
-        price: '29',
-        description: 'Perfecto para empresas en expansión con múltiples puntos.',
-        maxStores: 5,
-        maxAreas: 999,
-        maxMonthlyResponses: 500,
-        customBranding: true,
-        prioritySupport: false,
-        features: ['5 Sucursales', 'Áreas Ilimitadas', '500 Respuestas/mes', 'Branding Personalizado']
-    },
-    pro: {
-        name: 'Pro',
-        price: '79',
-        description: 'Para organizaciones grandes que buscan control total.',
-        maxStores: 999,
-        maxAreas: 999,
-        maxMonthlyResponses: 999999,
-        customBranding: true,
-        prioritySupport: true,
-        features: ['Sucursales Ilimitadas', 'Áreas Ilimitadas', 'Respuestas Ilimitadas', 'Soporte Prioritario']
-    },
-    enterprise: {
-        name: 'Enterprise',
-        price: 'Custom',
-        description: 'Soluciones a medida para corporativos globales.',
-        maxStores: 999,
-        maxAreas: 999,
-        maxMonthlyResponses: 999999,
-        customBranding: true,
-        prioritySupport: true,
-        isCustom: true,
-        features: ['Infraestructura Dedicada', 'SLA Garantizado', 'Manager de Cuenta']
-    }
+  free: {
+    name: 'Free',
+    price: 0,
+    priceLabel: '$0',
+    period: '/mes',
+    description: 'Para empezar a generar reseñas hoy mismo.',
+    maxLocations: 1,
+    maxReviewsPerMonth: 15,
+    maxEmployeeQRs: 0,
+    hasWhatsapp: false,
+    hasRevenueDashboard: false,
+    hasPeopleIntelligence: false,
+    recoveryAlertsPerMonth: 1,
+    features: [
+      '1 sucursal',
+      'Hasta 15 reseñas Google/mes',
+      'QR + redirect automático',
+      '1 alerta de recovery/mes',
+    ],
+  },
+  growth: {
+    name: 'Growth',
+    price: 79,
+    priceLabel: '$79 USD',
+    period: '/mes',
+    description: 'El motor completo de reputación para tu negocio.',
+    maxLocations: 1,
+    maxReviewsPerMonth: 150,
+    maxEmployeeQRs: 10,
+    hasWhatsapp: true,
+    hasRevenueDashboard: true,
+    hasPeopleIntelligence: false,
+    recoveryAlertsPerMonth: 999999,
+    features: [
+      '1 sucursal',
+      'Hasta 150 reseñas Google/mes',
+      'WhatsApp alerts ilimitadas',
+      'Hasta 10 QRs de empleado',
+      'Revenue dashboard',
+      'Recovery automático',
+    ],
+  },
+  scale: {
+    name: 'Scale',
+    price: 149,
+    priceLabel: '$149 USD',
+    period: '/mes',
+    description: 'Para negocios con múltiples sucursales.',
+    maxLocations: 5,
+    maxReviewsPerMonth: 500,
+    maxEmployeeQRs: 20,
+    hasWhatsapp: true,
+    hasRevenueDashboard: true,
+    hasPeopleIntelligence: false,
+    recoveryAlertsPerMonth: 999999,
+    features: [
+      'Hasta 5 sucursales',
+      'Hasta 500 reseñas Google/mes (total)',
+      'Dashboard comparativo multi-suc',
+      'WhatsApp alerts ilimitadas',
+      'Hasta 20 QRs de empleado',
+    ],
+  },
+  people: {
+    name: 'People',
+    price: 349,
+    priceLabel: '$349 USD',
+    period: '/mes',
+    description: 'Inteligencia de desempeño por empleado.',
+    maxLocations: 15,
+    maxReviewsPerMonth: 999999,
+    maxEmployeeQRs: 999999,
+    hasWhatsapp: true,
+    hasRevenueDashboard: true,
+    hasPeopleIntelligence: true,
+    recoveryAlertsPerMonth: 999999,
+    features: [
+      'Hasta 15 sucursales',
+      'Reseñas ilimitadas',
+      'QRs de empleado ilimitados',
+      'Leaderboard del equipo',
+      'Compensación variable',
+      'Análisis de top performers',
+    ],
+  },
+  enterprise: {
+    name: 'Enterprise',
+    price: null,
+    priceLabel: 'Desde $19/suc',
+    period: '/mes',
+    description: 'Infraestructura dedicada para corporativos.',
+    maxLocations: 999999,
+    maxReviewsPerMonth: 999999,
+    maxEmployeeQRs: 999999,
+    hasWhatsapp: true,
+    hasRevenueDashboard: true,
+    hasPeopleIntelligence: true,
+    recoveryAlertsPerMonth: 999999,
+    isCustom: true,
+    features: [
+      'Sucursales ilimitadas',
+      'White-label',
+      'POS/CRM integration',
+      'Account manager dedicado',
+      'SLA 99.9%',
+    ],
+  },
 };
 
-export const checkLimit = (currentCount, limit) => {
-    return currentCount < limit;
-};
+// Returns the limit object for a given plan key, defaulting to free
+export const getPlanLimits = (plan) => PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+
+// Returns true if the tenant is within the limit
+export const withinLimit = (current, max) => max >= 999999 || current < max;
+
+// Returns percentage used (0-100)
+export const limitPct = (current, max) => max >= 999999 ? 0 : Math.round((current / max) * 100);

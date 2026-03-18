@@ -18,7 +18,7 @@ const LANGS = [
 
 // ─── Confetti ─────────────────────────────────────────────────────────────────
 const Confetti = () => {
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+  const colors = ['#FF5C3A', '#00C9A7', '#7C3AED', '#F59E0B', '#0D0D12', '#EC4899'];
   const pieces = Array.from({ length: 90 }).map((_, i) => ({
     id: i,
     color: colors[i % colors.length],
@@ -46,38 +46,38 @@ const Confetti = () => {
 const useSteps = (t) => [
   {
     id: 'identity',
-    icon: '🎨',
-    color: '#3b82f6',
-    gradient: 'linear-gradient(135deg, #1e3a5f, #1e40af)',
-    headline: t('onboarding.s1_title', '¡Hola! ¿Cómo se llama tu negocio?'),
-    desc: t('onboarding.s1_desc', 'Aparecerá en tus reportes y QRs. Puedes cambiarlo después.'),
+    icon: '🏢',
+    color: '#FF5C3A',
+    gradient: 'linear-gradient(145deg, #0D0D12 0%, #2d1208 50%, #0D0D12 100%)',
+    headline: '¡Hola! ¿Cómo se llama tu negocio?',
+    desc: 'Aparecerá en tus reportes y QRs. Puedes cambiarlo después.',
     preview: '🏢',
   },
   {
     id: 'structure',
-    icon: '🏢',
-    color: '#10b981',
-    gradient: 'linear-gradient(135deg, #064e3b, #065f46)',
-    headline: t('onboarding.s2_title', '¿Dónde opera tu negocio?'),
-    desc: t('onboarding.s2_desc', 'Crea tu primera sucursal y área de evaluación.'),
+    icon: '📍',
+    color: '#00C9A7',
+    gradient: 'linear-gradient(145deg, #0D0D12 0%, #021f1a 50%, #0D0D12 100%)',
+    headline: '¿Dónde opera tu negocio?',
+    desc: 'Crea tu primera sucursal y área de evaluación.',
     preview: '📍',
   },
   {
     id: 'question',
-    icon: '❓',
-    color: '#8b5cf6',
-    gradient: 'linear-gradient(135deg, #3b0764, #4c1d95)',
-    headline: t('onboarding.s3_title', '¿Qué le preguntas a tus clientes?'),
-    desc: t('onboarding.s3_desc', 'Esta pregunta aparecerá en el formulario de feedback.'),
-    preview: '📝',
+    icon: '💬',
+    color: '#7C3AED',
+    gradient: 'linear-gradient(145deg, #0D0D12 0%, #1a0a2e 50%, #0D0D12 100%)',
+    headline: '¿Qué le preguntas a tus clientes?',
+    desc: 'Esta pregunta aparecerá en el formulario de feedback.',
+    preview: '💬',
   },
   {
     id: 'done',
-    icon: '🎉',
-    color: '#f59e0b',
-    gradient: 'linear-gradient(135deg, #78350f, #92400e)',
-    headline: t('onboarding.done_title', '¡Estás listo para despegar!'),
-    desc: t('onboarding.done_desc', 'Tu plataforma de feedback inteligente está configurada.'),
+    icon: '🚀',
+    color: '#FF5C3A',
+    gradient: 'linear-gradient(145deg, #0D0D12 0%, #2d1208 50%, #0D0D12 100%)',
+    headline: '¡Todo listo para despegar!',
+    desc: 'Tu motor de reputación está configurado.',
     preview: '🚀',
   },
 ];
@@ -359,19 +359,14 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
         {/* Top: logo + language */}
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Zap size={20} color="white" />
-            <span style={{ fontFamily: 'Outfit', fontWeight: '900', fontSize: '1.1rem', color: 'white', letterSpacing: '-0.02em' }}>IANPS</span>
-          </div>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {LANGS.map(l => (
-              <button key={l.code} onClick={() => i18n.changeLanguage(l.code)}
-                style={{ padding: '4px 9px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-                  background: i18n.language === l.code ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
-                  color: 'white', fontSize: '0.65rem', fontWeight: '800', transition: 'all 0.2s' }}>
-                {l.flag} {l.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', width: '26px', height: '26px' }}>
+              <div style={{ borderRadius: '3px', background: '#FF5C3A' }} />
+              <div style={{ borderRadius: '3px', background: '#00C9A7' }} />
+              <div style={{ borderRadius: '3px', background: '#7C3AED' }} />
+              <div style={{ borderRadius: '3px', background: 'rgba(255,255,255,0.3)' }} />
+            </div>
+            <span style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontWeight: 800, fontSize: '1.1rem', color: 'white', letterSpacing: '-0.02em' }}>retelio</span>
           </div>
         </div>
 
@@ -383,7 +378,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
               {t('onboarding.step', 'Paso')} {step + 1} / {TOTAL_STEPS}
             </span>
           </div>
-          <h2 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '900', color: 'white', lineHeight: '1.15', letterSpacing: '-0.03em', marginBottom: '1rem' }}>
+          <h2 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2rem', fontWeight: '900', color: 'white', lineHeight: '1.15', letterSpacing: '-0.03em', marginBottom: '1rem' }}>
             {currentStep.headline}
           </h2>
           <p style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.65)', lineHeight: '1.6', maxWidth: '320px' }}>
@@ -424,7 +419,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
             <style>{`@media (min-width:769px){.wizard-mobile-lang{display:none!important}}`}</style>
             {LANGS.map(l => (
               <button key={l.code} onClick={() => i18n.changeLanguage(l.code)}
-                style={{ padding: '4px 9px', borderRadius: '20px', border: `1.5px solid ${i18n.language === l.code ? '#3b82f6' : '#e2e8f0'}`, background: i18n.language === l.code ? '#eff6ff' : 'white', color: i18n.language === l.code ? '#3b82f6' : '#94a3b8', fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer' }}>
+                style={{ padding: '4px 9px', borderRadius: '20px', border: `1.5px solid ${i18n.language === l.code ? '#FF5C3A' : '#e2e8f0'}`, background: i18n.language === l.code ? '#FFF1EE' : 'white', color: i18n.language === l.code ? '#FF5C3A' : '#94a3b8', fontSize: '0.65rem', fontWeight: '800', cursor: 'pointer' }}>
                 {l.flag} {l.label}
               </button>
             ))}
@@ -454,7 +449,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
             {step === 0 && (
               <div>
                 <div style={{ marginBottom: '2rem' }}>
-                  <h1 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '900', color: '#0f172a', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
+                  <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2rem', fontWeight: '900', color: '#0D0D12', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
                     {t('onboarding.s1_title', '¿Cómo se llama tu negocio?')}
                   </h1>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>{t('onboarding.s1_desc', 'Puedes cambiarlo después desde Ajustes.')}</p>
@@ -485,7 +480,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
             {step === 1 && (
               <div>
                 <div style={{ marginBottom: '2rem' }}>
-                  <h1 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '900', color: '#0f172a', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
+                  <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2rem', fontWeight: '900', color: '#0D0D12', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
                     {t('onboarding.s2_title', '¿Dónde opera tu negocio?')}
                   </h1>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>{t('onboarding.s2_desc', 'Agrega tu primer punto de venta y área.')}</p>
@@ -520,7 +515,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                     localStorage.removeItem('saas_tenant_config');
                     window.location.reload();
                   }}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: '#3b82f6', color: 'white', border: 'none', fontWeight: '700', cursor: 'pointer' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', background: '#FF5C3A', color: 'white', border: 'none', fontWeight: '700', cursor: 'pointer' }}
                 >
                   Limpiar sesión y reintentar
                 </button>
@@ -544,7 +539,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
             {step === 2 && (
               <div>
                 <div style={{ marginBottom: '2rem' }}>
-                  <h1 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '900', color: '#0f172a', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
+                  <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2rem', fontWeight: '900', color: '#0D0D12', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
                     {t('onboarding.s3_title', '¿Qué le preguntas a tus clientes?')}
                   </h1>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>{t('onboarding.s3_desc', 'Puedes agregar más preguntas después.')}</p>
@@ -607,7 +602,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
             {step === 3 && (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🎉</div>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '2.25rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.04em', margin: '0 0 0.75rem' }}>
+                <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2.25rem', fontWeight: '900', color: '#0D0D12', letterSpacing: '-0.04em', margin: '0 0 0.75rem' }}>
                   {t('onboarding.done_title', '¡Todo listo para empezar!')}
                 </h1>
                 <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.65', maxWidth: '380px', margin: '0 auto 2rem' }}>
@@ -630,7 +625,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                     ))}
                   </div>
 
-                  <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '2px solid #3b82f633', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                  <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '2px solid rgba(255,92,58,0.15)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                     <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
                       <QRCodeSVG 
                         id="onboarding-qr"
@@ -651,7 +646,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <button onClick={() => handleFinish('/qr')}
-                    style={{ padding: '1rem 2rem', borderRadius: '16px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '800', fontFamily: 'Outfit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(59,130,246,0.3)' }}>
+                    style={{ padding: '1rem 2rem', borderRadius: '16px', background: '#FF5C3A', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '800', fontFamily: "'Plus Jakarta Sans', system-ui", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(255,92,58,0.3)' }}>
                     <QrCode size={20} /> {t('onboarding.go_qr', 'Ver mis Códigos QR')}
                   </button>
                   <button onClick={() => handleFinish(null)}
@@ -670,9 +665,9 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                 style={{
                   marginTop: '2rem', width: '100%', padding: '1rem 2rem',
                   borderRadius: '16px', border: 'none', cursor: saving || !canProceed ? 'not-allowed' : 'pointer',
-                  background: saving || !canProceed ? '#e2e8f0' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  background: saving || !canProceed ? '#e2e8f0' : '#FF5C3A',
                   color: saving || !canProceed ? '#94a3b8' : 'white',
-                  fontSize: '1rem', fontWeight: '800', fontFamily: 'Outfit',
+                  fontSize: '1rem', fontWeight: '800', fontFamily: "'Plus Jakarta Sans', system-ui",
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                   boxShadow: saving || !canProceed ? 'none' : '0 8px 24px rgba(59,130,246,0.25)',
                   transition: 'all 0.2s',
@@ -696,7 +691,7 @@ const LS = {
 };
 const IS = (active) => ({
   width: '100%', padding: '0.9rem 1.1rem', borderRadius: '14px',
-  border: `2px solid ${active ? '#3b82f6' : '#e2e8f0'}`,
+  border: `2px solid ${active ? '#FF5C3A' : '#e2e8f0'}`,
   fontSize: '0.95rem', fontWeight: '600', outline: 'none',
   transition: 'border-color 0.2s', boxSizing: 'border-box',
   background: active ? '#f0f7ff' : '#fafafa',

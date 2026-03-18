@@ -1,32 +1,9 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { LogIn, UserPlus, Mail, Lock, ShieldCheck, AlertCircle, Eye, EyeOff, User } from 'lucide-react';
-import { tenantConfig } from '../config/tenant';
 import { useTranslation } from 'react-i18next';
 
-// ─── Language Switcher ────────────────────────────────────────────────────────
-const LANGS = [
-  { code: 'es', flag: '🇲🇽', label: 'ES' },
-  { code: 'en', flag: '🇺🇸', label: 'EN' },
-  { code: 'pt', flag: '🇧🇷', label: 'PT' },
-];
-
-const LanguageSwitcher = ({ i18n }) => (
-  <div style={{ display: 'flex', gap: '6px' }}>
-    {LANGS.map(l => (
-      <button key={l.code} onClick={() => i18n.changeLanguage(l.code)}
-        style={{
-          padding: '5px 10px', borderRadius: '20px', border: 'none', cursor: 'pointer',
-          background: i18n.language === l.code ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.08)',
-          color: i18n.language === l.code ? 'white' : 'rgba(255,255,255,0.55)',
-          fontSize: '0.72rem', fontWeight: '800', transition: 'all 0.2s',
-          backdropFilter: 'blur(6px)',
-        }}>
-        {l.flag} {l.label}
-      </button>
-    ))}
-  </div>
-);
+const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
 // ─── Animated Orb ─────────────────────────────────────────────────────────────
 const BgOrbs = () => (
@@ -35,11 +12,10 @@ const BgOrbs = () => (
       @keyframes float1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-20px) scale(1.05)} }
       @keyframes float2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-20px,30px) scale(0.95)} }
       @keyframes float3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(15px,15px)} }
-      @keyframes inputFocus { from{border-color:#e2e8f0} to{border-color:#3b82f6} }
     `}</style>
-    <div style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.35) 0%, transparent 70%)', top: '-150px', left: '-100px', animation: 'float1 8s ease-in-out infinite', filter: 'blur(1px)' }} />
-    <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.3) 0%, transparent 70%)', bottom: '-100px', right: '-80px', animation: 'float2 10s ease-in-out infinite' }} />
-    <div style={{ position: 'absolute', width: '250px', height: '250px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)', top: '40%', left: '60%', animation: 'float3 6s ease-in-out infinite' }} />
+    <div style={{ position: 'absolute', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,92,58,0.3) 0%, transparent 70%)', top: '-150px', left: '-100px', animation: 'float1 8s ease-in-out infinite', filter: 'blur(1px)' }} />
+    <div style={{ position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,201,167,0.25) 0%, transparent 70%)', bottom: '-100px', right: '-80px', animation: 'float2 10s ease-in-out infinite' }} />
+    <div style={{ position: 'absolute', width: '250px', height: '250px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.2) 0%, transparent 70%)', top: '40%', left: '60%', animation: 'float3 6s ease-in-out infinite' }} />
   </>
 );
 
@@ -53,12 +29,12 @@ const strengthOf = (pw) => {
   if (/[^a-zA-Z0-9]/.test(pw)) s++;
   return s;
 };
-const strengthColors = ['#e2e8f0', '#ef4444', '#f59e0b', '#10b981', '#3b82f6'];
+const strengthColors = ['#e2e8f0', '#ef4444', '#f59e0b', '#10b981', '#00C9A7'];
 const strengthLabels = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'];
 
 // ─── Main Auth ────────────────────────────────────────────────────────────────
 const Auth = ({ onLogin }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -117,18 +93,18 @@ const Auth = ({ onLogin }) => {
   const inputStyle = (name) => ({
     width: '100%', padding: '0.9rem 0.9rem 0.9rem 2.8rem',
     borderRadius: '14px', fontSize: '0.95rem', outline: 'none',
-    transition: 'all 0.2s', boxSizing: 'border-box',
-    border: `2px solid ${focused === name ? '#3b82f6' : '#e2e8f0'}`,
-    background: focused === name ? '#f0f7ff' : '#fafafa',
+    transition: 'all 0.2s', boxSizing: 'border-box', fontFamily: font,
+    border: `2px solid ${focused === name ? '#FF5C3A' : '#e2e8f0'}`,
+    background: focused === name ? '#FFF1EE' : '#fafafa',
   });
 
   if (forceChange) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a, #1e293b)', padding: '2rem' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0D0D12, #1a1a2e)', padding: '2rem', fontFamily: font }}>
         <div style={{ maxWidth: '420px', width: '100%', background: 'white', borderRadius: '28px', boxShadow: '0 50px 100px rgba(0,0,0,0.4)', padding: '2.5rem' }}>
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <ShieldCheck size={48} color="#3b82f6" style={{ marginBottom: '1rem' }} />
-            <h1 style={{ fontFamily: 'Outfit', fontSize: '1.6rem', fontWeight: '900', color: '#0f172a' }}>{t('auth.force_change_title')}</h1>
+            <ShieldCheck size={48} color="#FF5C3A" style={{ marginBottom: '1rem' }} />
+            <h1 style={{ fontFamily: font, fontSize: '1.6rem', fontWeight: '900', color: '#0D0D12' }}>{t('auth.force_change_title')}</h1>
             <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '0.4rem' }}>{t('auth.force_change_desc')}</p>
           </div>
           <form onSubmit={handleForceChange} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -136,7 +112,7 @@ const Auth = ({ onLogin }) => {
             <input type="password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('auth.confirm_password_label')} style={{ ...inputStyle('cp'), paddingLeft: '1rem' }} />
             {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', textAlign: 'center' }}>{error}</div>}
             {message && <div style={{ color: '#10b981', fontSize: '0.8rem', textAlign: 'center' }}>{message}</div>}
-            <button type="submit" disabled={loading} style={{ padding: '1rem', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer' }}>
+            <button type="submit" disabled={loading} style={{ padding: '1rem', background: '#FF5C3A', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', fontFamily: font }}>
               {loading ? '...' : t('auth.update_btn')}
             </button>
           </form>
@@ -147,12 +123,12 @@ const Auth = ({ onLogin }) => {
 
   return (
     <div style={{
-      minHeight: '100vh', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif',
+      minHeight: '100vh', display: 'flex', fontFamily: font,
     }}>
       {/* ── Left panel: brand ── */}
       <div style={{
         flex: '1', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        background: 'linear-gradient(145deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+        background: 'linear-gradient(145deg, #0D0D12 0%, #1a0f0a 50%, #0D0D12 100%)',
         padding: '2.5rem', position: 'relative', overflow: 'hidden',
         minWidth: 0,
       }}
@@ -162,32 +138,32 @@ const Auth = ({ onLogin }) => {
         <style>{`
           @media (max-width: 768px) { .auth-left-panel { display: none !important; } }
         `}</style>
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '36px', height: '36px', background: 'linear-gradient(135deg,#3b82f6,#8b5cf6)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: '1rem' }}>⚡</span>
-            </div>
-            <span style={{ fontFamily: 'Outfit', fontWeight: '900', fontSize: '1.2rem', color: 'white', letterSpacing: '-0.02em' }}>IANPS</span>
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', width: '32px', height: '32px', flexShrink: 0 }}>
+            <div style={{ borderRadius: '4px', background: '#FF5C3A' }} />
+            <div style={{ borderRadius: '4px', background: '#00C9A7' }} />
+            <div style={{ borderRadius: '4px', background: '#7C3AED' }} />
+            <div style={{ borderRadius: '4px', background: 'rgba(255,255,255,0.3)' }} />
           </div>
-          <LanguageSwitcher i18n={i18n} />
+          <span style={{ fontFamily: font, fontWeight: 800, fontSize: '1.3rem', color: 'white', letterSpacing: '-0.02em' }}>retelio</span>
         </div>
 
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '100px', padding: '6px 14px', marginBottom: '2rem' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              {t('auth.brand_badge', 'Plataforma de Feedback Inteligente')}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(255,92,58,0.15)', border: '1px solid rgba(255,92,58,0.3)', borderRadius: '100px', padding: '6px 14px', marginBottom: '2rem' }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00C9A7', display: 'inline-block' }} />
+            <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#FF8C75', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Motor de reputación para negocios
             </span>
           </div>
-          <h2 style={{ fontFamily: 'Outfit', fontSize: '3rem', fontWeight: '900', color: 'white', lineHeight: '1.1', letterSpacing: '-0.04em', marginBottom: '1.5rem' }}>
-            {t('auth.brand_headline', 'Transforma la experiencia de tus clientes en datos que impulsan tu negocio.')}
+          <h2 style={{ fontFamily: font, fontSize: '2.8rem', fontWeight: '900', color: 'white', lineHeight: '1.1', letterSpacing: '-0.04em', marginBottom: '1.5rem' }}>
+            Convierte cada visita en una reseña de 5 estrellas.
           </h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {[
-              { emoji: '📲', text: t('auth.feature1', 'QR de feedback en segundos') },
-              { emoji: '📊', text: t('auth.feature2', 'Dashboard NPS en tiempo real') },
-              { emoji: '🌍', text: t('auth.feature3', 'Multiidioma, global desde día 1') },
+              { emoji: '⭐', text: 'QR inteligente que filtra feedback positivo a Google' },
+              { emoji: '📲', text: 'Alertas WhatsApp cuando un cliente está inconforme' },
+              { emoji: '📊', text: 'Dashboard de reputación en tiempo real' },
             ].map(f => (
               <div key={f.emoji} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', flexShrink: 0 }}>{f.emoji}</div>
@@ -198,7 +174,7 @@ const Auth = ({ onLogin }) => {
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', fontWeight: '600' }}>
-          © 2025 IANPS · {t('auth.tagline', 'Inteligencia que escucha.')}
+          © 2026 Retelio · Inteligencia que escucha.
         </div>
       </div>
 
@@ -216,23 +192,12 @@ const Auth = ({ onLogin }) => {
           }
         `}</style>
 
-        {/* Mobile-only language switcher */}
-        <div style={{ display: 'none', marginBottom: '1.5rem' }} className="auth-mobile-lang">
-          <style>{`.auth-mobile-lang { display: flex !important; gap: 6px; } @media (min-width: 769px) { .auth-mobile-lang { display: none !important; } }`}</style>
-          {LANGS.map(l => (
-            <button key={l.code} onClick={() => i18n.changeLanguage(l.code)}
-              style={{ padding: '5px 12px', borderRadius: '20px', border: `2px solid ${i18n.language === l.code ? '#3b82f6' : '#e2e8f0'}`, background: i18n.language === l.code ? '#eff6ff' : 'white', color: i18n.language === l.code ? '#3b82f6' : '#94a3b8', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}>
-              {l.flag} {l.label}
-            </button>
-          ))}
-        </div>
-
         <div style={{ marginBottom: '2.5rem' }}>
-          <h1 style={{ fontFamily: 'Outfit', fontSize: '2rem', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.03em', margin: '0 0 0.4rem' }}>
-            {isSignUp ? t('auth.signup_title', 'Crear cuenta') : t('auth.login_title', 'Bienvenido de vuelta')}
+          <h1 style={{ fontFamily: font, fontSize: '2rem', fontWeight: '900', color: '#0D0D12', letterSpacing: '-0.03em', margin: '0 0 0.4rem' }}>
+            {isSignUp ? 'Crear cuenta' : 'Bienvenido de vuelta'}
           </h1>
           <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
-            {isSignUp ? t('auth.signup_subtitle', 'Comienza gratis. Sin tarjeta de crédito.') : t('auth.login_subtitle', 'Ingresa a tu dashboard de feedback.')}
+            {isSignUp ? 'Comienza gratis. Sin tarjeta de crédito.' : 'Ingresa a tu dashboard de reputación.'}
           </p>
         </div>
 
@@ -241,7 +206,7 @@ const Auth = ({ onLogin }) => {
             <div>
               <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#374151', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('auth.name_label', 'Tu nombre')}</label>
               <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'nombre' ? '#3b82f6' : '#cbd5e1', transition: 'color 0.2s' }} />
+                <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'nombre' ? '#FF5C3A' : '#cbd5e1', transition: 'color 0.2s' }} />
                 <input autoFocus type="text" required value={nombre} onChange={e => setNombre(e.target.value)}
                   onFocus={() => setFocused('nombre')} onBlur={() => setFocused(null)}
                   placeholder={t('auth.name_placeholder', 'ej. María Rodríguez')}
@@ -253,7 +218,7 @@ const Auth = ({ onLogin }) => {
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#374151', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('auth.email_label', 'Correo electrónico')}</label>
             <div style={{ position: 'relative' }}>
-              <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'email' ? '#3b82f6' : '#cbd5e1', transition: 'color 0.2s' }} />
+              <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'email' ? '#FF5C3A' : '#cbd5e1', transition: 'color 0.2s' }} />
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
                 placeholder="tu@empresa.com"
@@ -264,7 +229,7 @@ const Auth = ({ onLogin }) => {
           <div>
             <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#374151', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('auth.password_label', 'Contraseña')}</label>
             <div style={{ position: 'relative' }}>
-              <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'pw' ? '#3b82f6' : '#cbd5e1', transition: 'color 0.2s' }} />
+              <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'pw' ? '#FF5C3A' : '#cbd5e1', transition: 'color 0.2s' }} />
               <input type={showPw ? 'text' : 'password'} required value={password} onChange={e => setPassword(e.target.value)}
                 onFocus={() => setFocused('pw')} onBlur={() => setFocused(null)}
                 placeholder={isSignUp ? t('auth.password_placeholder_min', 'Mínimo 8 caracteres') : '••••••••'}
@@ -298,30 +263,30 @@ const Auth = ({ onLogin }) => {
 
           <button type="submit" disabled={loading} style={{
             padding: '1rem', borderRadius: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-            background: loading ? '#e2e8f0' : 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            color: loading ? '#94a3b8' : 'white', fontSize: '1rem', fontWeight: '800', fontFamily: 'Outfit',
+            background: loading ? '#e2e8f0' : '#FF5C3A',
+            color: loading ? '#94a3b8' : 'white', fontSize: '1rem', fontWeight: '800', fontFamily: font,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            boxShadow: loading ? 'none' : '0 8px 24px rgba(59,130,246,0.3)',
+            boxShadow: loading ? 'none' : '0 8px 24px rgba(255,92,58,0.3)',
             transition: 'all 0.2s', marginTop: '0.25rem',
           }}>
-            {loading ? '⟳ ' + t('auth.processing', 'Procesando...') : isSignUp ? <><UserPlus size={20} /> {t('auth.signup_btn', 'Crear cuenta gratis')}</> : <><LogIn size={20} /> {t('auth.login_btn', 'Entrar')}</>}
+            {loading ? '⟳ Procesando...' : isSignUp ? <><UserPlus size={20} /> Crear cuenta gratis</> : <><LogIn size={20} /> Entrar</>}
           </button>
         </form>
 
         <div style={{ marginTop: '1.75rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
-            {isSignUp ? t('auth.have_account_question', '¿Ya tienes cuenta?') : t('auth.new_admin_question', '¿Primera vez aquí?')}
+          <p style={{ fontSize: '0.85rem', color: '#94a3b8', fontFamily: font }}>
+            {isSignUp ? '¿Ya tienes cuenta?' : '¿Primera vez aquí?'}
             {' '}
             <button onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }}
-              style={{ background: 'none', border: 'none', color: '#3b82f6', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}>
-              {isSignUp ? t('auth.login_link', 'Ingresar') : t('auth.create_account_btn', 'Crear cuenta')}
+              style={{ background: 'none', border: 'none', color: '#FF5C3A', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem', fontFamily: font }}>
+              {isSignUp ? 'Ingresar' : 'Crear cuenta'}
             </button>
           </p>
         </div>
 
         {isSignUp && (
-          <p style={{ marginTop: '1.25rem', fontSize: '0.72rem', color: '#cbd5e1', textAlign: 'center', lineHeight: '1.5' }}>
-            {t('auth.terms', 'Al registrarte aceptas nuestros Términos de Servicio y Política de Privacidad.')}
+          <p style={{ marginTop: '1.25rem', fontSize: '0.72rem', color: '#cbd5e1', textAlign: 'center', lineHeight: '1.5', fontFamily: font }}>
+            Al registrarte aceptas nuestros Términos de Servicio y Política de Privacidad.
           </p>
         )}
       </div>

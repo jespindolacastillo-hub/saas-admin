@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import Feedback from './components/Feedback';
+import FeedbackPublic from './components/FeedbackPublic';
 import { supabase } from './lib/supabase';
 import { tenantConfig } from './config/tenant';
 import OrganizationSettings from './components/admin/OrganizationSettings';
@@ -12,7 +13,8 @@ import {
   Smile, Frown, Meh, Filter, Award, Target, Building,
   Lightbulb, AlertCircle, CheckCircle2, AlertTriangle, Clock,
   Trophy, ShieldCheck, Download, History, HelpCircle, Trash2, Loader,
-  Search, Plus, Save, Edit2, Check, Eye, Copy, PlusCircle, UserPlus, Fingerprint, Mail
+  Search, Plus, Save, Edit2, Check, Eye, Copy, PlusCircle, UserPlus, Fingerprint, Mail,
+  Sun, Moon, Gift
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -30,7 +32,12 @@ import EmailTemplateManager from './components/admin/EmailTemplateManager';
 import BackupManager from './components/admin/BackupManager';
 
 import KpiManager from './components/admin/KpiManager';
+import RetelioDashboard from './components/admin/RetelioDashboard';
+import RecoverySettings from './components/admin/RecoverySettings';
+import { getPlanLimits } from './config/planLimits';
+import QRStudio from './components/admin/QRStudio';
 import IssueManagement from './components/admin/IssueManagement';
+import RetellioLeaderboard from './components/admin/RetellioLeaderboard';
 import { getSampleData } from './utils/sampleData';
 import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
@@ -557,9 +564,9 @@ const Dashboard = ({
     <div className="animate-fade-in">
       {isDemoMode && (
         <div style={{ position: 'fixed', top: '1rem', left: '50%', transform: 'translateX(-50%)', zIndex: 99999 }}>
-          <div className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '100px', boxShadow: 'var(--shadow-lg)', border: '1px solid #f97316' }}>
+          <div className="badge badge-warning">
             <TrendingUp size={16} /> <strong>DEMO MODE ACTIVE</strong>
-            <button onClick={() => setIsDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9a3412', fontWeight: 'bold', marginLeft: '8px' }}>[EXIT]</button>
+            <button onClick={() => setIsDemoMode(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 'bold', marginLeft: '8px' }}>[EXIT]</button>
           </div>
         </div>
       )}
@@ -576,7 +583,7 @@ const Dashboard = ({
         {/* Title and Action Buttons Row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
           <div>
-            <h1 style={{ fontFamily: 'Outfit', fontSize: '2.2rem', fontWeight: '800', letterSpacing: '-0.03em', color: '#1e293b', marginBottom: '0.25rem' }}>
+            <h1 style={{ fontFamily: 'Outfit', fontSize: '2.2rem', fontWeight: '800', letterSpacing: '-0.03em', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
               {t('dashboard.title')} <span style={{ color: 'var(--primary)' }}>Pro</span>
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: '500' }}>{t('dashboard.subtitle')}</p>
@@ -644,7 +651,7 @@ const Dashboard = ({
       {/* Hierarchy Upgrade: Strategic vs Operational Sections */}
 
 
-      <h3 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', fontWeight: '800', marginBottom: '1.25rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <h3 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', fontWeight: '800', marginBottom: '1.25rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <TrendingUp size={20} color="var(--primary)" /> Métricas Estratégicas
       </h3>
 
@@ -664,7 +671,7 @@ const Dashboard = ({
               </div>
             </div>
             <div className="tooltip-wrapper">
-              <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '12px' }}>
+              <div style={{ background: 'var(--primary-light)', padding: '10px', borderRadius: '12px' }}>
                 <Trophy size={24} color="var(--primary)" />
               </div>
               <span className="tooltip-content">Net Promoter Score Global</span>
@@ -715,7 +722,7 @@ const Dashboard = ({
         </div>
       </div>
 
-      <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem', fontWeight: '700', marginBottom: '1rem', color: '#1e293b' }}>Desempeño Operativo</h3>
+      <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem', fontWeight: '800', marginBottom: '1rem', color: 'var(--text-main)' }}>Desempeño Operativo</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -737,7 +744,7 @@ const Dashboard = ({
             {sentimentStats.map(s => (
               <div key={s.name} style={{ textAlign: 'center', flex: 1 }}>
                 <div style={{ color: s.color, marginBottom: '4px' }}>{s.icon}</div>
-                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#1e293b' }}>{s.value}</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-main)' }}>{s.value}</div>
                 <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{s.name}</div>
               </div>
             ))}
@@ -775,12 +782,12 @@ const Dashboard = ({
               {weeklyComparison.totalChange > 0 ? (
                 <>
                   <TrendingUp size={14} color="#10b981" />
-                  <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '700' }}>+{weeklyComparison.totalChange}%</span>
+                  <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: '800' }}>+{weeklyComparison.totalChange}%</span>
                 </>
               ) : weeklyComparison.totalChange < 0 ? (
                 <>
                   <TrendingDown size={14} color="#ef4444" />
-                  <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '700' }}>{weeklyComparison.totalChange}%</span>
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: '800' }}>{weeklyComparison.totalChange}%</span>
                 </>
               ) : null}
             </div>
@@ -811,7 +818,7 @@ const Dashboard = ({
             <span className="stat-value" style={{ fontSize: '1.8rem' }}>{stats.avg}</span>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>/ 5.0</span>
           </div>
-          <div style={{ marginTop: 'auto', background: '#f8fafc', borderRadius: '4px', height: '6px', width: '100%', overflow: 'hidden' }}>
+          <div style={{ marginTop: 'auto', background: 'var(--bg-main)', borderRadius: '4px', height: '6px', width: '100%', overflow: 'hidden' }}>
             <div style={{ background: '#fbbf24', height: '100%', width: `${(stats.avg / 5) * 100}%` }}></div>
           </div>
         </div>
@@ -825,13 +832,13 @@ const Dashboard = ({
         {/* Row 1: Intelligence vs Matrix */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'stretch' }}>
           {/* AI Insights Card - Redesigned as Executive Summary */}
-          <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderLeft: '4px solid #f59e0b' }}>
+          <div className="card" style={{ background: 'var(--bg-surface)', borderLeft: '4px solid #f59e0b' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '10px' }}>
+                <div style={{ background: 'rgba(245, 158, 11, 0.1)', padding: '8px', borderRadius: '10px' }}>
                   <Lightbulb size={20} color="#f59e0b" />
                 </div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.ia_predictive')}</h3>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-header)', margin: 0 }}>{t('dashboard.ia_predictive')}</h3>
               </div>
               <span className="badge badge-warning" style={{ borderRadius: '20px', padding: '4px 12px' }}>Beta Pro</span>
             </div>
@@ -847,20 +854,20 @@ const Dashboard = ({
                     alignItems: 'flex-start',
                     gap: '12px',
                     padding: '1rem',
-                    background: 'white',
+                    background: 'rgba(0,0,0,0.15)',
                     borderRadius: '16px',
-                    border: '1px solid #f1f5f9',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
                     transition: 'all 0.3s ease',
                     cursor: insight.highlight ? 'help' : 'default',
                     transform: highlightedData?.id === insight.highlight?.id && insight.highlight ? 'scale(1.02)' : 'none',
-                    borderColor: highlightedData?.id === insight.highlight?.id && insight.highlight ? 'var(--primary)' : '#f1f5f9'
+                    borderColor: highlightedData?.id === insight.highlight?.id && insight.highlight ? 'var(--primary)' : 'transparent'
                   }}
                   className="hover-card-subtle"
                 >
                   <div style={{
                     color: insight.type === 'success' ? '#10b981' : insight.type === 'alert' ? '#ef4444' : '#3b82f6',
-                    background: insight.type === 'success' ? '#dcfce7' : insight.type === 'alert' ? '#fee2e2' : '#eff6ff',
+                    background: insight.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : insight.type === 'alert' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(59, 130, 246, 0.15)',
                     padding: '8px',
                     borderRadius: '10px'
                   }}>
@@ -868,7 +875,7 @@ const Dashboard = ({
                   </div>
                   <div style={{
                     fontSize: '0.85rem',
-                    color: '#475569',
+                    color: 'var(--text-muted)',
                     fontWeight: '500',
                     lineHeight: '1.4'
                   }}>
@@ -877,7 +884,7 @@ const Dashboard = ({
                 </div>
               ))}
               {aiInsights.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                   {t('dashboard.analyzing_trends')}
                 </div>
               )}
@@ -887,13 +894,13 @@ const Dashboard = ({
           {/* Sentiment Distribution Card */}
           {/* Performance Matrix Card - Refined Layout */}
           {/* Performance Ranking Card */}
-          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
+          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-sidebar)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.performance_ranking')}</h3>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>{t('dashboard.performance_ranking')}</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{t('dashboard.comp_operational')}</p>
               </div>
-              <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
+              <div style={{ background: 'var(--bg-main)', padding: '8px', borderRadius: '10px' }}>
                 <TrendingUp size={18} color="var(--primary)" />
               </div>
             </div>
@@ -913,7 +920,7 @@ const Dashboard = ({
                       width={90}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#475569', fontSize: 10, fontWeight: 800 }}
+                      tick={{ fill: 'var(--text-muted)', fontSize: 10, fontWeight: 800 }}
                     />
                     <Tooltip
                       cursor={{ fill: 'rgba(0,0,0,0.02)' }}
@@ -939,7 +946,7 @@ const Dashboard = ({
                         position="right"
                         offset={10}
                         style={{
-                          fill: '#1e293b',
+                          fill: 'var(--text-header)',
                           fontWeight: '800',
                           fontSize: '11px',
                           fontFamily: 'Outfit',
@@ -962,13 +969,13 @@ const Dashboard = ({
         {/* Row 2: Analytical Widgets (Sentiment, Concepts, Categories) */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', alignItems: 'stretch', marginBottom: '1.5rem' }}>
           {/* Sentiment Distribution Card - Donut Chart */}
-          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
+          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-sidebar)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.empathy_analysis')}</h3>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>{t('dashboard.empathy_analysis')}</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{t('dashboard.emotional_class')}</p>
               </div>
-              <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
+              <div style={{ background: 'var(--bg-main)', padding: '8px', borderRadius: '10px' }}>
                 <Users size={18} color="var(--primary)" />
               </div>
             </div>
@@ -1001,19 +1008,19 @@ const Dashboard = ({
                 transform: 'translate(-50%, -50%)',
                 textAlign: 'center'
               }}>
-                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: '#1e293b', fontFamily: 'Outfit' }}>
+                <div style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-main)', fontFamily: 'Outfit' }}>
                   {Math.round(((sentimentStats[0]?.value ?? 0) / (stats.total || 1)) * 100)}%
                 </div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '700' }}>{t('common.positive')}</div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '800' }}>{t('common.positive')}</div>
               </div>
             </div>
           </div>
 
           {/* New Card: Concept Cloud (Phase 3) */}
-          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'white' }}>
+          <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-sidebar)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.key_concepts')}</h3>
+                <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>{t('dashboard.key_concepts')}</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>{t('dashboard.top_terms')}</p>
               </div>
               <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '10px' }}>
@@ -1042,7 +1049,7 @@ const Dashboard = ({
                 </span>
               ))}
               {aiConceptCloud.length === 0 && (
-                <div style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center', width: '100%', padding: '2rem' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', width: '100%', padding: '2rem' }}>
                   {t('dashboard.analyzing')}
                 </div>
               )}
@@ -1076,8 +1083,8 @@ const Dashboard = ({
                 return (
                   <div key={cat} style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: '700', color: '#1e293b' }}>{cat}</span>
-                      <span style={{ color: '#64748b' }}>{count} items ({percent}%)</span>
+                      <span style={{ fontWeight: '800', color: 'var(--text-main)' }}>{cat}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{count} items ({percent}%)</span>
                     </div>
                     <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
                       <div style={{
@@ -1101,7 +1108,7 @@ const Dashboard = ({
       <div className="card" style={{ marginBottom: '1.5rem', minHeight: '350px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>
+            <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
               {t('dashboard.volume_chart_title', 'Daily Feedback Volume')}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '4px' }}>
@@ -1166,12 +1173,12 @@ const Dashboard = ({
                 {npsTimeline[npsTimeline.length - 1].nps > npsTimeline[0].nps ? (
                   <>
                     <TrendingUp size={14} color="#10b981" />
-                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '700' }}>{t('dashboard.improving')}</span>
+                    <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: '800' }}>{t('dashboard.improving')}</span>
                   </>
                 ) : (
                   <>
                     <TrendingDown size={14} color="#ef4444" />
-                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '700' }}>{t('dashboard.needs_attention')}</span>
+                    <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '800' }}>{t('dashboard.needs_attention')}</span>
                   </>
                 )}
               </div>
@@ -1224,8 +1231,10 @@ const Dashboard = ({
                       label={false}
                     />
                   )}
-                  <Tooltip
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: 'var(--shadow-lg)', padding: '16px' }}
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border)', borderRadius: '12px', color: 'var(--text-main)', fontSize: '12px', boxShadow: 'var(--shadow-luxury)', padding: '12px' }} 
+                    itemStyle={{ color: 'var(--primary)' }} 
+                    cursor={{ fill: 'var(--primary-light)', opacity: 0.1 }}
                     formatter={(value, name) => [
                       `${value} pts`,
                       name === 'nps' ? t('dashboard.actual_nps') : t('dashboard.prev_target')
@@ -1241,26 +1250,26 @@ const Dashboard = ({
           </div>
         </div>
 
-        <div className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '480px', overflow: 'hidden', background: 'white' }}>
+        <div className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '480px', overflow: 'hidden', background: 'var(--bg-sidebar)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '10px' }}>
+              <div style={{ background: 'var(--bg-main)', padding: '8px', borderRadius: '10px' }}>
                 <History size={18} color="#64748b" />
               </div>
-              <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b', margin: 0 }}>{t('dashboard.audit_log')}</h3>
+              <h3 style={{ fontFamily: 'Outfit', fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>{t('dashboard.audit_log')}</h3>
             </div>
-            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--primary)', background: '#eff6ff', padding: '4px 12px', borderRadius: '20px' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--primary)', background: 'var(--primary-light)', padding: '4px 12px', borderRadius: '20px' }}>
               {t('dashboard.last_records', { count: finalFilteredData.length > 50 ? 50 : finalFilteredData.length })}
             </span>
           </div>
 
           <div style={{ flex: 1, overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10 }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-main)', zIndex: 10 }}>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #f1f5f9' }}>
-                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.timestamp')}</th>
-                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dashboard.entries')}</th>
-                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.insight_opinion')}</th>
+                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.timestamp')}</th>
+                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('dashboard.entries')}</th>
+                  <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.insight_opinion')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1272,15 +1281,15 @@ const Dashboard = ({
                   return (
                     <tr key={f.id} style={{ borderBottom: '1px solid #f8fafc' }} className="hover-row-subtle">
                       <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b' }}>{dateLabel}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{timeLabel}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)' }}>{dateLabel}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{timeLabel}</div>
                       </td>
                       <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '700', color: '#1e293b' }}>{getStoreName(f.tienda_id)}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)' }}>{getStoreName(f.tienda_id)}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: '600' }}>{getAreaName(f.area_id)}</div>
                       </td>
                       <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                        <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0, fontStyle: f.comentario ? 'normal' : 'italic', lineHeight: '1.4' }}>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, fontStyle: f.comentario ? 'normal' : 'italic', lineHeight: '1.4' }}>
                           {f.comentario || t('common.no_comment')}
                         </p>
                         <div style={{ marginTop: '8px' }}>
@@ -1294,7 +1303,7 @@ const Dashboard = ({
                 })}
                 {finalFilteredData.length === 0 && (
                   <tr>
-                    <td colSpan="3" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
+                    <td colSpan="3" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
                       <History size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
                       <p style={{ fontSize: '0.85rem' }}>{t('dashboard.no_audit_data')}</p>
                     </td>
@@ -1519,7 +1528,7 @@ const QRGenerator = () => {
     <div className="animate-in fade-in duration-500">
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('qr.studio_title')}</h1>
+          <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>{t('qr.studio_title')}</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('qr.studio_desc')}</p>
         </div>
         <button
@@ -1534,14 +1543,14 @@ const QRGenerator = () => {
       {!batchMode ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
           <div className="card">
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem' }}>{t('qr.config')}</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem' }}>{t('qr.config')}</h3>
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.5rem', display: 'block' }}>{t('qr.select_store')}</label>
               <select
                 value={selectedStore}
                 onChange={(e) => { setSelectedStore(e.target.value); setSelectedArea(''); }}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border)' }}
               >
                 <option value="">{t('qr.select_store_placeholder')}</option>
                 {stores.map(s => <option key={s?.id} value={s?.id}>{s?.nombre}</option>)}
@@ -1554,7 +1563,7 @@ const QRGenerator = () => {
                 value={selectedArea}
                 onChange={(e) => setSelectedArea(e.target.value)}
                 disabled={!selectedStore}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', opacity: selectedStore ? 1 : 0.5 }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border)', opacity: selectedStore ? 1 : 0.5 }}
               >
                 <option value="">{t('qr.select_area_placeholder')}</option>
                 {activeAreas.map(area => (
@@ -1573,7 +1582,7 @@ const QRGenerator = () => {
           <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
             {selectedStore && selectedArea ? (
               <>
-                <div style={{ background: 'white', padding: '1.5rem', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9' }}>
+                <div style={{ background: 'var(--bg-sidebar)', padding: '1.5rem', borderRadius: '20px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid var(--border)' }}>
                   <QRCodeSVG
                     id="single-qr"
                     value={getQRUrl(selectedStore, selectedArea)}
@@ -1591,7 +1600,7 @@ const QRGenerator = () => {
                   />
                 </div>
                 <div style={{ marginTop: '1.5rem' }}>
-                  <h4 style={{ fontWeight: '700', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                  <h4 style={{ fontWeight: '800', fontSize: '1rem', marginBottom: '0.25rem' }}>
                     {stores.find(s => s.id === selectedStore)?.nombre}
                   </h4>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
@@ -1604,7 +1613,7 @@ const QRGenerator = () => {
                 </div>
               </>
             ) : (
-              <div style={{ color: '#94a3b8' }}>
+              <div style={{ color: 'var(--text-muted)' }}>
                 <QrCode size={64} strokeWidth={1} style={{ marginBottom: '1rem' }} />
                 <p style={{ fontSize: '0.9rem' }}>{t('qr.preview_placeholder')}</p>
               </div>
@@ -1618,7 +1627,7 @@ const QRGenerator = () => {
             <select
               value={selectedStore}
               onChange={(e) => setSelectedStore(e.target.value)}
-              style={{ maxWidth: '400px', width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}
+              style={{ maxWidth: '400px', width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1px solid var(--border)' }}
             >
               <option value="">{t('qr.select_store_placeholder')}</option>
               {stores.map(s => <option key={s?.id} value={s?.id}>{s?.nombre}</option>)}
@@ -1650,8 +1659,8 @@ const QRGenerator = () => {
           {selectedStore ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.5rem' }}>
               {activeAreas.map(area => (
-                <div key={area?.id} className="card" style={{ padding: '1rem', textAlign: 'center', background: '#f8fafc' }}>
-                  <div style={{ background: 'white', padding: '1rem', borderRadius: '12px', display: 'inline-block', marginBottom: '1rem' }}>
+                <div key={area?.id} className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--bg-main)' }}>
+                  <div style={{ background: 'var(--bg-sidebar)', padding: '1rem', borderRadius: '12px', display: 'inline-block', marginBottom: '1rem' }}>
                     <QRCodeSVG
                       id={`batch-qr-${area?.id}`}
                       value={getQRUrl(selectedStore, area?.id)}
@@ -1660,7 +1669,7 @@ const QRGenerator = () => {
                       includeMargin={true}
                     />
                   </div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '0.5rem' }}>{area?.nombre}</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: '800', marginBottom: '0.5rem' }}>{area?.nombre}</div>
                   <button
                     className="btn btn-secondary btn-sm"
                     style={{ width: '100%' }}
@@ -1672,7 +1681,7 @@ const QRGenerator = () => {
               ))}
             </div>
           ) : (
-            <div style={{ padding: '4rem', textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
               <p>{t('qr.no_store_selected')}</p>
             </div>
           )}
@@ -1728,25 +1737,25 @@ const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {}, load
   return (
     <div className="animate-in fade-in duration-500">
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('leaderboard.title')}</h1>
+        <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>{t('leaderboard.title')}</h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('leaderboard.subtitle')}</p>
       </div>
 
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead style={{ background: '#f8fafc' }}>
+          <thead style={{ background: 'var(--bg-main)' }}>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('leaderboard.rank')}</th>
-              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('common.store')}</th>
-              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>NPS</th>
-              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('leaderboard.volume')}</th>
-              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>{t('leaderboard.status')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('leaderboard.rank')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('common.store')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>NPS</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('leaderboard.volume')}</th>
+              <th style={{ padding: '1rem 1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('leaderboard.status')}</th>
             </tr>
           </thead>
           <tbody>
             {storeRankings.map((store, index) => (
               <tr key={store.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '700', color: '#1e293b' }}>
+                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '800', color: 'var(--text-main)' }}>
                   {index + 1}
                   {index === 0 && ' 🥇'}
                   {index === 1 && ' 🥈'}
@@ -1757,12 +1766,12 @@ const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {}, load
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{t('leaderboard.official_store')}</div>
                 </td>
                 <td style={{
-                  padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '700',
+                  padding: '1rem 1.5rem', fontSize: '0.9rem', fontWeight: '800',
                   color: store.nps > 40 ? '#10b981' : store.nps > 0 ? '#f59e0b' : '#ef4444'
                 }}>
                   {store.nps}
                 </td>
-                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', color: '#1e293b' }}>{store.volume}</td>
+                <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', color: 'var(--text-main)' }}>{store.volume}</td>
                 <td style={{ padding: '1rem 1.5rem' }}>
                   <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden', width: '80px' }}>
                     <div style={{
@@ -1825,11 +1834,11 @@ const AuditTrail = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.date')}</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.user')}</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.action')}</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.table')}</th>
-                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-muted)' }}>{t('audit.details')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>{t('audit.date')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>{t('audit.user')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>{t('audit.action')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>{t('audit.table')}</th>
+                <th style={{ padding: '1rem', fontSize: '0.75rem', fontWeight: '800', color: 'var(--text-muted)' }}>{t('audit.details')}</th>
               </tr>
             </thead>
             <tbody>
@@ -1841,8 +1850,8 @@ const AuditTrail = () => {
                   onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
-                  <td style={{ padding: '1rem', color: '#64748b' }}>{formatDateMX(log.created_at)}</td>
-                  <td style={{ padding: '1rem', fontWeight: '700', color: '#1e293b' }}>{log.usuario_email}</td>
+                  <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{formatDateMX(log.created_at)}</td>
+                  <td style={{ padding: '1rem', fontWeight: '800', color: 'var(--text-main)' }}>{log.usuario_email}</td>
                   <td style={{ padding: '1rem' }}>
                     <span style={{
                       padding: '4px 8px', borderRadius: '6px', background: '#eef2ff', color: '#4338ca', fontSize: '0.65rem', fontWeight: '800'
@@ -1850,7 +1859,7 @@ const AuditTrail = () => {
                       {log.accion}
                     </span>
                   </td>
-                  <td style={{ padding: '1rem', color: '#64748b' }}>{log.tabla_afectada}</td>
+                  <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{log.tabla_afectada}</td>
                   <td style={{ padding: '1rem 1.5rem' }}>
                     <button className="btn btn-sm" style={{ padding: '4px 12px' }} onClick={() => setSelectedLog(log)}>
                       {t('audit.view_details')}
@@ -1871,29 +1880,29 @@ const AuditTrail = () => {
           backdropFilter: 'blur(2px)'
         }} onClick={() => setSelectedLog(null)}>
           <div style={{
-            background: 'white', borderRadius: '12px', padding: '2rem', width: '90%', maxWidth: '800px',
+            background: 'var(--bg-sidebar)', borderRadius: '12px', padding: '2rem', width: '90%', maxWidth: '800px',
             maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
               <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', margin: 0 }}>{t('audit.forensic_evidence')}</h2>
-                <span style={{ fontSize: '0.8rem', color: '#64748b', fontFamily: 'monospace' }}>{t('common.id')}: {selectedLog.id}</span>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', margin: 0 }}>{t('audit.forensic_evidence')}</h2>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{t('common.id')}: {selectedLog.id}</span>
               </div>
               <button onClick={() => setSelectedLog(null)} style={{ background: 'none', border: 'none', fontSize: '2rem', cursor: 'pointer', lineHeight: 0 }}>×</button>
             </div>
 
             {/* Metadata Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{t('audit.responsible_user')}</div>
+              <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>{t('audit.responsible_user')}</div>
                 <div style={{ fontWeight: '600' }}>{selectedLog.usuario_email}</div>
               </div>
-              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{t('audit.date_time')}</div>
+              <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>{t('audit.date_time')}</div>
                 <div style={{ fontWeight: '600' }}>{formatDateMX(selectedLog.created_at)}</div>
               </div>
-              <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
-                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>{t('audit.device_user_agent')}</div>
+              <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', gridColumn: '1 / -1' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '800', marginBottom: '4px' }}>{t('audit.device_user_agent')}</div>
                 <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', wordBreak: 'break-all' }}>
                   {selectedLog.detalles?.meta?.userAgent || t('common.not_registered')}
                 </div>
@@ -1901,18 +1910,18 @@ const AuditTrail = () => {
             </div>
 
             {/* Changes Analysis */}
-            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>{t('audit.changes_analysis')}</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1rem' }}>{t('audit.changes_analysis')}</h3>
 
             {selectedLog.detalles?.changes ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem' }}>{t('audit.previous_state')}</div>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', fontWeight: '800', fontSize: '0.85rem' }}>{t('audit.previous_state')}</div>
                   <pre style={{ padding: '1rem', margin: 0, fontSize: '0.8rem', overflowX: 'auto', background: '#fff' }}>
                     {JSON.stringify(selectedLog.detalles.changes.before, null, 2)}
                   </pre>
                 </div>
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ background: '#dcfce7', color: '#166534', padding: '0.75rem', fontWeight: '700', fontSize: '0.85rem' }}>{t('audit.new_state')}</div>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <div style={{ background: '#dcfce7', color: '#166534', padding: '0.75rem', fontWeight: '800', fontSize: '0.85rem' }}>{t('audit.new_state')}</div>
                   <pre style={{ padding: '1rem', margin: 0, fontSize: '0.8rem', overflowX: 'auto', background: '#fff' }}>
                     {JSON.stringify(selectedLog.detalles.changes.after, null, 2)}
                   </pre>
@@ -1943,6 +1952,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     '/issues': 'issues',
     '/qr': 'qr',
     '/leaderboard': 'leaderboard',
+    '/recovery': 'recovery',
     '/estructura': 'users',
     '/marketing': 'email',
     '/respaldos': 'backup',
@@ -1969,7 +1979,13 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [wizardStep, setWizardStep] = useState(0);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
   const [filters, setFilters] = useState({
     store: 'Todas',
     area: 'Todas',
@@ -2194,9 +2210,9 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 
   if (tenantLoading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem', background: '#f8fafc' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem', background: 'var(--bg-main)' }}>
         <Loader className="animate-spin" size={40} color="var(--primary)" />
-        <p style={{ fontWeight: '800', color: '#1e40af', fontSize: '1rem' }}>Sincronizando identidad...</p>
+        <p style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1rem' }}>Sincronizando identidad...</p>
       </div>
     );
   }
@@ -2224,99 +2240,165 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
       <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
 
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
-        <div style={{ padding: '0 0.5rem', marginBottom: '2rem' }}>
-          {tenant?.logoUrl && <img src={tenant.logoUrl} alt={tenant?.name || 'SaaS Admin'} style={{ maxWidth: '130px', objectFit: 'contain' }} />}
+        {/* Logo */}
+        <div style={{ padding: '0 0.25rem', marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', width: '28px', height: '28px', flexShrink: 0 }}>
+              <div style={{ borderRadius: '3px', background: '#FF5C3A' }} />
+              <div style={{ borderRadius: '3px', background: '#00C9A7' }} />
+              <div style={{ borderRadius: '3px', background: '#7C3AED' }} />
+              <div style={{ borderRadius: '3px', background: '#0D0D12' }} />
+            </div>
+            <span style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontWeight: 800, fontSize: '1.1rem', color: '#0D0D12', letterSpacing: '-0.02em' }}>retelio</span>
+          </div>
         </div>
+
         <nav style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <ul className="nav-links">
+            {/* Core */}
+            <li style={{ padding: '0 0.5rem', marginBottom: '0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Principal</span>
+            </li>
             <li>
               <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>
-                <LayoutDashboard size={18} /> {t('menu.dashboard')}
-              </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { navigate('/ajustes'); setIsSidebarOpen(false); }}>
-                <Building size={18} /> {t('menu.settings')}
-              </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
-                <AlertTriangle size={18} /> {t('menu.issues')}
+                <LayoutDashboard size={16} /> Dashboard
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { navigate('/qr'); setIsSidebarOpen(false); }}>
-                <QrCode size={18} /> {t('menu.qr')}
+                <QrCode size={16} /> QR Studio
               </button>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
+                <AlertTriangle size={16} /> Issues
+              </button>
+            </li>
+
+            {/* Analytics */}
+            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Analítica</span>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => { navigate('/leaderboard'); setIsSidebarOpen(false); }}>
-                <Trophy size={18} /> {t('menu.leaderboard')}
-              </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { navigate('/estructura'); setIsSidebarOpen(false); }}>
-                <Users size={18} /> {t('menu.structure')}
-              </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
-                <Mail size={18} /> {t('menu.marketing')}
-              </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
-                <MessageSquare size={18} /> {t('menu.questions')}
+                <Trophy size={16} /> Leaderboard
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'kpi' ? 'active' : ''}`} onClick={() => { navigate('/metas'); setIsSidebarOpen(false); }}>
-                <Target size={18} /> {t('menu.kpi')}
+                <Target size={16} /> Metas KPI
               </button>
             </li>
-            <li style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
+
+            {/* Config */}
+            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Configuración</span>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { navigate('/ajustes'); setIsSidebarOpen(false); }}>
+                <Building size={16} /> Organización
+              </button>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { navigate('/estructura'); setIsSidebarOpen(false); }}>
+                <Users size={16} /> Equipo
+              </button>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
+                <MessageSquare size={16} /> Preguntas
+              </button>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
+                <Mail size={16} /> Marketing
+              </button>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'recovery' ? 'active' : ''}`} onClick={() => { navigate('/recovery'); setIsSidebarOpen(false); }}>
+                <Gift size={16} /> Recovery
+              </button>
+            </li>
+
+            {/* System */}
+            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</span>
+            </li>
+            <li>
               <button className={`nav-item ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => { navigate('/respaldos'); setIsSidebarOpen(false); }}>
-                <RotateCcw size={18} /> {t('menu.backup')}
+                <RotateCcw size={16} /> Respaldos
               </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { navigate('/auditoria'); setIsSidebarOpen(false); }}>
-                <ShieldCheck size={18} /> {t('menu.audit')}
+                <ShieldCheck size={16} /> Auditoría
               </button>
-            </li>
-            
-            <li style={{ marginTop: '1rem' }}>
-              <div style={{ padding: '1rem', background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 100%)', borderRadius: '16px', border: '1px solid #dbeafe' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#1e40af' }}>
-                  <HelpCircle size={16} />
-                  <span style={{ fontSize: '0.75rem', fontWeight: '800' }}>{t('menu.help')}</span>
-                </div>
-                <p style={{ fontSize: '0.65rem', color: '#60a5fa', lineHeight: '1.4', marginBottom: '8px' }}>
-                  {t('menu.help_desc')}
-                </p>
-                <button className="btn btn-sm btn-primary" style={{ width: '100%', fontSize: '0.65rem' }}>
-                  {t('menu.contact_support')}
-                </button>
-              </div>
             </li>
           </ul>
         </nav>
 
-        <div style={{ padding: '0.75rem', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', flexShrink: 0, marginTop: '0.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-            <div style={{ width: '32px', height: '32px', background: 'var(--primary)', borderRadius: '8px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white', fontSize: '0.75rem', fontWeight: 'bold' }}>
+        {/* Plan usage mini */}
+        <div style={{ padding: '0 0.25rem', marginBottom: '0.75rem' }}>
+          {[
+            { label: 'Sucursales', current: stores.length, max: getPlanLimits(tenant?.plan || 'free').maxLocations },
+          ].filter(item => item.max < 999999).map(({ label, current, max }) => {
+            const pct = Math.min(100, Math.round((current / max) * 100));
+            const barColor = pct >= 90 ? '#FF5C3A' : pct >= 70 ? '#F59E0B' : '#00C9A7';
+            return (
+              <div key={label} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: 600, color: '#9CA3AF', marginBottom: 3 }}>
+                  <span>{label}</span>
+                  <span style={{ color: pct >= 90 ? '#FF5C3A' : '#9CA3AF' }}>{current}/{max}</span>
+                </div>
+                <div style={{ height: 4, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 999, transition: 'width 0.3s ease' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* User card */}
+        <div style={{ flexShrink: 0, marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+          {/* Plan badge */}
+          <div style={{ marginBottom: '0.75rem', padding: '0 0.25rem' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#FFF1EE', borderRadius: 999, padding: '4px 10px' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF5C3A' }} />
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#FF5C3A', textTransform: 'capitalize' }}>
+                {tenant?.plan || 'free'}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0.6rem', padding: '0 0.25rem' }}>
+            <div style={{
+              width: '34px', height: '34px', background: '#FF5C3A', borderRadius: '10px',
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              color: 'white', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0,
+            }}>
               {session?.user?.email?.substring(0, 2).toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: '700' }}>{session?.user?.user_metadata?.nombre || t('menu.admin')}</div>
-              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100px' }}>{session?.user?.email}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0D0D12',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {session?.user?.user_metadata?.nombre || 'Admin'}
+              </div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {session?.user?.email}
+              </div>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '0.5rem', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#ef4444', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer' }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: '6px', padding: '0.5rem', borderRadius: '10px',
+              border: '1px solid var(--border)', background: 'transparent',
+              color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+            }}
           >
-            <LogOut size={16} /> {t('menu.logout')}
+            <LogOut size={14} /> Cerrar sesión
           </button>
         </div>
       </aside>
@@ -2332,89 +2414,34 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
               <Menu size={22} />
             </button>
             <h2 className="view-title">
-              {activeTab === 'dash' ? t('menu.dashboard') :
-                activeTab === 'issues' ? t('menu.issues') :
-                  activeTab === 'email' ? t('menu.marketing') :
-                    activeTab === 'backup' ? t('menu.backup') :
-                      activeTab === 'kpi' ? t('menu.kpi') :
-                        activeTab === 'qr' ? t('menu.qr') :
-                        activeTab === 'org' ? t('menu.settings') :
-                        activeTab === 'leaderboard' ? t('menu.leaderboard') :
-                        activeTab === 'users' ? t('menu.structure') :
-                        activeTab === 'questions' ? t('menu.questions') :
-                        activeTab === 'audit' ? t('menu.audit') : t('menu.structure')}
+              {activeTab === 'dash'        ? 'Dashboard'      :
+               activeTab === 'qr'         ? 'QR Studio'      :
+               activeTab === 'org'        ? 'Configuración'  :
+               activeTab === 'issues'     ? 'Issues'         :
+               activeTab === 'leaderboard'? 'Leaderboard'    :
+               activeTab === 'recovery'  ? 'Recovery & Cupones' :
+               activeTab === 'users'      ? 'Equipo'         :
+               activeTab === 'email'      ? 'Marketing'      :
+               activeTab === 'questions'  ? 'Preguntas'      :
+               activeTab === 'kpi'        ? 'Metas'          :
+               activeTab === 'backup'     ? 'Respaldos'      :
+               activeTab === 'audit'      ? 'Auditoría'      : 'Dashboard'}
             </h2>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            {/* Global Filter Bar */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: '#f8fafc', padding: '4px 12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-              {/* Language Selector */}
-              <div style={{ display: 'flex', gap: '4px', background: '#e2e8f0', padding: '2px', borderRadius: '8px', marginRight: '8px' }}>
-                <button
-                  onClick={() => i18n.changeLanguage('es')}
-                  style={{
-                    padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                    background: i18n.language.startsWith('es') ? 'white' : 'transparent',
-                    fontWeight: i18n.language.startsWith('es') ? '700' : '500',
-                    boxShadow: i18n.language.startsWith('es') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
-                  }}
-                  title={t('common.spanish')}
-                >
-                  ES
-                </button>
-                <button
-                  onClick={() => i18n.changeLanguage('en')}
-                  style={{
-                    padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                    background: i18n.language.startsWith('en') ? 'white' : 'transparent',
-                    fontWeight: i18n.language.startsWith('en') ? '700' : '500',
-                    boxShadow: i18n.language.startsWith('en') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
-                  }}
-                  title={t('common.english')}
-                >
-                  EN
-                </button>
-                <button
-                  onClick={() => i18n.changeLanguage('pt')}
-                  style={{
-                    padding: '4px 8px', fontSize: '0.65rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                    background: i18n.language.startsWith('pt') ? 'white' : 'transparent',
-                    fontWeight: i18n.language.startsWith('pt') ? '700' : '500',
-                    boxShadow: i18n.language.startsWith('pt') ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
-                  }}
-                  title={t('common.portuguese')}
-                >
-                  PT
-                </button>
-              </div>
-              
-              <Filter size={16} color="var(--primary)" />
-              <select className="filter-select-mini" value={filters.dateRange} onChange={e => setFilters({ ...filters, dateRange: e.target.value })}>
-                <option value="last7days">{t('common.last_7_days')}</option>
-                <option value="last30days">{t('common.last_30_days')}</option>
-                <option value="all">{t('common.all_time')}</option>
-              </select>
-              <select className="filter-select-mini" value={filters.store} onChange={e => handleStoreChange(e.target.value)}>
-                <option value="Todas">{t('common.all_stores')}</option>
-                {[...new Set(dateFilteredData.map(f => f.tienda_id).filter(Boolean))].map(s => <option key={s} value={s}>{getStoreName(s)}</option>)}
-              </select>
-              <select className="filter-select-mini" value={filters.area} onChange={e => setFilters({ ...filters, area: e.target.value })}>
-                <option value="Todas">{t('common.all_areas')}</option>
-                {[...new Set(storeFilteredData.map(f => f.area_id).filter(Boolean))].map(a => <option key={a} value={a}>{getAreaName(a)}</option>)}
-              </select>
-              <select className="filter-select-mini" value={filters.sentiment} onChange={e => setFilters({ ...filters, sentiment: e.target.value })}>
-                <option value="Todos">{t('common.sentiment')}: {t('common.all')}</option>
-                <option value="Positivo">{t('common.positive')} 🟢</option>
-                <option value="Neutral">{t('common.neutral')} 🟡</option>
-                <option value="Negativo">{t('common.negative')} 🔴</option>
-              </select>
-              <select className="filter-select-mini" value={filters.canal} onChange={e => setFilters({ ...filters, canal: e.target.value })}>
-                <option value="Todos">{t('common.origin')}: {t('common.all')}</option>
-                <option value="QR">QR Code 📱</option>
-                <option value="Email">Email Marketing 📧</option>
-              </select>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              style={{
+                background: 'var(--bg-main)', border: '1px solid var(--border)',
+                color: 'var(--text-muted)', padding: '7px', borderRadius: '10px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              title={theme === 'light' ? 'Modo oscuro' : 'Modo claro'}
+            >
+              {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
 
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
@@ -2513,39 +2540,12 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
             </div>
           )}
           {activeTab === 'org' && <OrganizationSettings />}
-          {activeTab === 'dash' && (
-            <Dashboard
-              rawData={isDemoMode ? getSampleData(i18n.language).rawData : rawData}
-              stores={isDemoMode ? getSampleData(i18n.language).stores : stores}
-              areas={isDemoMode ? getSampleData(i18n.language).areas : areas}
-              filters={filters}
-              setFilters={setFilters}
-              loading={loading}
-              fetchError={fetchError}
-              refreshData={refreshData}
-              isDemoMode={isDemoMode}
-              setIsDemoMode={setIsDemoMode}
-              onStepLaunch={handleLaunchWizard}
-            />
-          )}
+          {activeTab === 'dash' && <RetelioDashboard />}
 
-          {activeTab === 'leaderboard' && (
-            <Leaderboard
-              rawData={rawData}
-              stores={stores}
-              areas={areas}
-              filters={filters}
-              loading={loading}
-            />
-          )}
-          {activeTab === 'issues' && (
-            <IssueManagement
-              issues={issues}
-              feedback={feedback}
-              onIssueUpdate={fetchIssues}
-            />
-          )}
-          {activeTab === 'qr' && <QRGenerator />}
+          {activeTab === 'leaderboard' && <RetellioLeaderboard />}
+          {activeTab === 'recovery' && <RecoverySettings />}
+          {activeTab === 'issues' && <IssueManagement />}
+          {activeTab === 'qr' && <QRStudio />}
           {activeTab === 'users' && <UserManagement session={session} />}
           {activeTab === 'email' && <EmailTemplateManager />}
           {activeTab === 'backup' && <BackupManager />}
@@ -2563,6 +2563,7 @@ export default function App() {
   
   return (
     <Routes>
+      <Route path="/f/:qrId" element={<FeedbackPublic />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/*" element={<AdminPanel tenant={tenant} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
     </Routes>

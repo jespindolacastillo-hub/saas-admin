@@ -1,403 +1,285 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { UserService } from '../../services/userService';
-import { StoreService } from '../../services/storeService';
-import { AreaService } from '../../services/areaService';
-import {
-    Plus, Edit2, Trash2, ShieldCheck,
-    UserPlus, X, Save, AlertCircle
-} from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { tenantConfig } from '../../config/tenant';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import { useTenant } from '../../hooks/useTenant';
+import { UserPlus, Edit2, Trash2, X, Users, ShieldCheck, Loader, CheckCircle2, AlertCircle } from 'lucide-react';
 
-const UserManagement = ({ session }) => {
-    const { t } = useTranslation();
-    // --- Configuration ---
-    const superUsers = ['jorge.espindola@priceshoes.com', 'admin@priceshoes.com', 'jec@priceshoes.com', tenantConfig.supportEmail];
-    const isSuperUser = superUsers.includes(session?.user?.email);
-
-    // --- State Management ---
-    const [activeSection, setActiveSection] = useState('tiendas');
-    const [data, setData] = useState({
-        tiendas: [],
-        areas: [],
-        usuarios: [],
-        tiendaAreas: []
-    });
-    const [loading, setLoading] = useState(true);
-
-    // Consolidated Modal State
-    const [modal, setModal] = useState({
-        show: false,
-        type: '', // 'tienda', 'area', 'usuario'
-        item: null,
-        original: null,
-        loading: false
-    });
-
-    const [deleteConfirm, setDeleteConfirm] = useState({
-        show: false,
-        target: null // { type, id, name }
-    });
-
-    const [tempSelectedAreas, setTempSelectedAreas] = useState(new Set());
-
-    // --- Data Fetching ---
-    const fetchAllData = useCallback(async () => {
-        setLoading(true);
-        try {
-            const [tiendas, areas, usuarios, tiendaAreas] = await Promise.all([
-                StoreService.listStores(),
-                AreaService.listAreas(),
-                UserService.listUsers(),
-                StoreService.listTiendaAreas()
-            ]);
-            setData({ tiendas, areas, usuarios, tiendaAreas });
-        } catch (err) {
-            console.error('❌ Error fetching data:', err);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchAllData();
-    }, [fetchAllData]);
-
-    // --- Handlers: Creation & Editing ---
-    const openModal = (type, item = null) => {
-        const isEdit = !!item;
-        setModal({
-            show: true,
-            type,
-            item: isEdit ? { ...item } : {},
-            original: isEdit ? { ...item } : null,
-            loading: false
-        });
-
-        if (type === 'tienda') {
-            if (isEdit) {
-                const currentAreas = new Set(
-                    data.tiendaAreas
-                        .filter(ta => ta.tienda_id === item.id && ta.activa)
-                        .map(ta => ta.area_id)
-                );
-                setTempSelectedAreas(currentAreas);
-            } else {
-                const allActiveAreas = new Set(data.areas.filter(a => a.activa).map(a => a.id));
-                setTempSelectedAreas(allActiveAreas);
-            }
-        }
-    };
-
-    const closeModal = () => {
-        setModal({ show: false, type: '', item: null, original: null, loading: false });
-        setTempSelectedAreas(new Set());
-    };
-
-    const handleSave = async () => {
-        const { type, item } = modal;
-        if (!item.nombre || item.nombre.trim() === '') {
-            alert(t('users.alerts.name_required'));
-            return;
-        }
-
-        setModal(prev => ({ ...prev, loading: true }));
-        try {
-            let result;
-            if (type === 'usuario') {
-                result = await UserService.saveUser(item);
-            } else if (type === 'tienda') {
-                result = await StoreService.saveStore(item, tempSelectedAreas);
-            } else if (type === 'area') {
-                result = await AreaService.saveArea(item);
-            }
-
-            // Cleanup & Refresh
-            closeModal();
-            fetchAllData();
-
-            // Note: Audit logging could be moved to services, 
-            // but keeping a simple console log here for confirmation
-            console.log(`✅ ${type} guardado con éxito:`, result.id);
-        } catch (err) {
-            alert(t('users.alerts.save_error', { type: t(`users.modal.types.${type}`) }) + ' ' + err.message);
-        } finally {
-            setModal(prev => ({ ...prev, loading: false }));
-        }
-    };
-
-    // --- Handlers: Deletion ---
-    const openDelete = (type, id, name) => {
-        setDeleteConfirm({ show: true, target: { type, id, name } });
-    };
-
-    const confirmDelete = async () => {
-        const { target } = deleteConfirm;
-        if (!target) return;
-
-        setLoading(true);
-        try {
-            if (target.type === 'usuario') {
-                const user = data.usuarios.find(u => u.id === target.id);
-                await UserService.deleteUser(target.id, user?.email);
-            } else if (target.type === 'tienda') {
-                await StoreService.deleteStore(target.id);
-            } else if (target.type === 'area') {
-                await AreaService.deleteArea(target.id);
-            }
-
-            fetchAllData();
-        } catch (err) {
-            alert(t('users.alerts.delete_error') + ' ' + err.message);
-        } finally {
-            setLoading(false);
-            setDeleteConfirm({ show: false, target: null });
-        }
-    };
-
-    // --- Optimistic Updates ---
-    const toggleUserStatus = async (id, currentStatus) => {
-        // 1. Optimistic Update
-        setData(prev => ({
-            ...prev,
-            usuarios: prev.usuarios.map(u => u.id === id ? { ...u, activo: !currentStatus } : u)
-        }));
-
-        try {
-            await UserService.toggleStatus(id, !currentStatus);
-        } catch (err) {
-            // 2. Revert on error
-            alert(t('users.alerts.status_error') + ' ' + err.message);
-            setData(prev => ({
-                ...prev,
-                usuarios: prev.usuarios.map(u => u.id === id ? { ...u, activo: currentStatus } : u)
-            }));
-        }
-    };
-
-    // --- Helpers ---
-    const getRolColor = (rol) => {
-        const colors = { Admin: '#dc2626', Gerente: '#f59e0b', Usuario: '#3b82f6' };
-        return colors[rol] || '#94a3b8';
-    };
-
-    // --- Render Logic ---
-    if (!isSuperUser && activeSection === 'usuarios') {
-        return (
-            <div style={{ padding: '3rem', textAlign: 'center', background: 'white', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-                <ShieldCheck size={48} style={{ color: '#dc2626', marginBottom: '1rem' }} />
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e293b', marginBottom: '0.5rem' }}>{t('users.restricted_access')}</h2>
-                <p style={{ color: '#64748b' }}>{t('users.restricted_desc')}</p>
-                <button onClick={() => setActiveSection('tiendas')} className="btn btn-primary" style={{ marginTop: '1rem' }}>{t('users.back_btn')}</button>
-            </div>
-        );
-    }
-
-    if (loading && !data.tiendas.length) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('users.loading')}</div>;
-
-    return (
-        <div className="animate-in fade-in duration-500">
-            <header style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('users.title')}</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('users.subtitle')}</p>
-            </header>
-
-            {/* Navigation Tabs */}
-            <nav style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '2px solid #e2e8f0' }}>
-                {['tiendas', 'areas', 'usuarios'].map(section => (
-                    <button
-                        key={section}
-                        onClick={() => setActiveSection(section)}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: 'none', border: 'none',
-                            borderBottom: activeSection === section ? '3px solid var(--primary)' : '3px solid transparent',
-                            color: activeSection === section ? 'var(--primary)' : 'var(--text-muted)',
-                            fontWeight: activeSection === section ? '700' : '500',
-                            cursor: 'pointer', textTransform: 'capitalize'
-                        }}
-                    >
-                        {t(`users.sections.${section}`)}
-                    </button>
-                ))}
-            </nav>
-
-            {/* Stores Section */}
-            {activeSection === 'tiendas' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.25rem' }}>
-                    <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                        <button className="btn btn-primary" onClick={() => openModal('tienda')}><Plus size={18} /> {t('users.new_tienda')}</button>
-                    </div>
-                    {data.tiendas.map(tienda => (
-                        <div key={tienda.id} className="card shadow-sm hover-grow">
-                            <h3 style={{ fontWeight: 700, marginBottom: '0.5rem' }}>{tienda.nombre}</h3>
-                            <p style={{ fontSize: '0.8rem', color: '#64748b', minHeight: '2.4rem' }}>{tienda.direccion}</p>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
-                                <button onClick={() => openModal('tienda', tienda)} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>{t('users.edit')}</button>
-                                <button onClick={() => openDelete('tienda', tienda.id, tienda.nombre)} className="btn btn-danger btn-sm">{t('users.delete')}</button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Areas Section */}
-            {activeSection === 'areas' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
-                    <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-                        <button className="btn btn-primary" onClick={() => openModal('area')}><Plus size={18} /> {t('users.new_area')}</button>
-                    </div>
-                    {data.areas.map(area => (
-                        <div key={area.id} className="card shadow-sm" style={{ borderLeft: `4px solid ${area.color}` }}>
-                            <h3 style={{ fontWeight: 700 }}>{area.nombre}</h3>
-                            <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{area.descripcion}</p>
-                            <div style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
-                                <button onClick={() => openModal('area', area)} className="btn btn-secondary btn-sm">{t('users.edit')}</button>
-                                <button onClick={() => openDelete('area', area.id, area.nombre)} className="btn btn-danger btn-sm"><Trash2 size={16} /></button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Users Section */}
-            {activeSection === 'usuarios' && (
-                <div className="card shadow-sm" style={{ overflowX: 'auto' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-                        <button className="btn btn-primary" onClick={() => openModal('usuario')}><UserPlus size={18} /> {t('users.new_usuario')}</button>
-                    </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid #f1f5f9', textAlign: 'left', fontSize: '0.7rem', color: '#94a3b8', letterSpacing: '0.05em' }}>
-                                <th style={{ padding: '1rem' }}>{t('users.table.name')}</th>
-                                <th>{t('users.table.email')}</th>
-                                <th>{t('users.table.role')}</th>
-                                <th>{t('users.table.state')}</th>
-                                <th>{t('users.table.actions')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.usuarios.map(u => (
-                                <tr key={u.id} className="hover-bg" style={{ borderBottom: '1px solid #f8fafc', fontSize: '0.85rem' }}>
-                                    <td style={{ padding: '1rem', fontWeight: 600 }}>{u.nombre} {u.apellido}</td>
-                                    <td style={{ color: '#64748b' }}>{u.email}</td>
-                                    <td>
-                                        <span style={{
-                                            padding: '4px 10px', borderRadius: '6px',
-                                            background: getRolColor(u.rol) + '15', color: getRolColor(u.rol),
-                                            fontSize: '0.75rem', fontWeight: 600
-                                        }}>
-                                            {t(`users.roles.${u.rol}`)}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button
-                                            onClick={() => toggleUserStatus(u.id, u.activo)}
-                                            className={u.activo ? 'badge badge-success' : 'badge'}
-                                            style={{ transition: 'all 0.2s', border: 'none', cursor: 'pointer' }}
-                                        >
-                                            {u.activo ? t('users.status.active') : t('users.status.inactive')}
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            <button onClick={() => openModal('usuario', u)} className="btn btn-secondary btn-sm" title={t('users.edit')}><Edit2 size={14} /></button>
-                                            <button onClick={() => openDelete('usuario', u.id, `${u.nombre} ${u.apellido}`)} className="btn btn-danger btn-sm" title={t('users.delete')}><Trash2 size={14} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* Modal: Consolidated Create/Edit */}
-            {modal.show && (
-                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
-                    <div className="card scale-in shadow-xl" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'auto' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                            <h2 style={{ fontWeight: 800, fontSize: '1.25rem', color: '#1e293b' }}>
-                                {t(`users.modal.${modal.original ? 'edit_title' : 'new_title'}`, { type: t(`users.modal.types.${modal.type}`) })}
-                            </h2>
-                            <button onClick={closeModal} className="hover-rotate" style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={24} color="#94a3b8" /></button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <div className="form-group">
-                                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.name')}</label>
-                                <input placeholder={t('users.modal.name')} value={modal.item.nombre || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, nombre: e.target.value } })} className="input" />
-                            </div>
-
-                            {modal.type === 'usuario' && (
-                                <>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.lastname')}</label>
-                                        <input placeholder={t('users.modal.lastname')} value={modal.item.apellido || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, apellido: e.target.value } })} className="input" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.email')}</label>
-                                        <input placeholder={t('users.modal.email')} disabled={!!modal.original} value={modal.item.email || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, email: e.target.value } })} className="input" />
-                                    </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.role')}</label>
-                                        <select value={modal.item.rol || 'Usuario'} onChange={e => setModal({ ...modal, item: { ...modal.item, rol: e.target.value } })} className="input">
-                                            <option value="Admin">{t('users.roles.Admin')}</option>
-                                            <option value="Gerente">{t('users.roles.Gerente')}</option>
-                                            <option value="Usuario">{t('users.roles.Usuario')}</option>
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.password')} {modal.original && t('users.modal.password_hint')}</label>
-                                        <input type="password" placeholder={t('users.modal.password_placeholder')} value={modal.item.password || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, password: e.target.value } })} className="input" />
-                                    </div>
-                                </>
-                            )}
-
-                            {modal.type === 'area' && (
-                                <>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.description')}</label>
-                                        <textarea placeholder={t('users.modal.description')} value={modal.item.descripcion || ''} onChange={e => setModal({ ...modal, item: { ...modal.item, descripcion: e.target.value } })} className="input" rows={3} />
-                                    </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem' }}>{t('users.modal.color')}</label>
-                                        <input type="color" value={modal.item.color || '#3b82f6'} onChange={e => setModal({ ...modal, item: { ...modal.item, color: e.target.value } })} style={{ height: 50, width: '100%', cursor: 'pointer', borderRadius: '8px', border: '2px solid #f1f5f9' }} />
-                                    </div>
-                                </>
-                            )}
-
-                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                                <button onClick={closeModal} className="btn btn-secondary" style={{ flex: 1 }}>{t('users.modal.cancel')}</button>
-                                <button onClick={handleSave} className="btn btn-primary" style={{ flex: 1 }} disabled={modal.loading}>
-                                    {modal.loading ? t('users.modal.saving') : <><Save size={18} style={{ marginRight: '8px' }} /> {t('users.modal.save')}</>}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal: Deletion Confirmation */}
-            {deleteConfirm.show && (
-                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-                    <div className="card scale-in shadow-2xl" style={{ maxWidth: 400, textAlign: 'center', padding: '2.5rem' }}>
-                        <div style={{ width: '64px', height: '64px', background: '#fef2f2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-                            <AlertCircle size={32} color="#dc2626" />
-                        </div>
-                        <h3 style={{ fontWeight: 800, fontSize: '1.5rem', color: '#1e293b', marginBottom: '0.75rem' }}>{t('users.delete_confirm.title')}</h3>
-                        <p style={{ fontSize: '0.95rem', color: '#64748b', lineHeight: 1.5 }}>
-                            {t('users.delete_confirm.message', { name: deleteConfirm.target.name })}
-                        </p>
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button onClick={() => setDeleteConfirm({ show: false, target: null })} className="btn btn-secondary" style={{ flex: 1 }}>{t('users.delete_confirm.cancel')}</button>
-                            <button onClick={confirmDelete} className="btn btn-danger" style={{ flex: 1 }}>{t('users.delete_confirm.confirm')}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+const T = {
+  coral:  '#FF5C3A',
+  teal:   '#00C9A7',
+  purple: '#7C3AED',
+  ink:    '#0D0D12',
+  muted:  '#6B7280',
+  border: '#E5E7EB',
+  bg:     '#F7F8FC',
+  card:   '#FFFFFF',
+  green:  '#16A34A',
+  amber:  '#F59E0B',
+  red:    '#DC2626',
 };
+const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
-export default UserManagement;
+const ROLES = ['Admin', 'Gerente', 'Usuario'];
+const ROLE_COLORS = { Admin: T.red, Gerente: T.amber, Usuario: T.teal };
+
+const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'Usuario', activo: true };
+
+export default function UserManagement({ session }) {
+  const { tenant } = useTenant();
+  const [users, setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal]   = useState(null); // null | { type: 'add'|'edit', user? }
+  const [form, setForm]     = useState(initForm);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    if (tenant?.id) loadUsers();
+  }, [tenant?.id]);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('Usuarios')
+      .select('id, nombre, apellido, email, rol, activo, created_at')
+      .eq('tenant_id', tenant.id)
+      .order('created_at', { ascending: false });
+    setUsers(data || []);
+    setLoading(false);
+  };
+
+  const openAdd = () => { setForm(initForm); setModal({ type: 'add' }); };
+  const openEdit = (u) => { setForm({ nombre: u.nombre || '', apellido: u.apellido || '', email: u.email || '', password: '', rol: u.rol || 'Usuario', activo: u.activo ?? true, id: u.id }); setModal({ type: 'edit', user: u }); };
+
+  const showMsg = (type, text) => { setMessage({ type, text }); setTimeout(() => setMessage(null), 4000); };
+
+  const handleSave = async () => {
+    if (!form.nombre?.trim() || !form.email?.trim()) { showMsg('error', 'Nombre y email son requeridos.'); return; }
+    if (modal.type === 'add' && !form.password) { showMsg('error', 'La contraseña es requerida para nuevos usuarios.'); return; }
+
+    setSaving(true);
+    try {
+      if (modal.type === 'add') {
+        const { data: fnData, error: fnErr } = await supabase.functions.invoke('admin-api', {
+          body: { action: 'sync', email: form.email, password: form.password, nombre: form.nombre, apellido: form.apellido },
+        });
+        if (fnErr || fnData?.success === false) throw new Error(fnErr?.message || fnData?.error || 'Error al crear usuario');
+
+        const { error: dbErr } = await supabase.from('Usuarios').upsert({
+          id: fnData.user.id,
+          email: form.email,
+          nombre: form.nombre,
+          apellido: form.apellido,
+          rol: form.rol,
+          activo: true,
+          tenant_id: tenant.id,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'email' });
+        if (dbErr) throw dbErr;
+        showMsg('success', 'Usuario creado correctamente.');
+      } else {
+        const updates = { nombre: form.nombre, apellido: form.apellido, rol: form.rol, activo: form.activo, updated_at: new Date().toISOString() };
+        const { error } = await supabase.from('Usuarios').update(updates).eq('id', form.id).eq('tenant_id', tenant.id);
+        if (error) throw error;
+        showMsg('success', 'Usuario actualizado.');
+      }
+      setModal(null);
+      loadUsers();
+    } catch (err) {
+      showMsg('error', err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (u) => {
+    setUsers(prev => prev.map(x => x.id === u.id ? { ...x, activo: !x.activo } : x));
+    await supabase.from('Usuarios').update({ activo: !u.activo, updated_at: new Date().toISOString() }).eq('id', u.id).eq('tenant_id', tenant.id);
+  };
+
+  const handleDelete = async (u) => {
+    setDeleting(u.id);
+    try {
+      await supabase.functions.invoke('admin-api', { body: { action: 'delete', id: u.id, email: u.email } });
+      await supabase.from('Usuarios').delete().eq('id', u.id).eq('tenant_id', tenant.id);
+      loadUsers();
+    } catch (err) {
+      showMsg('error', 'Error al eliminar: ' + err.message);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const currentUserEmail = session?.user?.email;
+
+  return (
+    <div style={{ fontFamily: font, padding: 28, background: T.bg, minHeight: '100vh' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>
+            Equipo
+          </h1>
+          <p style={{ fontSize: '0.85rem', color: T.muted }}>
+            Gestiona los usuarios con acceso al panel de administración
+          </p>
+        </div>
+        <button onClick={openAdd} style={{
+          padding: '10px 18px', borderRadius: 12, border: 'none',
+          background: T.coral, color: '#fff', fontWeight: 700,
+          fontSize: '0.88rem', cursor: 'pointer', fontFamily: font,
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <UserPlus size={16} /> Nuevo usuario
+        </button>
+      </div>
+
+      {/* Message */}
+      {message && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 12, marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: message.type === 'success' ? '#DCFCE7' : '#FEE2E2',
+          color: message.type === 'success' ? T.green : T.red,
+          fontSize: '0.88rem', fontWeight: 600,
+        }}>
+          {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          {message.text}
+        </div>
+      )}
+
+      {/* Table */}
+      <div style={{ background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 22px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Users size={16} color={T.coral} />
+          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: T.ink }}>{users.length} usuario{users.length !== 1 ? 's' : ''}</h3>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: 48, textAlign: 'center', color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> Cargando…
+          </div>
+        ) : users.length === 0 ? (
+          <div style={{ padding: '56px 24px', textAlign: 'center' }}>
+            <Users size={36} color={T.border} style={{ marginBottom: 12 }} />
+            <div style={{ fontSize: '0.9rem', color: T.muted, fontWeight: 500 }}>Aún no hay usuarios en el equipo.</div>
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+            <thead>
+              <tr style={{ background: '#FAFAFA', borderBottom: `1px solid ${T.border}` }}>
+                {['Usuario', 'Email', 'Rol', 'Estado', 'Acciones'].map(h => (
+                  <th key={h} style={{ padding: '11px 20px', textAlign: 'left', fontWeight: 700, color: T.muted, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u, i) => {
+                const isSelf = u.email === currentUserEmail;
+                return (
+                  <tr key={u.id} style={{ borderBottom: `1px solid ${T.border}`, background: i % 2 === 0 ? '#fff' : '#FAFAFA' }}>
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 10, background: T.coral + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: T.coral, fontSize: '0.88rem' }}>
+                          {(u.nombre?.[0] || u.email?.[0] || '?').toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: T.ink }}>{u.nombre} {u.apellido}</div>
+                          {isSelf && <div style={{ fontSize: '0.68rem', color: T.teal, fontWeight: 700 }}>Tú</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: '14px 20px', color: T.muted }}>{u.email}</td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: (ROLE_COLORS[u.rol] || T.muted) + '18', color: ROLE_COLORS[u.rol] || T.muted }}>
+                        {u.rol || 'Usuario'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <button onClick={() => !isSelf && toggleStatus(u)} disabled={isSelf}
+                        style={{ padding: '4px 12px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, border: 'none', cursor: isSelf ? 'default' : 'pointer', fontFamily: font, background: u.activo ? T.green + '18' : T.muted + '18', color: u.activo ? T.green : T.muted }}>
+                        {u.activo ? 'Activo' : 'Inactivo'}
+                      </button>
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => openEdit(u)} style={{ padding: '6px 12px', borderRadius: 9, border: `1.5px solid ${T.border}`, background: 'none', cursor: 'pointer', color: T.ink, display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, fontFamily: font }}>
+                          <Edit2 size={13} /> Editar
+                        </button>
+                        {!isSelf && (
+                          <button onClick={() => handleDelete(u)} disabled={deleting === u.id}
+                            style={{ padding: '6px 12px', borderRadius: 9, border: 'none', background: T.red + '12', cursor: 'pointer', color: T.red, display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', fontWeight: 600, fontFamily: font }}>
+                            {deleting === u.id ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={13} />}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Modal */}
+      {modal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
+          <div style={{ background: T.card, borderRadius: 20, padding: 28, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: T.ink, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <ShieldCheck size={20} color={T.coral} />
+                {modal.type === 'add' ? 'Nuevo usuario' : 'Editar usuario'}
+              </h3>
+              <button onClick={() => setModal(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: T.muted }}><X size={20} /></button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {[
+                { label: 'Nombre *', field: 'nombre', type: 'text', colSpan: 1 },
+                { label: 'Apellido', field: 'apellido', type: 'text', colSpan: 1 },
+                { label: 'Email *', field: 'email', type: 'email', colSpan: 2, disabled: modal.type === 'edit' },
+                { label: modal.type === 'add' ? 'Contraseña *' : 'Nueva contraseña (opcional)', field: 'password', type: 'password', colSpan: 2 },
+              ].map(({ label, field, type, colSpan, disabled }) => (
+                <div key={field} style={{ gridColumn: `span ${colSpan}` }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>{label}</label>
+                  <input
+                    type={type} value={form[field]} disabled={disabled}
+                    onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, outline: 'none', boxSizing: 'border-box', background: disabled ? '#F9FAFB' : '#fff' }}
+                  />
+                </div>
+              ))}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>Rol</label>
+                <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, outline: 'none', background: '#fff' }}>
+                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              {modal.type === 'edit' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
+                  <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} id="activo-check" style={{ accentColor: T.coral, width: 16, height: 16 }} />
+                  <label htmlFor="activo-check" style={{ fontSize: '0.88rem', fontWeight: 600, color: T.ink, cursor: 'pointer' }}>Activo</label>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+              <button onClick={() => setModal(null)} style={{ flex: 1, padding: 10, borderRadius: 12, border: `1.5px solid ${T.border}`, background: 'none', color: T.muted, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', fontFamily: font }}>
+                Cancelar
+              </button>
+              <button onClick={handleSave} disabled={saving}
+                style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', background: saving ? T.muted : T.coral, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: font, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {saving ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Guardando…</> : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}

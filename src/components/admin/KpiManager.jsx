@@ -1,262 +1,262 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { KpiService } from '../../services/kpiService';
-import { tenantConfig, getTenantId } from '../../config/tenant';
-import { useTranslation } from 'react-i18next';
-import { Target, Save, Search, Calendar, Award, TrendingUp, Loader, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useTenant } from '../../hooks/useTenant';
+import { Target, Save, Search, Calendar, Award, TrendingUp, Loader, AlertCircle, CheckCircle2, MapPin } from 'lucide-react';
+
+const T = {
+  coral:  '#FF5C3A',
+  teal:   '#00C9A7',
+  purple: '#7C3AED',
+  ink:    '#0D0D12',
+  muted:  '#6B7280',
+  border: '#E5E7EB',
+  bg:     '#F7F8FC',
+  card:   '#FFFFFF',
+  green:  '#16A34A',
+  amber:  '#F59E0B',
+};
+const font = "'Plus Jakarta Sans', system-ui, sans-serif";
+
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const KpiManager = () => {
-    const { t } = useTranslation();
-    const [stores, setStores] = useState([]);
-    const [goals, setGoals] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(null); // storeId being saved
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [message, setMessage] = useState(null);
+  const { tenant } = useTenant();
+  const [locations, setLocations] = useState([]);
+  const [goals, setGoals]         = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear]   = useState(new Date().getFullYear());
+  const [message, setMessage] = useState(null);
 
-    // Load stores and initial goals
-    useEffect(() => {
-        loadData();
-    }, [selectedMonth, selectedYear]);
+  useEffect(() => {
+    if (tenant?.id) loadData();
+  }, [tenant?.id, selectedMonth, selectedYear]);
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            // 1. Fetch Stores
-            const { data: storesData, error: storesError } = await supabase
-                .from('Tiendas_Catalogo')
-                .select('*')
-                .eq('tenant_id', getTenantId())
-                .order('nombre');
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [locRes, goalRes] = await Promise.all([
+        supabase.from('locations').select('id, name').eq('tenant_id', tenant.id).order('name'),
+        supabase.from('Metas_KPI').select('*').eq('mes', selectedMonth).eq('anio', selectedYear).eq('tenant_id', tenant.id),
+      ]);
+      if (locRes.error) throw locRes.error;
+      setLocations(locRes.data || []);
+      setGoals(goalRes.data || []);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al cargar datos: ' + err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            if (storesError) throw storesError;
+  const handleGoalChange = (locationId, field, value) => {
+    const val = parseInt(value) || 0;
+    setGoals(prev => {
+      const idx = prev.findIndex(g => g.tienda_id === locationId);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], [field]: val };
+        return next;
+      }
+      return [...prev, { tienda_id: locationId, [field]: val, mes: selectedMonth, anio: selectedYear }];
+    });
+  };
 
-            // 2. Fetch Goals for selected period
-            const goalsData = await KpiService.getMonthlyGoals(selectedMonth, selectedYear);
+  const saveGoal = async (locationId) => {
+    setSaving(locationId);
+    setMessage(null);
+    try {
+      const goal = goals.find(g => g.tienda_id === locationId) || {};
+      const targetNps = goal.target_nps ?? 50;
+      const targetVol = goal.target_volumen ?? 100;
 
-            setStores(storesData || []);
-            setGoals(goalsData || []);
-        } catch (err) {
-            console.error('Error loading KPI data:', err);
-            setMessage({ type: 'error', text: t('kpi.error_load') + ' ' + err.message });
-        } finally {
-            setLoading(false);
-        }
-    };
+      const { error } = await supabase.from('Metas_KPI').upsert({
+        tienda_id: locationId,
+        mes: selectedMonth,
+        anio: selectedYear,
+        target_nps: targetNps,
+        target_volumen: targetVol,
+        tenant_id: tenant.id,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'tienda_id,mes,anio' });
 
-    const handleGoalChange = (storeId, field, value) => {
-        // Optimistic update in local state
-        const existingGoalIndex = goals.findIndex(g => g.tienda_id === storeId);
-        const val = parseInt(value) || 0;
+      if (error) throw error;
+      setMessage({ type: 'success', text: 'Meta guardada correctamente.' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al guardar: ' + err.message });
+    } finally {
+      setSaving(null);
+    }
+  };
 
-        if (existingGoalIndex >= 0) {
-            const newGoals = [...goals];
-            newGoals[existingGoalIndex] = { ...newGoals[existingGoalIndex], [field]: val };
-            setGoals(newGoals);
-        } else {
-            // Create simplified optimistic goal
-            setGoals([...goals, { tienda_id: storeId, [field]: val, mes: selectedMonth, anio: selectedYear }]);
-        }
-    };
+  const getGoalValue = (locationId, field) => {
+    const goal = goals.find(g => g.tienda_id === locationId);
+    if (goal && goal[field] !== undefined) return goal[field];
+    return field === 'target_nps' ? 50 : 100;
+  };
 
-    const saveGoal = async (storeId) => {
-        setSaving(storeId);
-        setMessage(null);
-        try {
-            const goal = goals.find(g => g.tienda_id === storeId) || {};
-            const targetNps = goal.target_nps !== undefined ? goal.target_nps : 50; // Default
-            const targetVol = goal.target_volumen !== undefined ? goal.target_volumen : 100; // Default
+  const filtered = locations.filter(l =>
+    l.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-            await KpiService.setGoal(storeId, selectedMonth, selectedYear, targetNps, targetVol);
+  return (
+    <div style={{ fontFamily: font, padding: 28, background: T.bg, minHeight: '100vh' }}>
 
-            setMessage({ type: 'success', text: t('kpi.success_saved') });
-            setTimeout(() => setMessage(null), 3000);
-        } catch (err) {
-            setMessage({ type: 'error', text: t('kpi.error_save') + ' ' + err.message });
-        } finally {
-            setSaving(null);
-        }
-    };
+      {/* Header */}
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          Metas KPI
+        </h1>
+        <p style={{ fontSize: '0.85rem', color: T.muted }}>
+          Define objetivos de NPS y volumen por sucursal y período
+        </p>
+      </div>
 
-    const getGoalValue = (storeId, field) => {
-        const goal = goals.find(g => g.tienda_id === storeId);
-        if (goal) return goal[field];
-        return field === 'target_nps' ? 50 : 100; // Defaults
-    };
-
-    const filteredStores = stores.filter(s =>
-        s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    if (loading) return (
-        <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-            <Loader size={24} className="spin" /> {t('kpi.loading')}
+      {/* Controls */}
+      <div style={{ background: T.card, borderRadius: 16, border: `1px solid ${T.border}`, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: T.muted }} />
+          <input
+            type="text"
+            placeholder="Buscar sucursal…"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%', padding: '9px 12px 9px 36px', borderRadius: 10,
+              border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font,
+              outline: 'none', boxSizing: 'border-box', color: T.ink,
+            }}
+          />
         </div>
-    );
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: T.muted, fontSize: '0.88rem' }}>
+          <Calendar size={16} />
+          <span style={{ fontWeight: 600 }}>Período:</span>
+        </div>
+        <select
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(parseInt(e.target.value))}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, background: '#fff', outline: 'none' }}
+        >
+          {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+        </select>
+        <select
+          value={selectedYear}
+          onChange={e => setSelectedYear(parseInt(e.target.value))}
+          style={{ padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, background: '#fff', outline: 'none' }}
+        >
+          {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
 
-    return (
-        <div className="animate-in fade-in duration-500">
-            <header style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Target className="text-primary" size={32} />
-                    {t('kpi.title')}
-                </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                    {t('kpi.subtitle')}
-                </p>
-            </header>
+      {/* Message */}
+      {message && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 12, marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: message.type === 'success' ? '#DCFCE7' : '#FEE2E2',
+          color: message.type === 'success' ? T.green : '#DC2626',
+          fontSize: '0.88rem', fontWeight: 600,
+        }}>
+          {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          {message.text}
+        </div>
+      )}
 
-            {/* Controls */}
-            <div className="card shadow-sm" style={{ marginBottom: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '300px', position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+      {/* Grid */}
+      {loading ? (
+        <div style={{ padding: 48, textAlign: 'center', color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /> Cargando…
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, padding: '56px 24px', textAlign: 'center' }}>
+          <MapPin size={36} color={T.border} style={{ marginBottom: 12 }} />
+          <div style={{ fontSize: '0.9rem', color: T.muted, fontWeight: 500 }}>
+            {locations.length === 0 ? 'Aún no tienes sucursales configuradas.' : 'No hay sucursales que coincidan.'}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+          {filtered.map(loc => {
+            const npsVal = getGoalValue(loc.id, 'target_nps');
+            const volVal = getGoalValue(loc.id, 'target_volumen');
+            const isSaving = saving === loc.id;
+            return (
+              <div key={loc.id} style={{ background: T.card, borderRadius: 18, border: `1.5px solid ${T.border}`, padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: T.teal + '18', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <MapPin size={18} color={T.teal} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: T.ink, fontSize: '0.95rem' }}>{loc.name}</div>
+                    <div style={{ fontSize: '0.72rem', color: T.muted }}>{MONTHS[selectedMonth - 1]} {selectedYear}</div>
+                  </div>
+                </div>
+
+                {/* NPS Goal */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.muted, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Award size={13} /> Meta NPS
+                    </span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: T.purple }}>{npsVal} pts</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <input
-                        type="text"
-                        placeholder={t('kpi.search_placeholder')}
-                        className="input"
-                        style={{ paddingLeft: '2.5rem' }}
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
+                      type="range" min={0} max={100} value={npsVal}
+                      onChange={e => handleGoalChange(loc.id, 'target_nps', e.target.value)}
+                      style={{ flex: 1, accentColor: T.purple }}
                     />
+                    <input
+                      type="number" min={0} max={100} value={npsVal}
+                      onChange={e => handleGoalChange(loc.id, 'target_nps', e.target.value)}
+                      style={{ width: 56, padding: '6px 8px', borderRadius: 8, border: `1.5px solid ${T.border}`, fontSize: '0.85rem', fontFamily: font, textAlign: 'center', color: T.ink, outline: 'none' }}
+                    />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '0.9rem' }}>
-                        <Calendar size={18} /> {t('kpi.period')}
-                    </div>
-                    <select
-                        value={selectedMonth}
-                        onChange={e => setSelectedMonth(parseInt(e.target.value))}
-                        className="input"
-                        style={{ width: '140px' }}
-                    >
-                        {Array.from({ length: 12 }, (_, i) => (
-                            <option key={i + 1} value={i + 1}>
-                                {t(`months.${i + 1}`).toUpperCase()}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={selectedYear}
-                        onChange={e => setSelectedYear(parseInt(e.target.value))}
-                        className="input"
-                        style={{ width: '100px' }}
-                    >
-                        <option value={2025}>2025</option>
-                        <option value={2026}>2026</option>
-                        <option value={2027}>2027</option>
-                    </select>
+                {/* Volume Goal */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.muted, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <TrendingUp size={13} /> Meta de respuestas
+                    </span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: T.teal }}>{volVal} resp.</span>
+                  </div>
+                  <input
+                    type="number" min={0} value={volVal}
+                    onChange={e => handleGoalChange(loc.id, 'target_volumen', e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, outline: 'none', boxSizing: 'border-box' }}
+                  />
                 </div>
-            </div>
 
-            {message && (
-                <div style={{
-                    padding: '1rem',
-                    borderRadius: '12px',
-                    marginBottom: '1.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    background: message.type === 'success' ? '#dcfce7' : '#fee2e2',
-                    color: message.type === 'success' ? '#166534' : '#dc2626'
-                }}>
-                    {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                    {message.text}
-                </div>
-            )}
-
-            {/* Grid of Stores */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {filteredStores.map(store => (
-                    <div key={store.id} className="card hover-shadow" style={{ transition: 'all 0.2s', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                            <div>
-                                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#1e293b' }}>{store.nombre}</h3>
-                                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>ID: {store.id}</span>
-                            </div>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Building store={store} size={20} color="#64748b" />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {/* Target NPS Input */}
-                             <div>
-                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                     <span><Award size={14} style={{ verticalAlign: 'text-bottom' }} /> {t('kpi.nps_meta')}</span>
-                                     <span style={{ color: '#8b5cf6' }}>{getGoalValue(store.id, 'target_nps')} {t('kpi.units.pts')}</span>
-                                 </label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        value={getGoalValue(store.id, 'target_nps')}
-                                        onChange={e => handleGoalChange(store.id, 'target_nps', e.target.value)}
-                                        style={{ flex: 1, accentColor: '#8b5cf6' }}
-                                    />
-                                    <input
-                                        type="number"
-                                        value={getGoalValue(store.id, 'target_nps')}
-                                        onChange={e => handleGoalChange(store.id, 'target_nps', e.target.value)}
-                                        className="input"
-                                        style={{ width: '60px', padding: '4px 8px', textAlign: 'center' }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Target Volume Input */}
-                             <div>
-                                 <label style={{ fontSize: '0.8rem', fontWeight: '600', color: '#64748b', display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                     <span><TrendingUp size={14} style={{ verticalAlign: 'text-bottom' }} /> {t('kpi.volumen_meta')}</span>
-                                     <span style={{ color: '#10b981' }}>{getGoalValue(store.id, 'target_volumen')} {t('kpi.units.res')}</span>
-                                 </label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <input
-                                        type="number"
-                                        value={getGoalValue(store.id, 'target_volumen')}
-                                        onChange={e => handleGoalChange(store.id, 'target_volumen', e.target.value)}
-                                        className="input"
-                                        style={{ flex: 1 }}
-                                    />
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px dashed #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
-                                 <button
-                                     onClick={() => saveGoal(store.id)}
-                                     disabled={saving === store.id}
-                                     className="btn btn-primary btn-sm"
-                                     style={{ width: '100%', justifyContent: 'center' }}
-                                 >
-                                     {saving === store.id ? (
-                                         <><Loader size={16} className="spin" /> {t('kpi.saving')}</>
-                                     ) : (
-                                         <><Save size={16} /> {t('kpi.save_btn')}</>
-                                     )}
-                                 </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            <style>{`
-        .hover-shadow:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: #cbd5e1; }
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
-
+                <button
+                  onClick={() => saveGoal(loc.id)}
+                  disabled={isSaving}
+                  style={{
+                    marginTop: 4, padding: '10px 16px', borderRadius: 12,
+                    background: isSaving ? T.muted : T.coral,
+                    color: '#fff', border: 'none', cursor: isSaving ? 'not-allowed' : 'pointer',
+                    fontWeight: 700, fontSize: '0.88rem', fontFamily: font,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  }}
+                >
+                  {isSaving
+                    ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Guardando…</>
+                    : <><Save size={15} /> Guardar meta</>
+                  }
+                </button>
+              </div>
+            );
+          })}
         </div>
-    );
-}; // End Component
+      )}
 
-// Helper icon component
-const Building = ({ size, color }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M8 10h.01"></path><path d="M16 10h.01"></path><path d="M8 14h.01"></path><path d="M16 14h.01"></path></svg>
-);
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+};
 
 export default KpiManager;

@@ -1,621 +1,433 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useTenant } from '../../hooks/useTenant';
 import {
-    AlertTriangle, MessageSquare, Bell, Frown, Smile, Meh,
-    AlertCircle, CheckCircle2, Clock, Filter, Mail, Phone
+  AlertTriangle, Zap, TrendingDown, Users, Clock,
+  CheckCircle2, Loader, ChevronRight, MessageSquare, MapPin,
+  User, RefreshCw, Eye, X, Info, Star
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { getTenantId } from '../../config/tenant';
+import { subHours, subDays, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-const IssueManagement = ({ issues = [], feedback = [], onIssueUpdate }) => {
-    const { t } = useTranslation();
-    const [filterStatus, setFilterStatus] = useState(t('issues.filters.all'));
-    const [filterSeverity, setFilterSeverity] = useState(t('issues.filters.all'));
-    const [activeSubTab, setActiveSubTab] = useState('active'); // 'active' | 'closed'
-    const [showUpdateModal, setShowUpdateModal] = useState(false);
-    const [showResponseModal, setShowResponseModal] = useState(false);
-    const [updatingIssue, setUpdatingIssue] = useState(null);
-    const [updateForm, setUpdateForm] = useState({ user: '', comment: '', evidence: '' });
-    const [responseForm, setResponseForm] = useState({
-        respuesta: '',
-        medio: 'Email',
-        contacto: ''
-    });
+const T = {
+  coral:'#FF5C3A', teal:'#00C9A7', purple:'#7C3AED', ink:'#0D0D12',
+  muted:'#6B7280', border:'#E5E7EB', bg:'#F7F8FC', card:'#FFFFFF',
+  green:'#16A34A', amber:'#F59E0B', red:'#DC2626',
+};
+const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
-    // Helper functions
-    const getStoreName = (id) => id; // Placeholder, improved if stores passed as prop
-    const getAreaName = (id) => id;   // Placeholder
-
-    const createIssue = async (feedbackData) => {
-        try {
-            const newIssue = {
-                feedback_id: feedbackData.id,
-                titulo: t('issues.auto_generation.title', { area: feedbackData.area_id || t('issues.auto_generation.unknown_area') }),
-                descripcion: feedbackData.comentario,
-                categoria: 'Servicio',
-                severidad: feedbackData.satisfaccion === 1 ? 'Crítica' : 'Alta',
-                tienda_id: feedbackData.tienda_id,
-                area_id: feedbackData.area_id,
-                estado: 'Abierto'
-            };
-
-            const { error } = await supabase.from('Issues').insert([{ ...newIssue, tenant_id: getTenantId() }]);
-            if (error) throw error;
-            if (onIssueUpdate) onIssueUpdate();
-        } catch (err) {
-            console.error("Error creating issue:", err);
-            alert(t('issues.alerts.create_error') + err.message);
-        }
-    };
-
-    const updateIssueStatus = async (issueId, newStatus, metadata = null) => {
-        try {
-            const updates = { estado: newStatus };
-            const issue = issues.find(i => i.id === issueId);
-
-            if (newStatus === 'En Progreso' && !issue.fecha_asignacion) {
-                updates.fecha_asignacion = new Date().toISOString();
-            }
-
-            if (metadata) {
-                if (newStatus === 'Resuelto') {
-                    updates.fecha_resolucion = new Date().toISOString();
-                    updates.resuelto_por = metadata.user;
-                    updates.comentario_resolucion = metadata.comment;
-                    updates.evidencia_resolucion = metadata.evidence;
-                }
-                if (newStatus === 'Verificado') {
-                    updates.fecha_verificacion = new Date().toISOString();
-                    updates.verificado_por = metadata.user;
-                    updates.comentario_verificacion = metadata.comment;
-                    updates.evidencia_verificacion = metadata.evidence;
-                }
-            }
-
-            const { error } = await supabase
-                .from('Issues')
-                .update(updates)
-                .eq('id', issueId)
-                .eq('tenant_id', getTenantId());
-
-            if (error) throw error;
-
-            if (onIssueUpdate) onIssueUpdate();
-            setShowUpdateModal(false);
-            setUpdateForm({ user: '', comment: '', evidence: '' });
-        } catch (err) {
-            console.error("Error updating issue:", err);
-            alert(t('issues.alerts.update_error') + err.message);
-        }
-    };
-
-    const sendCheckResponse = async () => {
-        if (!updatingIssue) return;
-        try {
-            const { error } = await supabase
-                .from('Issues')
-                .update({
-                    respuesta_oficial: responseForm.respuesta,
-                    medio_respuesta: responseForm.medio,
-                    fecha_respuesta: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', updatingIssue.id);
-
-            if (error) throw error;
-
-            if (onIssueUpdate) onIssueUpdate();
-            setShowResponseModal(false);
-            setResponseForm({ respuesta: '', medio: 'Email', contacto: '' });
-            alert(t('issues.alerts.response_success'));
-        } catch (err) {
-            console.error("Error sending response:", err);
-            alert(t('issues.alerts.response_error') + err.message);
-        }
-    };
-
-    const shareIssue = (issue, platform) => {
-        const text = t('issues.actions.share_text_header', {
-            title: issue.titulo,
-            store: issue.tienda_id,
-            area: issue.area_id,
-            severity: t(`issues.severity_labels.${issue.severidad}`),
-            desc: issue.descripcion,
-            status: t(`issues.status_labels.${issue.estado}`)
-        });
-        const encodedText = encodeURIComponent(text);
-
-        if (platform === 'whatsapp') {
-            window.open(`https://wa.me/?text=${encodedText}`, '_blank');
-        } else if (platform === 'email') {
-            const subject = t('issues.actions.tracking_subject', { title: issue.titulo });
-            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodedText}`;
-        }
-    };
-
-    const filteredIssues = useMemo(() => {
-        return issues.filter(issue => {
-            if (!issue) return false;
-            const matchesStatus = filterStatus === t('issues.filters.all') || String(issue.estado).trim() === String(filterStatus).trim();
-            const matchesSeverity = filterSeverity === t('issues.filters.all') || String(issue.severidad).trim() === String(filterSeverity).trim();
-            return matchesStatus && matchesSeverity;
-        });
-    }, [issues, filterStatus, filterSeverity, t]);
-
-    const activeIssues = filteredIssues.filter(i => i.estado === 'Abierto' || i.estado === 'En Progreso');
-    const closedIssues = filteredIssues.filter(i => i.estado === 'Resuelto' || i.estado === 'Verificado');
-    const displayIssues = activeSubTab === 'active' ? activeIssues : closedIssues;
-
-    const metrics = useMemo(() => {
-        const total = issues.length;
-        const abiertos = issues.filter(i => i.estado === 'Abierto').length;
-        const enProgreso = issues.filter(i => i.estado === 'En Progreso').length;
-        const resueltos = issues.filter(i => i.estado === 'Resuelto' || i.estado === 'Verificado').length;
-        const criticos = issues.filter(i => i.severidad === 'Crítica' && i.estado !== 'Resuelto' && i.estado !== 'Verificado').length;
-
-        const resolvedIssues = issues.filter(i => i.fecha_resolucion);
-        const avgResolutionTime = resolvedIssues.length > 0
-            ? resolvedIssues.reduce((acc, issue) => {
-                const start = new Date(issue.fecha_reporte);
-                const end = new Date(issue.fecha_resolucion);
-                return acc + (end - start) / (1000 * 60 * 60);
-            }, 0) / resolvedIssues.length
-            : 0;
-
-        return { total, abiertos, enProgreso, resueltos, criticos, avgResolutionTime };
-    }, [issues]);
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'Abierto': return '#ef4444';
-            case 'En Progreso': return '#f59e0b';
-            case 'Resuelto': return '#10b981';
-            case 'Verificado': return '#3b82f6';
-            default: return '#94a3b8';
-        }
-    };
-
-    const getSeverityColor = (severity) => {
-        switch (severity) {
-            case 'Crítica': return '#dc2626';
-            case 'Alta': return '#f59e0b';
-            case 'Media': return '#3b82f6';
-            case 'Baja': return '#10b981';
-            default: return '#94a3b8';
-        }
-    };
-
-    const getSLALogic = (issue) => {
-        if (issue.estado === 'Resuelto' || issue.estado === 'Verificado') return null;
-
-        const reportDate = new Date(issue.fecha_reporte || issue.created_at);
-        const now = new Date();
-        const diffHours = (now - reportDate) / (1000 * 60 * 60);
-
-        const slaHours = issue.severidad === 'Crítica' ? 4 : issue.severidad === 'Alta' ? 24 : 48;
-        const timeLeft = slaHours - diffHours;
-
-        return {
-            hoursLeft: Math.max(0, timeLeft),
-            isExpired: timeLeft < 0,
-            text: timeLeft < 0 ? t('issues.sla.expired') : t('issues.sla.remaining', { hours: Math.floor(timeLeft) })
-        };
-    };
-
-    const getAISuggestion = (issue) => {
-        const category = issue.categoria || 'Servicio';
-        return t(`issues.ai_suggestion.categories.${category}`, { defaultValue: t('issues.ai_suggestion.categories.default') });
-    };
-
-    return (
-        <div className="animate-in fade-in duration-500">
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '700' }}>{t('issues.title')}</h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('issues.subtitle')}</p>
-            </div>
-
-            {/* Metrics Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-                <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderLeft: '4px solid var(--primary)' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.total')}</span>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '2rem', fontWeight: '800', color: '#1e293b', fontFamily: 'Outfit' }}>{metrics.total}</span>
-                    </div>
-                </div>
-                <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fef2f2 100%)', borderLeft: '4px solid #ef4444' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b91c1c', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.critical')}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '2rem', fontWeight: '800', color: '#991b1b', fontFamily: 'Outfit' }}>{metrics.criticos}</span>
-                        <AlertTriangle size={20} color="#ef4444" />
-                    </div>
-                </div>
-                <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fffbeb 100%)', borderLeft: '4px solid #f59e0b' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.status_labels.En Progreso')}</span>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '2rem', fontWeight: '800', color: '#92400e', fontFamily: 'Outfit' }}>{metrics.enProgreso}</span>
-                    </div>
-                </div>
-                <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)', borderLeft: '4px solid #10b981' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.efficiency')}</span>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '2rem', fontWeight: '800', color: '#166534', fontFamily: 'Outfit' }}>
-                            {metrics.total > 0 ? Math.round((metrics.resueltos / metrics.total) * 100) : 0}%
-                        </span>
-                    </div>
-                </div>
-                <div className="card" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%)', borderLeft: '4px solid #db2777' }}>
-                    <span style={{ fontSize: '0.7rem', fontWeight: '800', color: '#9d174d', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('issues.metrics.avg_resolution')}</span>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '0.5rem' }}>
-                        <span style={{ fontSize: '2rem', fontWeight: '800', color: '#831843', fontFamily: 'Outfit' }}>{Math.round(metrics.avgResolutionTime)}</span>
-                        <span style={{ fontSize: '0.8rem', color: '#9d174d', fontWeight: '600' }}>{t('issues.metrics.hrs')}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <select className="filter-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-                        <option value={t('issues.filters.all')}>{t('issues.filters.all_states')}</option>
-                        <option value="Abierto">{t('issues.status_labels.Abierto')}</option>
-                        <option value="En Progreso">{t('issues.status_labels.En Progreso')}</option>
-                        <option value="Resuelto">{t('issues.status_labels.Resuelto')}</option>
-                        <option value="Verificado">{t('issues.status_labels.Verificado')}</option>
-                    </select>
-                    <select className="filter-select" value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)}>
-                        <option value={t('issues.filters.all')}>{t('issues.filters.all_severities')}</option>
-                        <option value="Crítica">{t('issues.severity_labels.Crítica')}</option>
-                        <option value="Alta">{t('issues.severity_labels.Alta')}</option>
-                        <option value="Media">{t('issues.severity_labels.Media')}</option>
-                        <option value="Baja">{t('issues.severity_labels.Baja')}</option>
-                    </select>
-                </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'flex', gap: '1.5rem' }}>
-                            <button
-                                onClick={() => setActiveSubTab('active')}
-                                style={{
-                                    padding: '0.75rem 0.25rem',
-                                    fontSize: '0.9rem',
-                                    fontWeight: '700',
-                                    color: activeSubTab === 'active' ? 'var(--primary)' : '#64748b',
-                                    borderBottom: `2px solid ${activeSubTab === 'active' ? 'var(--primary)' : 'transparent'}`,
-                                    background: 'none', border: 'none', cursor: 'pointer'
-                                }}
-                            >
-                                {t('issues.tabs.active', { count: activeIssues.length })}
-                            </button>
-                            <button
-                                onClick={() => setActiveSubTab('closed')}
-                                style={{
-                                    padding: '0.75rem 0.25rem',
-                                    fontSize: '0.9rem',
-                                    fontWeight: '700',
-                                    color: activeSubTab === 'closed' ? '#10b981' : '#64748b',
-                                    borderBottom: `2px solid ${activeSubTab === 'closed' ? '#10b981' : 'transparent'}`,
-                                    background: 'none', border: 'none', cursor: 'pointer'
-                                }}
-                            >
-                                {t('issues.tabs.closed', { count: closedIssues.length })}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                        {displayIssues.length === 0 ? (
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                                {t('issues.no_results')}
-                            </div>
-                        ) : (
-                            displayIssues.map(issue => (
-                                <div key={issue.id} style={{
-                                    padding: '1rem',
-                                    marginBottom: '1rem',
-                                    background: '#f8fafc',
-                                    borderRadius: '12px',
-                                    border: `2px solid ${getStatusColor(issue.estado)}20`
-                                }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <h4 style={{ fontSize: '0.9rem', fontWeight: '700', marginBottom: '0.25rem' }}>{issue.titulo}</h4>
-                                            <p style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' }}>{issue.descripcion}</p>
-
-                                            {/* Contact Details */}
-                                            {(issue.contact_whatsapp || issue.contact_email) && (
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: '0.5rem' }}>
-                                                    {issue.contact_whatsapp && (
-                                                        <a
-                                                            href={`https://wa.me/52${issue.contact_whatsapp.replace(/\D/g, '')}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            style={{
-                                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                                padding: '4px 8px', borderRadius: '4px',
-                                                                background: '#dcfce7', color: '#166534',
-                                                                fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
-                                                            }}
-                                                        >
-                                                            <MessageSquare size={12} /> {t('issues.actions.whatsapp')}
-                                                        </a>
-                                                    )}
-                                                    {issue.contact_email && (
-                                                        <a
-                                                            href={`mailto:${issue.contact_email}`}
-                                                            style={{
-                                                                display: 'inline-flex', alignItems: 'center', gap: '4px',
-                                                                padding: '4px 8px', borderRadius: '4px',
-                                                                background: '#f1f5f9', color: '#475569',
-                                                                fontSize: '0.7rem', fontWeight: '700', textDecoration: 'none'
-                                                            }}
-                                                        >
-                                                            <Bell size={12} /> {t('issues.actions.send_email')}
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button onClick={() => shareIssue(issue, 'whatsapp')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#10b981' }} title={t('issues.actions.share_whatsapp')}>
-                                                <MessageSquare size={16} />
-                                            </button>
-                                            <button onClick={() => shareIssue(issue, 'email')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)' }} title={t('issues.actions.share_email')}>
-                                                <Bell size={16} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem', alignItems: 'center' }}>
-                                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', background: getStatusColor(issue.estado) + '20', color: getStatusColor(issue.estado) }}>{t(`issues.status_labels.${issue.estado}`)}</span>
-                                        <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', background: getSeverityColor(issue.severidad) + '20', color: getSeverityColor(issue.severidad) }}>{t(`issues.severity_labels.${issue.severidad}`)}</span>
-                                        {issue.tienda_id && <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: '700', background: '#f1f5f9', color: '#475569' }}>{issue.tienda_id}</span>}
-
-                                        {/* SLA Badge */}
-                                        {getSLALogic(issue) && (
-                                            <span style={{
-                                                marginLeft: 'auto',
-                                                padding: '4px 10px',
-                                                borderRadius: '20px',
-                                                fontSize: '0.65rem',
-                                                fontWeight: '800',
-                                                background: getSLALogic(issue).isExpired ? '#fee2e2' : '#ecfdf5',
-                                                color: getSLALogic(issue).isExpired ? '#991b1b' : '#047857',
-                                                border: '1px solid',
-                                                borderColor: getSLALogic(issue).isExpired ? '#fca5a5' : '#6ee7b7',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px'
-                                            }}>
-                                                <Clock size={10} /> {t('issues.sla.label', { text: getSLALogic(issue).text })}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* AI Smart Tip */}
-                                    {issue.estado !== 'Verificado' && (
-                                        <div style={{
-                                            marginBottom: '1rem',
-                                            padding: '8px 12px',
-                                            background: '#f8fafc',
-                                            borderRadius: '8px',
-                                            borderLeft: '3px solid var(--primary)',
-                                            display: 'flex',
-                                            alignItems: 'flex-start',
-                                            gap: '8px'
-                                        }}>
-                                            <div style={{ background: 'var(--primary-light)', padding: '4px', borderRadius: '6px', marginTop: '2px' }}>
-                                                <AlertCircle size={14} color="var(--primary)" />
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: '0.65rem', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '2px' }}>{t('issues.ai_suggestion.label')}</div>
-                                                <div style={{ fontSize: '0.75rem', color: '#475569', fontStyle: 'italic' }}>{getAISuggestion(issue)}</div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Action Buttons */}
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                        {issue.estado === 'Abierto' && (
-                                            <button className="btn btn-primary" style={{ fontSize: '0.7rem', padding: '6px 12px' }} onClick={() => updateIssueStatus(issue.id, 'En Progreso')}>
-                                                {t('issues.actions.start')}
-                                            </button>
-                                        )}
-                                        {issue.estado === 'En Progreso' && (
-                                            <button className="btn" style={{ fontSize: '0.7rem', padding: '6px 12px', background: '#10b981', color: 'white' }} onClick={() => { setUpdatingIssue({ id: issue.id, nextStatus: 'Resuelto' }); setShowUpdateModal(true); }}>
-                                                {t('issues.actions.resolve')}
-                                            </button>
-                                        )}
-                                        {issue.estado === 'Resuelto' && (
-                                            <button className="btn btn-primary btn-sm" onClick={() => { setUpdatingIssue({ id: issue.id, nextStatus: 'Verificado' }); setShowUpdateModal(true); }}>
-                                                {t('issues.actions.verify')}
-                                            </button>
-                                        )}
-
-                                        {/* Close the Loop Button */}
-                                        {/* Contact & Log Actions */}
-                                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            {issue.contact_whatsapp && (
-                                                <a
-                                                    href={`https://wa.me/52${issue.contact_whatsapp.replace(/\D/g, '')}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="btn"
-                                                    style={{
-                                                        padding: '6px 10px',
-                                                        background: '#25D366',
-                                                        color: 'white',
-                                                        borderRadius: '6px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        textDecoration: 'none'
-                                                    }}
-                                                    title={t('issues.actions.open_whatsapp')}
-                                                >
-                                                    <MessageSquare size={16} />
-                                                </a>
-                                            )}
-                                            {issue.contact_email && (
-                                                <a
-                                                    href={`mailto:${issue.contact_email}`}
-                                                    className="btn"
-                                                    style={{
-                                                        padding: '6px 10px',
-                                                        background: '#3b82f6',
-                                                        color: 'white',
-                                                        borderRadius: '6px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        textDecoration: 'none'
-                                                    }}
-                                                    title={t('issues.actions.send_email')}
-                                                >
-                                                    <Mail size={16} />
-                                                </a>
-                                            )}
-
-                                            <button
-                                                className="btn btn-secondary btn-sm"
-                                                onClick={() => { setUpdatingIssue(issue); setShowResponseModal(true); }}
-                                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                                                title={issue.respuesta_oficial ? t('issues.actions.view_log') : t('issues.actions.register')}
-                                            >
-                                                <div style={{ width: '1px', height: '16px', background: '#cbd5e1', marginRight: '4px' }}></div>
-                                                {issue.respuesta_oficial ? t('issues.actions.view_log') : t('issues.actions.register')}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Mostrar Respuesta Oficial si existe */}
-                                    {issue.respuesta_oficial && (
-                                        <div style={{ marginTop: '0.75rem', padding: '0.5rem', background: '#f0fdf4', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                                            <div style={{ fontSize: '0.7rem', fontWeight: '700', color: '#166534', marginBottom: '2px' }}>{t('issues.official_response.sent')}</div>
-                                            <div style={{ fontSize: '0.7rem', color: '#15803d' }}>"{issue.respuesta_oficial}"</div>
-                                            <div style={{ fontSize: '0.65rem', color: '#86efac', marginTop: '2px' }}>{t('issues.official_response.via', { medium: t(`issues.modals.media.${issue.medio_respuesta}`), date: new Date(issue.fecha_respuesta).toLocaleDateString() })}</div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                <div className="card">
-                    <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center' }}>
-                        {t('issues.critical_feedback')}
-                        <div className="tooltip-wrapper" style={{ marginLeft: '8px' }}>
-                            <AlertCircle size={14} color="#94a3b8" className="help-icon" />
-                            <span className="tooltip-content">{t('issues.no_critical')}</span>
-                        </div>
-                    </h3>
-                    <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                        {feedback.filter(f => !issues.some(i => String(i.feedback_id) === String(f.id))).map(f => (
-                            <div key={f.id} style={{ padding: '0.75rem', marginBottom: '0.75rem', background: '#fef2f2', borderRadius: '10px', border: '1px solid #fecaca' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>{'⭐'.repeat(f.satisfaccion)}</span>
-                                    <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{new Date(f.created_at).toLocaleDateString('es-MX')}</span>
-                                    <div style={{ marginLeft: 'auto' }}>
-                                        {f.sentimiento === 'Negativo' ? <Frown size={14} color="#ef4444" /> : <Meh size={14} color="#f59e0b" />}
-                                    </div>
-                                </div>
-                                <p style={{ fontSize: '0.75rem', color: '#475569', marginBottom: '0.75rem', fontWeight: '500' }}>"{f.comentario}"</p>
-                                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginBottom: '0.75rem' }}>{getStoreName(f.tienda_id)} • {getAreaName(f.area_id)}</div>
-                                <button className="btn btn-primary btn-sm" style={{ width: '100%' }} onClick={() => createIssue(f)}>{t('issues.create_corrective')}</button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Status Update Modal */}
-            {showUpdateModal && updatingIssue && (
-                <div className="modal-overlay">
-                    <div className="card" style={{ maxWidth: '450px', width: '100%', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', marginBottom: '0.5rem' }}>Actualizar Issue</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>Responsable *</label>
-                                <input type="text" className="input" style={{ width: '100%' }} value={updateForm.user} onChange={e => setUpdateForm({ ...updateForm, user: e.target.value })} />
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>Comentario de Cierre *</label>
-                                <textarea className="input" style={{ width: '100%', minHeight: '80px' }} value={updateForm.comment} onChange={e => setUpdateForm({ ...updateForm, comment: e.target.value })} />
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowUpdateModal(false)}>{t('issues.modals.cancel')}</button>
-                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => updateIssueStatus(updatingIssue.id, updatingIssue.nextStatus, updateForm)}>{t('issues.modals.confirm')}</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Close the Loop Modal */}
-            {showResponseModal && updatingIssue && (
-                <div className="modal-overlay">
-                    <div className="card" style={{ maxWidth: '450px', width: '100%', padding: '2rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                        <h3 style={{ fontFamily: 'Outfit', fontSize: '1.2rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <MessageSquare size={20} color="var(--primary)" />
-                            {t('issues.modals.official_title')}
-                        </h3>
-                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '1.5rem' }}>
-                            {t('issues.modals.official_desc')}
-                        </p>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>{t('issues.modals.contact_medium')}</label>
-                                <select
-                                    className="input"
-                                    style={{ width: '100%' }}
-                                    value={responseForm.medio}
-                                    onChange={e => setResponseForm({ ...responseForm, medio: e.target.value })}
-                                >
-                                    <option value="Email">{t('issues.modals.media.Email')}</option>
-                                    <option value="Teléfono">{t('issues.modals.media.Teléfono')}</option>
-                                    <option value="WhatsApp">{t('issues.modals.media.WhatsApp')}</option>
-                                    <option value="Presencial">{t('issues.modals.media.Presencial')}</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: '700' }}>{t('issues.modals.agreements')}</label>
-                                <textarea
-                                    className="input"
-                                    style={{ width: '100%', minHeight: '100px', padding: '0.75rem', fontSize: '0.85rem' }}
-                                    placeholder={t('issues.modals.placeholder')}
-                                    value={responseForm.respuesta}
-                                    onChange={e => setResponseForm({ ...responseForm, respuesta: e.target.value })}
-                                />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowResponseModal(false)}>{t('issues.modals.cancel')}</button>
-                            <button
-                                className="btn btn-primary"
-                                style={{ flex: 1 }}
-                                disabled={!responseForm.respuesta}
-                                onClick={sendCheckResponse}
-                            >
-                                {t('issues.modals.register_btn')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <style>{`
-                .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; alignItems: center; justifyContent: center; z-index: 1000; padding: 1rem; backdrop-filter: blur(2px); }
-                .input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.5rem; outline: none; transition: border-color 0.2s; }
-                .input:focus { border-color: var(--primary); }
-            `}</style>
-        </div>
-    );
+// ─── AI suggestions per alert type ───────────────────────────────────────────
+const AI_TIPS = {
+  cluster: [
+    'Visita la sucursal de inmediato — algo sistémico está ocurriendo ahora.',
+    'Revisa si hay un empleado nuevo en turno o un producto con problema.',
+    'Activa el protocolo de recuperación: cupón + llamada al cliente.',
+  ],
+  employee: [
+    'Agenda una sesión de feedback 1-a-1 con el empleado.',
+    'Revisa si hay factores externos: carga de trabajo, horario, equipo.',
+    'Considera reasignar temporalmente mientras se investiga.',
+  ],
+  trend: [
+    'Compara con cambios recientes: menú, staff, horarios o proveedores.',
+    'Envía a un "cliente misterioso" esta semana.',
+    'Revisión de procesos de la sucursal afectada.',
+  ],
+  abandoned_recovery: [
+    'El cliente ya recibió un cupón — el seguimiento humano duplica la retención.',
+    'Asigna a un manager para hacer la llamada hoy antes de que expire el cupón.',
+  ],
 };
 
-export default IssueManagement;
+function getRandomTip(type) {
+  const tips = AI_TIPS[type] || [];
+  return tips[Math.floor(Math.random() * tips.length)] || '';
+}
+
+// ─── Detect alerts from feedbacks ────────────────────────────────────────────
+function detectAlerts(feedbacks, locations, employeeQRs) {
+  const alerts = [];
+  const now = new Date();
+
+  // 1. CLUSTER: 3+ bad scores at same location in last 24h
+  locations.forEach(loc => {
+    const recent = feedbacks.filter(f =>
+      f.location_id === loc.id &&
+      f.score <= 2 &&
+      new Date(f.created_at) > subHours(now, 24)
+    );
+    if (recent.length >= 3) {
+      const avg = (recent.reduce((s, f) => s + f.score, 0) / recent.length).toFixed(1);
+      alerts.push({
+        id: `cluster-${loc.id}`,
+        type: 'cluster',
+        severity: recent.length >= 5 ? 'critical' : 'high',
+        title: `Cluster de feedback negativo`,
+        entity: loc.name,
+        entityType: 'location',
+        detail: `${recent.length} calificaciones ≤2 en las últimas 24h · promedio ${avg}/5`,
+        feedbacks: recent,
+        tip: getRandomTip('cluster'),
+        createdAt: recent[0]?.created_at,
+      });
+    }
+  });
+
+  // 2. EMPLOYEE: avg score < 3 with 5+ feedbacks this week
+  employeeQRs.forEach(qr => {
+    const weekFbs = feedbacks.filter(f =>
+      f.qr_id === qr.id && new Date(f.created_at) > subDays(now, 7)
+    );
+    if (weekFbs.length >= 5) {
+      const avg = weekFbs.reduce((s, f) => s + f.score, 0) / weekFbs.length;
+      if (avg < 3) {
+        const loc = locations.find(l => l.id === qr.location_id);
+        alerts.push({
+          id: `employee-${qr.id}`,
+          type: 'employee',
+          severity: avg < 2 ? 'critical' : 'high',
+          title: `Desempeño bajo · empleado`,
+          entity: qr.label || 'Empleado sin nombre',
+          entityType: 'employee',
+          entitySub: loc?.name,
+          detail: `Promedio ${avg.toFixed(1)}/5 en ${weekFbs.length} feedbacks esta semana`,
+          feedbacks: weekFbs,
+          tip: getRandomTip('employee'),
+          createdAt: weekFbs[0]?.created_at,
+        });
+      }
+    }
+  });
+
+  // 3. TREND: location score dropped >0.5 comparing last 7 vs previous 7 days
+  locations.forEach(loc => {
+    const last7 = feedbacks.filter(f =>
+      f.location_id === loc.id && new Date(f.created_at) > subDays(now, 7)
+    );
+    const prev7 = feedbacks.filter(f => {
+      const d = new Date(f.created_at);
+      return f.location_id === loc.id && d > subDays(now, 14) && d <= subDays(now, 7);
+    });
+    if (last7.length >= 5 && prev7.length >= 5) {
+      const avgLast = last7.reduce((s, f) => s + f.score, 0) / last7.length;
+      const avgPrev = prev7.reduce((s, f) => s + f.score, 0) / prev7.length;
+      const drop = avgPrev - avgLast;
+      if (drop >= 0.5) {
+        alerts.push({
+          id: `trend-${loc.id}`,
+          type: 'trend',
+          severity: drop >= 1 ? 'critical' : 'medium',
+          title: `Tendencia a la baja`,
+          entity: loc.name,
+          entityType: 'location',
+          detail: `Calificación bajó ${drop.toFixed(1)} pts vs semana anterior (${avgPrev.toFixed(1)} → ${avgLast.toFixed(1)})`,
+          feedbacks: last7,
+          tip: getRandomTip('trend'),
+          createdAt: last7[0]?.created_at,
+        });
+      }
+    }
+  });
+
+  // 4. ABANDONED RECOVERY: recovery_sent=true but no contact_phone and feedback > 48h ago
+  const abandoned = feedbacks.filter(f =>
+    f.recovery_sent &&
+    !f.contact_phone &&
+    new Date(f.created_at) < subHours(now, 48)
+  );
+  if (abandoned.length >= 2) {
+    alerts.push({
+      id: 'abandoned-recovery',
+      type: 'abandoned_recovery',
+      severity: 'medium',
+      title: `Recuperaciones sin seguimiento`,
+      entity: `${abandoned.length} clientes`,
+      entityType: 'group',
+      detail: `Recibieron cupón pero no dejaron contacto · llevan más de 48h sin seguimiento`,
+      feedbacks: abandoned,
+      tip: getRandomTip('abandoned_recovery'),
+      createdAt: abandoned[0]?.created_at,
+    });
+  }
+
+  // Sort by severity
+  const ORDER = { critical: 0, high: 1, medium: 2 };
+  return alerts.sort((a, b) => (ORDER[a.severity] || 9) - (ORDER[b.severity] || 9));
+}
+
+// ─── Severity config ──────────────────────────────────────────────────────────
+const SEV = {
+  critical: { color: T.red,    bg: T.red + '12',    label: 'CRÍTICO',  dot: T.red },
+  high:     { color: T.coral,  bg: T.coral + '12',  label: 'ALTO',     dot: T.coral },
+  medium:   { color: T.amber,  bg: T.amber + '12',  label: 'MEDIO',    dot: T.amber },
+};
+
+const TYPE_ICONS = {
+  cluster:            AlertTriangle,
+  employee:           User,
+  trend:              TrendingDown,
+  abandoned_recovery: Clock,
+};
+
+// ─── Alert card ───────────────────────────────────────────────────────────────
+function AlertCard({ alert, onDismiss, onViewFeedbacks }) {
+  const [expanded, setExpanded] = useState(false);
+  const sev = SEV[alert.severity] || SEV.medium;
+  const Icon = TYPE_ICONS[alert.type] || AlertTriangle;
+
+  return (
+    <div style={{
+      background: T.card, borderRadius: 18,
+      border: `2px solid ${sev.color}22`,
+      overflow: 'hidden',
+      boxShadow: alert.severity === 'critical' ? `0 4px 20px ${T.red}18` : 'none',
+    }}>
+      {/* Top bar */}
+      <div style={{ height: 3, background: sev.color, opacity: 0.7 }} />
+
+      <div style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+          {/* Icon */}
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: sev.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon size={18} color={sev.color} />
+          </div>
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: sev.color, background: sev.bg, padding: '2px 8px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{sev.label}</span>
+              <span style={{ fontSize: '0.62rem', color: T.muted }}>{alert.createdAt ? format(new Date(alert.createdAt), "d MMM · HH:mm", { locale: es }) : ''}</span>
+            </div>
+            <div style={{ fontWeight: 800, color: T.ink, fontSize: '0.95rem', marginBottom: 2 }}>{alert.title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontWeight: 700, color: sev.color, fontSize: '0.88rem' }}>{alert.entity}</span>
+              {alert.entitySub && <span style={{ fontSize: '0.78rem', color: T.muted }}>· {alert.entitySub}</span>}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: T.muted, marginTop: 4 }}>{alert.detail}</div>
+          </div>
+
+          <button onClick={() => onDismiss(alert.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.muted, flexShrink: 0 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* AI Tip */}
+        <div style={{ background: `linear-gradient(135deg, ${T.purple}08, ${T.teal}08)`, borderRadius: 10, padding: '10px 12px', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start', border: `1px solid ${T.purple}18` }}>
+          <Zap size={13} color={T.purple} style={{ marginTop: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.78rem', color: T.ink, lineHeight: 1.5, fontStyle: 'italic' }}>{alert.tip}</span>
+        </div>
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => onViewFeedbacks(alert)} style={{
+            padding: '7px 14px', borderRadius: 9, border: `1.5px solid ${T.border}`,
+            background: 'none', cursor: 'pointer', fontFamily: font,
+            fontSize: '0.78rem', fontWeight: 700, color: T.ink,
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}>
+            <Eye size={13} /> Ver {alert.feedbacks.length} feedbacks
+          </button>
+          {expanded && (
+            <button onClick={() => setExpanded(false)} style={{ padding: '7px 14px', borderRadius: 9, border: `1.5px solid ${T.border}`, background: 'none', cursor: 'pointer', fontFamily: font, fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>
+              Ocultar
+            </button>
+          )}
+          <button onClick={() => onDismiss(alert.id)} style={{
+            padding: '7px 16px', borderRadius: 9, border: 'none',
+            background: T.green, color: '#fff', cursor: 'pointer',
+            fontFamily: font, fontSize: '0.78rem', fontWeight: 700,
+            display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto',
+          }}>
+            <CheckCircle2 size={13} /> Marcar atendido
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Feedback detail panel ────────────────────────────────────────────────────
+function FeedbackPanel({ alert, locations, onClose }) {
+  if (!alert) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'flex-end', zIndex: 1000 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: T.card, width: '100%', maxWidth: 480, height: '100vh', overflowY: 'auto', padding: 24, boxShadow: '-8px 0 32px rgba(0,0,0,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h3 style={{ fontWeight: 800, color: T.ink, fontSize: '1rem' }}>{alert.entity} · feedbacks afectados</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.muted }}><X size={20} /></button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {alert.feedbacks.map(fb => {
+            const loc = locations.find(l => l.id === fb.location_id);
+            return (
+              <div key={fb.id} style={{ background: T.bg, borderRadius: 14, padding: '14px 16px', border: `1px solid ${T.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: T.red + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: T.red, fontSize: '0.9rem' }}>
+                    {fb.score}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: T.ink }}>{loc?.name || '—'}</div>
+                    <div style={{ fontSize: '0.7rem', color: T.muted }}>{format(new Date(fb.created_at), "d MMM yyyy · HH:mm", { locale: es })}</div>
+                  </div>
+                  {fb.recovery_sent && (
+                    <span style={{ marginLeft: 'auto', fontSize: '0.68rem', fontWeight: 700, color: T.coral, background: T.coral + '15', padding: '2px 8px', borderRadius: 999 }}>Cupón enviado</span>
+                  )}
+                </div>
+                {fb.comment && <div style={{ fontSize: '0.82rem', color: T.muted, fontStyle: 'italic' }}>"{fb.comment}"</div>}
+                {fb.followup_answer && <div style={{ fontSize: '0.78rem', color: T.purple, marginTop: 4 }}>↳ {fb.followup_answer}</div>}
+                {fb.contact_phone && (
+                  <a href={`https://wa.me/52${fb.contact_phone.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, padding: '4px 10px', borderRadius: 8, background: '#25D36618', color: '#25D366', fontSize: '0.72rem', fontWeight: 700, textDecoration: 'none' }}>
+                    <MessageSquare size={11} /> {fb.contact_phone}
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+export default function IssueManagement() {
+  const { tenant } = useTenant();
+  const [feedbacks, setFeedbacks]   = useState([]);
+  const [locations, setLocations]   = useState([]);
+  const [employeeQRs, setEmployeeQRs] = useState([]);
+  const [dismissed, setDismissed]   = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('retelio_dismissed_alerts') || '[]')); }
+    catch { return new Set(); }
+  });
+  const [loading, setLoading]       = useState(true);
+  const [activePanel, setActivePanel] = useState(null);
+  const [tab, setTab]               = useState('active'); // active | resolved
+
+  useEffect(() => { if (tenant?.id) loadData(); }, [tenant?.id]);
+
+  const loadData = async () => {
+    setLoading(true);
+    const since = subDays(new Date(), 30).toISOString();
+    const [fbRes, locRes, qrRes] = await Promise.all([
+      supabase.from('feedbacks')
+        .select('id, location_id, qr_id, score, comment, followup_answer, recovery_sent, coupon_code, contact_phone, created_at')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', since)
+        .order('created_at', { ascending: false }),
+      supabase.from('locations').select('id, name').eq('tenant_id', tenant.id),
+      supabase.from('qr_codes').select('id, label, location_id, type').eq('tenant_id', tenant.id).eq('type', 'employee'),
+    ]);
+    if (fbRes.data)  setFeedbacks(fbRes.data);
+    if (locRes.data) setLocations(locRes.data);
+    if (qrRes.data)  setEmployeeQRs(qrRes.data);
+    setLoading(false);
+  };
+
+  const allAlerts = useMemo(() => detectAlerts(feedbacks, locations, employeeQRs), [feedbacks, locations, employeeQRs]);
+  const alerts = allAlerts.filter(a => !dismissed.has(a.id));
+  const resolvedCount = dismissed.size;
+
+  const dismiss = (id) => {
+    const next = new Set([...dismissed, id]);
+    setDismissed(next);
+    localStorage.setItem('retelio_dismissed_alerts', JSON.stringify([...next]));
+  };
+
+  // Summary stats
+  const stats = useMemo(() => ({
+    unhappy24h: feedbacks.filter(f => f.score <= 2 && new Date(f.created_at) > subHours(new Date(), 24)).length,
+    recoveryPending: feedbacks.filter(f => f.recovery_sent && !f.contact_phone && new Date(f.created_at) > subDays(new Date(), 7)).length,
+    critical: allAlerts.filter(a => a.severity === 'critical').length,
+  }), [feedbacks, allAlerts]);
+
+  return (
+    <div style={{ fontFamily: font, padding: 28, background: T.bg, minHeight: '100vh' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>Centro de Alertas</h1>
+          <p style={{ fontSize: '0.85rem', color: T.muted }}>Detección automática de patrones · últimos 30 días</p>
+        </div>
+        <button onClick={loadData} style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.card, cursor: 'pointer', color: T.muted, display: 'flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8rem', fontWeight: 600 }}>
+          <RefreshCw size={14} /> Actualizar
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+        {[
+          { label: 'Alertas activas', value: alerts.length, color: alerts.length > 0 ? T.coral : T.green, Icon: AlertTriangle },
+          { label: 'Negativos últimas 24h', value: stats.unhappy24h, color: stats.unhappy24h > 0 ? T.red : T.green, Icon: TrendingDown },
+          { label: 'Recuperaciones pendientes', value: stats.recoveryPending, color: stats.recoveryPending > 0 ? T.amber : T.green, Icon: Clock },
+        ].map(({ label, value, color, Icon }) => (
+          <div key={label} style={{ background: T.card, borderRadius: 16, padding: '16px 20px', border: `1.5px solid ${T.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Icon size={14} color={color} />
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+            </div>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color, lineHeight: 1 }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, background: '#F1F5F9', borderRadius: 12, padding: 4, marginBottom: 20, width: 'fit-content' }}>
+        {[['active', `Activas (${alerts.length})`], ['resolved', `Atendidas (${resolvedCount})`]].map(([val, label]) => (
+          <button key={val} onClick={() => setTab(val)} style={{
+            padding: '7px 18px', borderRadius: 9, border: 'none',
+            background: tab === val ? T.ink : 'transparent',
+            color: tab === val ? '#fff' : T.muted,
+            fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', fontFamily: font,
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div style={{ padding: 48, textAlign: 'center', color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> Analizando patrones…
+        </div>
+      ) : tab === 'active' ? (
+        alerts.length === 0 ? (
+          <div style={{ background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, padding: '64px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 16 }}>✅</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: T.ink, marginBottom: 8 }}>¡Sin alertas activas!</div>
+            <div style={{ fontSize: '0.88rem', color: T.muted, maxWidth: 360, margin: '0 auto' }}>
+              No se detectaron patrones problemáticos en los últimos 30 días. Retelio monitorea continuamente.
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {alerts.map(alert => (
+              <AlertCard
+                key={alert.id}
+                alert={alert}
+                onDismiss={dismiss}
+                onViewFeedbacks={a => setActivePanel(a)}
+              />
+            ))}
+          </div>
+        )
+      ) : (
+        <div style={{ background: T.card, borderRadius: 20, border: `1px solid ${T.border}`, padding: '32px 24px', textAlign: 'center' }}>
+          <CheckCircle2 size={32} color={T.green} style={{ marginBottom: 12 }} />
+          <div style={{ fontWeight: 700, color: T.ink, marginBottom: 6 }}>{resolvedCount} alertas atendidas</div>
+          <div style={{ fontSize: '0.85rem', color: T.muted }}>Las alertas atendidas se limpian al refrescar la página.</div>
+          <button onClick={() => { setDismissed(new Set()); localStorage.removeItem('retelio_dismissed_alerts'); }} style={{ marginTop: 16, padding: '8px 18px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: 'none', cursor: 'pointer', fontFamily: font, fontSize: '0.82rem', fontWeight: 600, color: T.muted }}>
+            Restaurar todas
+          </button>
+        </div>
+      )}
+
+      {/* Feedback detail panel */}
+      {activePanel && (
+        <FeedbackPanel alert={activePanel} locations={locations} onClose={() => setActivePanel(null)} />
+      )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}

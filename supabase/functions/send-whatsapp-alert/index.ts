@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,10 +38,45 @@ serve(async (req) => {
       );
     }
 
+    // ── Check usage limit ──────────────────────────────────────────────────
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const period = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+    // Get tenant plan + current usage
+    const [tenantRes, usageRes] = await Promise.all([
+      supabase.from("tenants").select("plan, plan_status, trial_ends_at").eq("id", tenant_id).single(),
+      supabase.from("tenant_whatsapp_usage").select("used_count, included_limit, addon_purchased").eq("tenant_id", tenant_id).eq("period", period).maybeSingle(),
+    ]);
+
+    const planSlug = tenantRes.data?.plan || "trial";
+    const planStatus = tenantRes.data?.plan_status;
+    const trialEndsAt = tenantRes.data?.trial_ends_at;
+
+    // Determine limit
+    const PLAN_WA_LIMITS: Record<string, number> = {
+      trial: 20, starter: 50, growth: 200, enterprise: -1,
+    };
+    const isTrial = planStatus === "trial" && trialEndsAt && new Date(trialEndsAt) > new Date();
+    const includedLimit = isTrial ? 20 : (PLAN_WA_LIMITS[planSlug] ?? 20);
+    const addonPurchased = usageRes.data?.addon_purchased ?? 0;
+    const totalLimit = includedLimit === -1 ? Infinity : includedLimit + addonPurchased;
+    const usedCount = usageRes.data?.used_count ?? 0;
+
+    if (usedCount >= totalLimit) {
+      return new Response(
+        JSON.stringify({ error: "WhatsApp limit reached for this period", used: usedCount, limit: totalLimit }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ── Twilio credentials ─────────────────────────────────────────────────
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken  = Deno.env.get("TWILIO_AUTH_TOKEN");
-    const fromNumber = Deno.env.get("TWILIO_WHATSAPP_FROM"); // e.g. "whatsapp:+14155238886"
+    const fromNumber = Deno.env.get("TWILIO_WHATSAPP_FROM");
 
     if (!accountSid || !authToken || !fromNumber) {
       console.error("Twilio credentials missing");
@@ -90,8 +126,25 @@ serve(async (req) => {
       );
     }
 
+    // ── Track usage ────────────────────────────────────────────────────────
+    if (usageRes.data) {
+      await supabase
+        .from("tenant_whatsapp_usage")
+        .update({ used_count: usedCount + 1 })
+        .eq("tenant_id", tenant_id)
+        .eq("period", period);
+    } else {
+      await supabase.from("tenant_whatsapp_usage").insert({
+        tenant_id,
+        period,
+        included_limit: includedLimit,
+        addon_purchased: 0,
+        used_count: 1,
+      });
+    }
+
     return new Response(
-      JSON.stringify({ ok: true, sid: twilioData.sid }),
+      JSON.stringify({ ok: true, sid: twilioData.sid, used: usedCount + 1, limit: totalLimit }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

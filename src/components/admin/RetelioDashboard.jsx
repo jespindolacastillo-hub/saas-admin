@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
 import {
@@ -7,11 +7,11 @@ import {
 } from 'recharts';
 import { format, subDays, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getPlanLimits, limitPct } from '../../config/planLimits';
+import { getPlanLimits, limitPct, isActiveTrial } from '../../config/planLimits';
 import {
   MessageSquare, Star, Zap, TrendingUp, DollarSign,
   Lock, ArrowUpRight, MapPin, AlertTriangle, CheckCircle2,
-  Minus, ChevronRight, Sparkles, Info,
+  Minus, ChevronRight, Sparkles, Info, ChevronDown, X, Search,
 } from 'lucide-react';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -32,6 +32,71 @@ const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
 const calcRevenue = ({ reviewsGen, recovered, ticket = 350 }) =>
   Math.round(reviewsGen * 2.8 * ticket + recovered * ticket * 2.5);
+
+// ─── NPS Card ─────────────────────────────────────────────────────────────────
+function NPSCard({ nps, breakdown, loading, range }) {
+  const color = nps === null ? T.muted : nps >= 50 ? T.green : nps >= 20 ? T.teal : nps >= 0 ? T.amber : T.red;
+
+  return (
+    <div style={{
+      background: T.card, borderRadius: 20, padding: '22px 24px',
+      border: `1px solid ${T.border}`,
+      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      display: 'flex', flexDirection: 'column', gap: 12,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{
+          fontSize: '0.72rem', fontWeight: 700, color: T.muted,
+          textTransform: 'uppercase', letterSpacing: '0.07em',
+        }}>NPS</span>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: color + '12', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <TrendingUp size={18} color={color} strokeWidth={2} />
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ height: 40, background: '#F1F5F9', borderRadius: 10,
+          animation: 'pulse 1.5s ease-in-out infinite' }} />
+      ) : (
+        <div style={{
+          fontSize: '2.2rem', fontWeight: 800, color,
+          fontFamily: font, lineHeight: 1, letterSpacing: '-0.02em',
+        }}>
+          {nps === null ? '—' : (nps > 0 ? `+${nps}` : `${nps}`)}
+        </div>
+      )}
+
+      <div style={{ fontSize: '0.78rem', color: T.muted, fontWeight: 500 }}>últimos {range} días</div>
+
+      {!loading && breakdown && (
+        <div style={{ marginTop: 2 }}>
+          {/* Stacked bar */}
+          <div style={{ display: 'flex', height: 6, borderRadius: 999, overflow: 'hidden', gap: 2, marginBottom: 8 }}>
+            <div style={{ width: `${breakdown.promotersPct}%`, background: T.green, borderRadius: 999 }} />
+            <div style={{ width: `${breakdown.passivesPct}%`, background: T.amber, borderRadius: 999 }} />
+            <div style={{ width: `${breakdown.detractorsPct}%`, background: T.red, borderRadius: 999 }} />
+          </div>
+          {/* Labels */}
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            {[
+              { pct: breakdown.promotersPct, label: 'Prom.', color: T.green },
+              { pct: breakdown.passivesPct,  label: 'Pasiv.', color: T.amber },
+              { pct: breakdown.detractorsPct,label: 'Detr.', color: T.red },
+            ].map(({ pct, label, color }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.68rem', color: T.muted, fontWeight: 600 }}>{pct}% {label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
 function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
@@ -73,8 +138,8 @@ function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
 }
 
 // ─── Revenue Card ─────────────────────────────────────────────────────────────
-function RevenueCard({ reviewsGen, recovered, plan, loading }) {
-  const locked = plan === 'free' || plan === 'starter';
+function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading }) {
+  const locked = !isTrial && (plan === 'free' || plan === 'starter');
   const revenue = calcRevenue({ reviewsGen, recovered });
 
   return (
@@ -366,107 +431,441 @@ function ScoreBadge({ score }) {
   );
 }
 
-function FeedbackTable({ rows, locations, loading }) {
-  return (
-    <div style={{
-      background: T.card, borderRadius: 20, border: `1px solid ${T.border}`,
-      overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-    }}>
-      <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <MessageSquare size={16} color={T.coral} />
-          <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: T.ink }}>Feedbacks recientes</h3>
-        </div>
-        <span style={{
-          fontSize: '0.72rem', fontWeight: 600, color: T.muted,
-          background: '#F1F5F9', borderRadius: 999, padding: '3px 10px',
-        }}>últimos 50</span>
+// ─── Feedback Drawer ──────────────────────────────────────────────────────────
+const NPS_CATEGORY = s => s === 5 ? { label: 'Promotor', color: T.green } : s >= 3 ? { label: 'Pasivo', color: T.amber } : { label: 'Detractor', color: T.red };
+
+function ActionPanel({ feedback, tenant, onUpdate }) {
+  const [step, setStep]     = useState('idle');   // idle | preview | done
+  const [action, setAction] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const score    = feedback.score;
+  const hasPhone = !!feedback.contact_phone;
+  const bizName  = tenant?.name || 'nuestro negocio';
+
+  const ACTIONS = score <= 2 ? [
+    { key: 'recovery', label: 'Enviar recovery',      color: T.red,    icon: '🚨', disabled: feedback.recovery_sent },
+    { key: 'google',   label: 'Pedir reseña Google',  color: T.muted,  icon: '⭐', disabled: feedback.routed_to_google },
+  ] : score <= 4 ? [
+    { key: 'recovery', label: 'Enviar recovery',      color: T.amber,  icon: '💌', disabled: feedback.recovery_sent },
+    { key: 'google',   label: 'Pedir reseña Google',  color: T.teal,   icon: '⭐', disabled: feedback.routed_to_google },
+  ] : [
+    { key: 'google',   label: 'Pedir reseña Google',  color: T.teal,   icon: '⭐', disabled: feedback.routed_to_google },
+    { key: 'reward',   label: 'Enviar recompensa',    color: T.purple, icon: '🎁', disabled: false },
+  ];
+
+  const MESSAGES = {
+    recovery: `Hola! Somos del equipo de ${bizName}. Notamos que tu experiencia reciente no fue la mejor y queremos resolverlo. ¿Podemos ayudarte? 🙏`,
+    google:   `Hola! Gracias por visitarnos en ${bizName}. Tu opinión nos ayuda mucho — ¿podrías dejarnos una reseña rápida en Google? ⭐ Te lo agradeceríamos muchísimo.`,
+    reward:   `Hola! En ${bizName} queremos agradecerte por tu visita y tu buena valoración 🎁. Como muestra de aprecio, tenemos un regalo especial para ti en tu próxima visita. ¡Esperamos verte pronto!`,
+  };
+
+  const DB_UPDATES = {
+    recovery: { recovery_sent: true },
+    google:   { routed_to_google: true },
+    reward:   {},
+  };
+
+  const handleSelect = (key) => { setAction(key); setStep('preview'); };
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(MESSAGES[action]);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleConfirm = async () => {
+    setSaving(true);
+    const updates = DB_UPDATES[action];
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('feedbacks').update(updates).eq('id', feedback.id);
+      onUpdate({ ...feedback, ...updates });
+    }
+    setSaving(false);
+    setStep('done');
+  };
+
+  if (step === 'done') return (
+    <div style={{ background: T.green + '10', border: `1px solid ${T.green}30`, borderRadius: 14, padding: '16px', textAlign: 'center' }}>
+      <div style={{ fontSize: '1.4rem', marginBottom: 6 }}>✅</div>
+      <div style={{ fontWeight: 700, color: T.green, fontSize: '0.88rem' }}>Acción completada</div>
+      <button onClick={() => { setStep('idle'); setAction(null); }} style={{
+        marginTop: 10, background: 'none', border: 'none', color: T.muted,
+        fontSize: '0.78rem', cursor: 'pointer', fontFamily: font,
+      }}>Otra acción</button>
+    </div>
+  );
+
+  if (step === 'preview') return (
+    <div style={{ background: '#F8F9FC', borderRadius: 14, padding: '16px', border: `1px solid ${T.border}` }}>
+      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+        Vista previa del mensaje
       </div>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-          <thead>
-            <tr style={{ background: '#FAFAFA' }}>
-              {['Fecha', 'Sucursal', 'Calificación', 'Google', 'Recovery', 'Comentario'].map(h => (
-                <th key={h} style={{
-                  padding: '10px 16px', textAlign: 'left', fontWeight: 700,
-                  color: T.muted, fontSize: '0.7rem', textTransform: 'uppercase',
-                  letterSpacing: '0.07em', whiteSpace: 'nowrap',
-                  borderBottom: `1px solid ${T.border}`,
-                }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              [...Array(6)].map((_, i) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${T.border}` }}>
-                  {[...Array(6)].map((_, j) => (
-                    <td key={j} style={{ padding: '14px 16px' }}>
-                      <div style={{
-                        height: 14, background: '#F1F5F9', borderRadius: 6,
-                        width: j === 5 ? '80%' : '60%',
-                        animation: 'pulse 1.5s ease-in-out infinite',
-                      }} />
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ padding: '48px', textAlign: 'center' }}>
-                  <MessageSquare size={32} color="#E5E7EB" style={{ marginBottom: 12 }} />
-                  <div style={{ color: T.muted, fontSize: '0.88rem', fontWeight: 500 }}>
-                    Aún no hay feedbacks. Escanea un QR para empezar.
-                  </div>
-                </td>
-              </tr>
-            ) : rows.map((r, idx) => {
-              const loc = locations.find(l => l.id === r.location_id);
-              return (
-                <tr key={r.id} style={{
-                  borderBottom: `1px solid ${T.border}`,
-                  background: idx % 2 === 0 ? '#fff' : '#FAFAFA',
-                  transition: 'background 0.15s',
-                }}>
-                  <td style={{ padding: '12px 16px', color: T.muted, whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
-                    {format(new Date(r.created_at), 'dd MMM · HH:mm', { locale: es })}
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{
-                      fontSize: '0.8rem', fontWeight: 600, color: T.ink,
-                      background: T.purple + '10', borderRadius: 6, padding: '3px 8px',
-                    }}>
-                      {loc?.name || '—'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px 16px' }}>
-                    <ScoreBadge score={r.score} />
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    {r.routed_to_google
-                      ? <CheckCircle2 size={16} color={T.teal} />
-                      : <Minus size={16} color="#D1D5DB" />}
-                  </td>
-                  <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                    {r.recovery_sent
-                      ? <Zap size={16} color={T.coral} />
-                      : <Minus size={16} color="#D1D5DB" />}
-                  </td>
-                  <td style={{
-                    padding: '12px 16px', color: T.muted, maxWidth: 220,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    fontSize: '0.82rem', fontStyle: r.comment ? 'normal' : 'italic',
-                  }}>
-                    {r.comment || 'Sin comentario'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div style={{
+        background: '#fff', borderRadius: 10, padding: '12px 14px',
+        fontSize: '0.84rem', color: T.ink, lineHeight: 1.6,
+        border: `1px solid ${T.border}`, marginBottom: 12,
+      }}>
+        {MESSAGES[action]}
+      </div>
+      {!hasPhone && (
+        <div style={{ fontSize: '0.75rem', color: T.amber, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          ⚠ Sin teléfono registrado — copia el mensaje manualmente
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {hasPhone && (
+          <a
+            href={`https://wa.me/${feedback.contact_phone.replace(/\D/g, '')}?text=${encodeURIComponent(MESSAGES[action])}`}
+            target="_blank" rel="noreferrer"
+            onClick={handleConfirm}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '10px 14px', borderRadius: 10, background: '#25D366', color: '#fff',
+              fontWeight: 700, fontSize: '0.83rem', textDecoration: 'none', fontFamily: font,
+            }}>
+            <span>WhatsApp</span> →
+          </a>
+        )}
+        <button onClick={handleCopy} style={{
+          flex: 1, padding: '10px 14px', borderRadius: 10,
+          border: `1.5px solid ${T.border}`, background: '#fff',
+          fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer',
+          color: copied ? T.green : T.ink, fontFamily: font,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        }}>
+          {copied ? '✓ Copiado' : 'Copiar mensaje'}
+        </button>
+        {!hasPhone && (
+          <button onClick={handleConfirm} disabled={saving} style={{
+            flex: 1, padding: '10px 14px', borderRadius: 10, border: 'none',
+            background: saving ? T.muted : T.ink, color: '#fff',
+            fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', fontFamily: font,
+          }}>
+            {saving ? 'Guardando…' : 'Marcar enviado'}
+          </button>
+        )}
+        <button onClick={() => setStep('idle')} style={{
+          padding: '10px 12px', borderRadius: 10, border: `1px solid ${T.border}`,
+          background: 'none', color: T.muted, cursor: 'pointer', fontFamily: font, fontSize: '0.83rem',
+        }}>✕</button>
       </div>
     </div>
+  );
+
+  // idle
+  return (
+    <div>
+      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
+        Acciones
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {ACTIONS.map(({ key, label, color, icon, disabled }) => (
+          <button key={key} onClick={() => !disabled && handleSelect(key)} style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '12px 16px', borderRadius: 12,
+            border: `1.5px solid ${disabled ? T.border : color + '40'}`,
+            background: disabled ? '#FAFAFA' : color + '08',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontFamily: font, textAlign: 'left', opacity: disabled ? 0.5 : 1,
+            transition: 'all 0.15s',
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>{icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.85rem', color: disabled ? T.muted : color }}>
+                {label}
+              </div>
+              {disabled && (
+                <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>Ya realizado</div>
+              )}
+            </div>
+            {!disabled && <ChevronRight size={14} color={color} />}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FeedbackDrawer({ feedback, locations, onClose, tenant, onUpdate }) {
+  if (!feedback) return null;
+  const loc = locations.find(l => l.id === feedback.location_id);
+  const nps = NPS_CATEGORY(feedback.score);
+  const scoreColor = SCORE_COLOR[feedback.score] || T.muted;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)',
+        zIndex: 200, backdropFilter: 'blur(2px)',
+      }} />
+      {/* Panel */}
+      <div style={{
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 420,
+        background: T.card, zIndex: 201, boxShadow: '-8px 0 40px rgba(0,0,0,0.12)',
+        display: 'flex', flexDirection: 'column', fontFamily: font,
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px', borderBottom: `1px solid ${T.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <MessageSquare size={16} color={T.coral} />
+            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: T.ink }}>Detalle del feedback</span>
+          </div>
+          <button onClick={onClose} style={{
+            background: '#F1F5F9', border: 'none', borderRadius: 8,
+            width: 32, height: 32, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer', color: T.muted,
+          }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+
+          {/* Score + NPS */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 18,
+              background: scoreColor + '15',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.8rem', fontWeight: 800, color: scoreColor, fontFamily: font,
+            }}>
+              {feedback.score}
+            </div>
+            <div>
+              <div style={{ fontSize: '0.72rem', color: T.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Calificación</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ScoreBadge score={feedback.score} />
+                <span style={{
+                  fontSize: '0.75rem', fontWeight: 700, color: nps.color,
+                  background: nps.color + '12', borderRadius: 6, padding: '3px 8px',
+                }}>{nps.label}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info rows */}
+          {[
+            { label: 'Fecha y hora', value: format(new Date(feedback.created_at), "dd 'de' MMMM yyyy · HH:mm 'hrs'", { locale: es }) },
+            { label: 'Sucursal', value: loc?.name || '—' },
+            { label: 'QR', value: feedback.qr_codes?.label ? `${feedback.qr_codes.label} (${feedback.qr_codes.type})` : '—' },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{label}</div>
+              <div style={{ fontSize: '0.88rem', color: T.ink, fontWeight: 500 }}>{value}</div>
+            </div>
+          ))}
+
+          {/* Comment */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Comentario</div>
+            <div style={{
+              background: '#F8F9FC', borderRadius: 12, padding: '14px 16px',
+              fontSize: '0.88rem', color: feedback.comment ? T.ink : T.muted,
+              fontStyle: feedback.comment ? 'normal' : 'italic', lineHeight: 1.6,
+            }}>
+              {feedback.comment || 'Sin comentario'}
+            </div>
+          </div>
+
+          {/* Follow-up */}
+          {feedback.followup_answer && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Seguimiento</div>
+              <div style={{
+                background: T.purple + '08', borderRadius: 12, padding: '14px 16px',
+                fontSize: '0.88rem', color: T.ink, lineHeight: 1.6,
+                border: `1px solid ${T.purple}20`,
+              }}>
+                {Array.isArray(feedback.followup_answer) ? feedback.followup_answer.join(', ') : feedback.followup_answer}
+              </div>
+            </div>
+          )}
+
+          {/* Contact */}
+          {feedback.contact_phone && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Contacto</div>
+              <div style={{
+                background: T.teal + '08', border: `1px solid ${T.teal}20`,
+                borderRadius: 12, padding: '12px 16px',
+                fontSize: '0.88rem', color: T.teal, fontWeight: 700,
+              }}>
+                📱 {feedback.contact_phone}
+              </div>
+            </div>
+          )}
+
+          {/* Status badges */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              borderRadius: 10, background: feedback.routed_to_google ? T.teal + '10' : '#F1F5F9',
+              border: `1px solid ${feedback.routed_to_google ? T.teal + '30' : T.border}`,
+            }}>
+              {feedback.routed_to_google
+                ? <CheckCircle2 size={14} color={T.teal} />
+                : <Minus size={14} color={T.muted} />}
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: feedback.routed_to_google ? T.teal : T.muted }}>
+                {feedback.routed_to_google ? 'Enviado a Google' : 'Sin reseña Google'}
+              </span>
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+              borderRadius: 10, background: feedback.recovery_sent ? T.coral + '10' : '#F1F5F9',
+              border: `1px solid ${feedback.recovery_sent ? T.coral + '30' : T.border}`,
+            }}>
+              <Zap size={14} color={feedback.recovery_sent ? T.coral : T.muted} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: feedback.recovery_sent ? T.coral : T.muted }}>
+                {feedback.recovery_sent ? 'Recovery enviado' : 'Sin recovery'}
+              </span>
+            </div>
+          </div>
+
+          {/* Coupon */}
+          {feedback.coupon_code && (
+            <div style={{
+              marginTop: 16, background: `linear-gradient(135deg, ${T.coral}10, ${T.purple}10)`,
+              border: `1px dashed ${T.coral}40`, borderRadius: 12, padding: '14px 16px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Cupón generado</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: T.coral, letterSpacing: '0.1em' }}>{feedback.coupon_code}</div>
+            </div>
+          )}
+
+          {/* Divider */}
+          <div style={{ height: 1, background: T.border, margin: '20px 0' }} />
+
+          {/* Actions */}
+          <ActionPanel feedback={feedback} tenant={tenant} onUpdate={onUpdate} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Feedback Table ────────────────────────────────────────────────────────────
+function FeedbackTable({ rows, locations, loading, tenant, onUpdate }) {
+  const [selected, setSelected] = useState(null);
+
+  const handleUpdate = (updated) => {
+    setSelected(updated);
+    if (onUpdate) onUpdate(updated);
+  };
+
+  return (
+    <>
+      <FeedbackDrawer feedback={selected} locations={locations} onClose={() => setSelected(null)} tenant={tenant} onUpdate={handleUpdate} />
+      <div style={{
+        background: T.card, borderRadius: 20, border: `1px solid ${T.border}`,
+        overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      }}>
+        <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <MessageSquare size={16} color={T.coral} />
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 700, color: T.ink }}>Feedbacks recientes</h3>
+          </div>
+          <span style={{
+            fontSize: '0.72rem', fontWeight: 600, color: T.muted,
+            background: '#F1F5F9', borderRadius: 999, padding: '3px 10px',
+          }}>click para ver detalle</span>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: '#FAFAFA' }}>
+                {['Fecha', 'Sucursal', 'Calificación', 'Google', 'Recovery', 'Comentario'].map(h => (
+                  <th key={h} style={{
+                    padding: '10px 16px', textAlign: 'left', fontWeight: 700,
+                    color: T.muted, fontSize: '0.7rem', textTransform: 'uppercase',
+                    letterSpacing: '0.07em', whiteSpace: 'nowrap',
+                    borderBottom: `1px solid ${T.border}`,
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                [...Array(6)].map((_, i) => (
+                  <tr key={i} style={{ borderBottom: `1px solid ${T.border}` }}>
+                    {[...Array(6)].map((_, j) => (
+                      <td key={j} style={{ padding: '14px 16px' }}>
+                        <div style={{
+                          height: 14, background: '#F1F5F9', borderRadius: 6,
+                          width: j === 5 ? '80%' : '60%',
+                          animation: 'pulse 1.5s ease-in-out infinite',
+                        }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: '48px', textAlign: 'center' }}>
+                    <MessageSquare size={32} color="#E5E7EB" style={{ marginBottom: 12 }} />
+                    <div style={{ color: T.muted, fontSize: '0.88rem', fontWeight: 500 }}>
+                      Aún no hay feedbacks. Escanea un QR para empezar.
+                    </div>
+                  </td>
+                </tr>
+              ) : rows.map((r, idx) => {
+                const loc = locations.find(l => l.id === r.location_id);
+                return (
+                  <tr key={r.id} onClick={() => setSelected(r)} style={{
+                    borderBottom: `1px solid ${T.border}`,
+                    background: selected?.id === r.id ? T.coral + '06' : idx % 2 === 0 ? '#fff' : '#FAFAFA',
+                    cursor: 'pointer', transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.coral + '06'}
+                  onMouseLeave={e => e.currentTarget.style.background = selected?.id === r.id ? T.coral + '06' : idx % 2 === 0 ? '#fff' : '#FAFAFA'}
+                  >
+                    <td style={{ padding: '12px 16px', color: T.muted, whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                      {format(new Date(r.created_at), 'dd MMM · HH:mm', { locale: es })}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{
+                        fontSize: '0.8rem', fontWeight: 600, color: T.ink,
+                        background: T.purple + '10', borderRadius: 6, padding: '3px 8px',
+                      }}>
+                        {loc?.name || '—'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <ScoreBadge score={r.score} />
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      {r.routed_to_google
+                        ? <CheckCircle2 size={16} color={T.teal} />
+                        : <Minus size={16} color="#D1D5DB" />}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                      {r.recovery_sent
+                        ? <Zap size={16} color={T.coral} />
+                        : <Minus size={16} color="#D1D5DB" />}
+                    </td>
+                    <td style={{
+                      padding: '12px 16px', color: T.muted, maxWidth: 220,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      fontSize: '0.82rem', fontStyle: r.comment ? 'normal' : 'italic',
+                    }}>
+                      {r.comment || 'Sin comentario'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -625,17 +1024,124 @@ function InsightsCard({ insights, loading }) {
   );
 }
 
+// ─── Location Multiselect ─────────────────────────────────────────────────────
+function LocationFilter({ locations, selected, onChange }) {
+  const [open, setOpen]       = useState(false);
+  const [search, setSearch]   = useState('');
+  const ref                   = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = locations.filter(l => l.name.toLowerCase().includes(search.toLowerCase()));
+  const allSelected = selected.length === 0;
+  const label = allSelected
+    ? 'Todas las sucursales'
+    : selected.length === 1
+      ? locations.find(l => l.id === selected[0])?.name || '1 sucursal'
+      : `${selected.length} sucursales`;
+
+  const toggle = id => {
+    onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(v => !v)} style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '8px 14px', borderRadius: 12, border: `1.5px solid ${selected.length ? T.coral : T.border}`,
+        background: selected.length ? T.coral + '08' : T.card,
+        cursor: 'pointer', fontFamily: font, fontWeight: 600,
+        fontSize: '0.83rem', color: selected.length ? T.coral : T.ink,
+        transition: 'all 0.15s', whiteSpace: 'nowrap',
+      }}>
+        <MapPin size={14} color={selected.length ? T.coral : T.muted} />
+        {label}
+        {selected.length > 0 && (
+          <span onClick={e => { e.stopPropagation(); onChange([]); }} style={{
+            display: 'flex', alignItems: 'center', marginLeft: 2,
+            color: T.coral, cursor: 'pointer',
+          }}>
+            <X size={13} />
+          </span>
+        )}
+        <ChevronDown size={14} color={T.muted} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100,
+          background: T.card, borderRadius: 16, border: `1px solid ${T.border}`,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)', width: 260,
+          overflow: 'hidden',
+        }}>
+          {/* Search */}
+          <div style={{ padding: '10px 12px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Search size={14} color={T.muted} />
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar sucursal…"
+              style={{
+                border: 'none', outline: 'none', fontFamily: font,
+                fontSize: '0.83rem', color: T.ink, background: 'transparent', width: '100%',
+              }}
+            />
+          </div>
+          {/* "Todas" option */}
+          <div onClick={() => { onChange([]); setOpen(false); }} style={{
+            padding: '9px 14px', cursor: 'pointer', fontSize: '0.83rem', fontWeight: 700,
+            color: allSelected ? T.coral : T.muted,
+            background: allSelected ? T.coral + '08' : 'transparent',
+            borderBottom: `1px solid ${T.border}`,
+          }}>
+            Todas las sucursales
+          </div>
+          {/* List */}
+          <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+            {filtered.map(loc => {
+              const checked = selected.includes(loc.id);
+              return (
+                <div key={loc.id} onClick={() => toggle(loc.id)} style={{
+                  padding: '9px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                  background: checked ? T.coral + '06' : 'transparent',
+                  transition: 'background 0.1s',
+                }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: 5, flexShrink: 0,
+                    border: `2px solid ${checked ? T.coral : T.border}`,
+                    background: checked ? T.coral : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {checked && <CheckCircle2 size={10} color="#fff" strokeWidth={3} />}
+                  </div>
+                  <span style={{ fontSize: '0.83rem', color: T.ink, fontWeight: checked ? 600 : 400 }}>{loc.name}</span>
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <div style={{ padding: '16px', textAlign: 'center', color: T.muted, fontSize: '0.82rem' }}>Sin resultados</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function RetelioDashboard() {
   const { tenant } = useTenant();
-  const [feedbacks,  setFeedbacks]  = useState([]);
-  const [locations,  setLocations]  = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [range,      setRange]      = useState(30);
-
-  useEffect(() => {
-    if (tenant?.id) loadData();
-  }, [tenant?.id, range]);
+  const [feedbacks,      setFeedbacks]      = useState([]);
+  const [locations,      setLocations]      = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [range,          setRange]          = useState(30);
+  const [selectedLocs,   setSelectedLocs]   = useState([]);   // [] = all
+  const [healthFilter,   setHealthFilter]   = useState('all'); // 'all'|'risk'|'top'
 
   const loadData = async () => {
     setLoading(true);
@@ -658,44 +1164,88 @@ export default function RetelioDashboard() {
     setLoading(false);
   };
 
+  useEffect(() => {
+    if (tenant?.id) loadData();
+  }, [tenant?.id, range]);
+
+  // ── Filtered locations based on health filter ──
+  const filteredLocIds = useMemo(() => {
+    let locs = locations;
+    if (selectedLocs.length > 0)
+      locs = locs.filter(l => selectedLocs.includes(l.id));
+    if (healthFilter !== 'all') {
+      locs = locs.filter(loc => {
+        const fbs = feedbacks.filter(f => f.location_id === loc.id);
+        if (fbs.length === 0) return false;
+        const avg = fbs.reduce((s, f) => s + f.score, 0) / fbs.length;
+        return healthFilter === 'risk' ? avg < 3.0 : avg >= 4.3;
+      });
+    }
+    return new Set(locs.map(l => l.id));
+  }, [locations, feedbacks, selectedLocs, healthFilter]);
+
+  const filteredFeedbacks = useMemo(() => {
+    const noLocFilter  = selectedLocs.length === 0;
+    const noHealthFilter = healthFilter === 'all';
+    if (noLocFilter && noHealthFilter) return feedbacks;
+    return feedbacks.filter(f => filteredLocIds.has(f.location_id));
+  }, [feedbacks, filteredLocIds, selectedLocs, healthFilter]);
+
+  const filteredLocations = useMemo(() => (
+    locations.filter(l => filteredLocIds.has(l.id))
+  ), [locations, filteredLocIds]);
+
   const metrics = useMemo(() => {
-    const total     = feedbacks.length;
-    const reviews   = feedbacks.filter(f => f.routed_to_google).length;
-    const unhappy   = feedbacks.filter(f => f.score <= 2).length;
-    const recovered = feedbacks.filter(f => f.recovery_sent).length;
+    const total     = filteredFeedbacks.length;
+    const reviews   = filteredFeedbacks.filter(f => f.routed_to_google).length;
+    const unhappy   = filteredFeedbacks.filter(f => f.score <= 2).length;
+    const recovered = filteredFeedbacks.filter(f => f.recovery_sent).length;
     const avgScore  = total
-      ? (feedbacks.reduce((s, f) => s + f.score, 0) / total).toFixed(1)
+      ? (filteredFeedbacks.reduce((s, f) => s + f.score, 0) / total).toFixed(1)
       : '—';
     const recRate = unhappy ? Math.round((recovered / unhappy) * 100) : 0;
-    return { total, reviews, unhappy, recovered, avgScore, recRate };
-  }, [feedbacks]);
+    // NPS: 5=Promotor, 3-4=Pasivo, 1-2=Detractor
+    const promoters  = filteredFeedbacks.filter(f => f.score === 5).length;
+    const detractors = filteredFeedbacks.filter(f => f.score <= 2).length;
+    const passives   = total - promoters - detractors;
+    const nps = total
+      ? Math.round((promoters / total - detractors / total) * 100)
+      : null;
+    const npsBreakdown = total ? {
+      promotersPct:  Math.round((promoters  / total) * 100),
+      passivesPct:   Math.round((passives   / total) * 100),
+      detractorsPct: Math.round((detractors / total) * 100),
+    } : null;
+    return { total, reviews, unhappy, recovered, avgScore, recRate, nps, npsBreakdown };
+  }, [filteredFeedbacks]);
 
   const chartData = useMemo(() => {
     const days = eachDayOfInterval({ start: subDays(new Date(), range - 1), end: new Date() });
     return days.map(day => {
       const label  = format(day, 'd MMM', { locale: es });
       const dayStr = format(day, 'yyyy-MM-dd');
-      const dayFbs = feedbacks.filter(f => f.created_at.startsWith(dayStr));
+      const dayFbs = filteredFeedbacks.filter(f => f.created_at.startsWith(dayStr));
       return {
         date:      label,
         Feedbacks: dayFbs.length,
         Reseñas:   dayFbs.filter(f => f.routed_to_google).length,
       };
     });
-  }, [feedbacks, range]);
+  }, [filteredFeedbacks, range]);
 
   const scoreData = useMemo(() => (
     [1, 2, 3, 4, 5].map(s => ({
       score: `${s}★`,
-      count: feedbacks.filter(f => f.score === s).length,
+      count: filteredFeedbacks.filter(f => f.score === s).length,
     }))
-  ), [feedbacks]);
+  ), [filteredFeedbacks]);
 
   const SCORE_COLORS = [T.red, '#FB923C', T.amber, T.teal, T.green];
 
   const plan       = tenant?.plan || 'free';
+  const isTrial    = isActiveTrial(tenant);
   const planLimits = getPlanLimits(plan);
-  const pct        = limitPct(metrics.reviews, planLimits.maxReviewsPerMonth);
+  const pct        = isTrial ? 0 : limitPct(metrics.reviews, planLimits.maxReviewsPerMonth);
 
   const tickInterval = range <= 7 ? 0 : range <= 30
     ? Math.floor(chartData.length / 6)
@@ -730,35 +1280,63 @@ export default function RetelioDashboard() {
         </div>
       </div>
 
-      {/* ── Plan limit banner ── */}
-      {pct >= 80 && (
+      {/* ── Filters ── */}
+      {locations.length > 1 && (
         <div style={{
-          background: pct >= 100 ? '#FEF2F2' : '#FFFBEB',
-          border: `1px solid ${pct >= 100 ? '#FECACA' : '#FDE68A'}`,
-          borderRadius: 14, padding: '14px 20px', marginBottom: 24,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20,
+          flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <AlertTriangle size={18} color={pct >= 100 ? T.red : T.amber} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: T.ink }}>
-              {pct >= 100
-                ? `Alcanzaste el límite de ${planLimits.maxReviewsPerMonth} reseñas de tu plan este mes.`
-                : `Llevas ${metrics.reviews} de ${planLimits.maxReviewsPerMonth} reseñas (${pct}%).`}
-            </span>
+          <LocationFilter
+            locations={locations}
+            selected={selectedLocs}
+            onChange={setSelectedLocs}
+          />
+
+          {/* Health filter pills */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[
+              { key: 'all',  label: 'Todas' },
+              { key: 'risk', label: '⚠ En riesgo' },
+              { key: 'top',  label: '⭐ Destacadas' },
+            ].map(({ key, label }) => (
+              <button key={key} onClick={() => setHealthFilter(key)} style={{
+                padding: '8px 14px', borderRadius: 12, border: `1.5px solid ${healthFilter === key ? T.coral : T.border}`,
+                background: healthFilter === key ? T.coral + '08' : T.card,
+                color: healthFilter === key ? T.coral : T.muted,
+                fontWeight: 600, fontSize: '0.83rem', cursor: 'pointer',
+                fontFamily: font, transition: 'all 0.15s',
+              }}>{label}</button>
+            ))}
           </div>
-          <button style={{
-            background: T.coral, color: '#fff', border: 'none', borderRadius: 9,
-            padding: '7px 16px', fontWeight: 700, fontSize: '0.8rem',
-            cursor: 'pointer', fontFamily: font, display: 'flex', alignItems: 'center', gap: 6,
-            whiteSpace: 'nowrap',
-          }}>
-            <Zap size={13} fill="white" /> Mejorar plan
-          </button>
+
+          {/* Active filter summary */}
+          {(selectedLocs.length > 0 || healthFilter !== 'all') && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+              <span style={{ fontSize: '0.78rem', color: T.muted, fontWeight: 500 }}>
+                {filteredLocIds.size} de {locations.length} sucursales
+              </span>
+              <button onClick={() => { setSelectedLocs([]); setHealthFilter('all'); }} style={{
+                display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px',
+                borderRadius: 8, border: `1px solid ${T.border}`, background: '#fff',
+                color: T.muted, fontSize: '0.75rem', fontWeight: 600,
+                cursor: 'pointer', fontFamily: font,
+              }}>
+                <X size={11} /> Limpiar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
+
       {/* ── Metric cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 16, marginBottom: 20 }}>
+        <NPSCard
+          nps={loading ? null : metrics.nps}
+          breakdown={metrics.npsBreakdown}
+          loading={loading}
+          range={range}
+        />
         <MetricCard
           label="Feedbacks"
           value={loading ? '—' : metrics.total}
@@ -770,9 +1348,7 @@ export default function RetelioDashboard() {
         <MetricCard
           label="Reseñas Google"
           value={loading ? '—' : metrics.reviews}
-          sub={planLimits.maxReviewsPerMonth >= 999999
-            ? 'ilimitadas'
-            : `${metrics.reviews}/${planLimits.maxReviewsPerMonth} este mes`}
+          sub={`${metrics.reviews} este mes`}
           color={T.teal}
           Icon={Star}
           loading={loading}
@@ -801,12 +1377,13 @@ export default function RetelioDashboard() {
           reviewsGen={metrics.reviews}
           recovered={metrics.recovered}
           plan={plan}
+          isTrial={isTrial}
           loading={loading}
         />
       </div>
 
       {/* ── Location breakdown ── */}
-      <LocationBreakdown feedbacks={feedbacks} locations={locations} loading={loading} />
+      <LocationBreakdown feedbacks={filteredFeedbacks} locations={filteredLocations.length ? filteredLocations : locations} loading={loading} />
 
       {/* ── Charts ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 20 }}>
@@ -878,10 +1455,16 @@ export default function RetelioDashboard() {
       </div>
 
       {/* ── Insights ── */}
-      <InsightsCard insights={generateInsights(feedbacks, locations)} loading={loading} />
+      <InsightsCard insights={generateInsights(filteredFeedbacks, filteredLocations.length ? filteredLocations : locations)} loading={loading} />
 
       {/* ── Feedback table ── */}
-      <FeedbackTable rows={feedbacks.slice(0, 50)} locations={locations} loading={loading} />
+      <FeedbackTable
+        rows={filteredFeedbacks.slice(0, 50)}
+        locations={locations}
+        loading={loading}
+        tenant={tenant}
+        onUpdate={updated => setFeedbacks(prev => prev.map(f => f.id === updated.id ? updated : f))}
+      />
 
     </div>
   );

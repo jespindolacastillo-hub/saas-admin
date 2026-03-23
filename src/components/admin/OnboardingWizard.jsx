@@ -42,6 +42,40 @@ const Confetti = () => {
   );
 };
 
+// ─── Plan options shown in wizard ────────────────────────────────────────────
+const WIZARD_PLANS = [
+  {
+    slug: 'trial',
+    label: '14 días gratis',
+    name: 'Empezar prueba',
+    price: '$0',
+    period: '',
+    note: 'Sin tarjeta de crédito',
+    color: '#00C9A7',
+    features: ['Acceso completo 14 días', 'QR ilimitados', 'Dashboard + alertas', '20 alertas WhatsApp'],
+  },
+  {
+    slug: 'starter',
+    label: 'Starter',
+    name: 'Starter',
+    price: '$349',
+    period: '/mes',
+    note: 'o $279/mes anual',
+    color: '#FF5C3A',
+    features: ['Todo Trial +', '50 alertas WhatsApp/mes', '2 usuarios', 'Email campañas'],
+  },
+  {
+    slug: 'growth',
+    label: 'Growth',
+    name: 'Growth',
+    price: '$599',
+    period: '/mes',
+    note: 'o $479/mes anual',
+    color: '#7C3AED',
+    features: ['Todo Starter +', '200 alertas WhatsApp/mes', 'Usuarios ilimitados', 'Mapa geográfico'],
+  },
+];
+
 // ─── Step Definitions ──────────────────────────────────────────────────────────
 const useSteps = (t) => [
   {
@@ -70,6 +104,15 @@ const useSteps = (t) => [
     headline: '¿Qué le preguntas a tus clientes?',
     desc: 'Esta pregunta aparecerá en el formulario de feedback.',
     preview: '💬',
+  },
+  {
+    id: 'plan',
+    icon: '⚡',
+    color: '#F59E0B',
+    gradient: 'linear-gradient(145deg, #0D0D12 0%, #1f1600 50%, #0D0D12 100%)',
+    headline: 'Elige tu plan',
+    desc: 'Empieza gratis 14 días. Sin tarjeta de crédito.',
+    preview: '⚡',
   },
   {
     id: 'done',
@@ -114,9 +157,9 @@ const ProgressBar = ({ current, total }) => (
 );
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
-const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], areas = [], refreshData = () => {} }) => {
+const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], areas = [], refreshData = () => {}, tenantRefresh = null }) => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const STEPS = useSteps(t);
@@ -132,6 +175,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
   const [areaName, setAreaName] = useState('');
   const [questionText, setQuestionText] = useState('');
   const [tipoRespuesta, setTipoRespuesta] = useState('stars');
+  const [selectedPlan, setSelectedPlan] = useState('trial');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -298,6 +342,29 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
     setSaving(false);
   };
 
+  const saveStep3 = async () => {
+    setSaving(true); setError('');
+    try {
+      const tid = savedTenantId || getTenantId();
+      if (tid && tid !== '00000000-0000-0000-0000-000000000000') {
+        const now = new Date();
+        const trialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const updates = {
+          plan: selectedPlan === 'trial' ? 'trial' : selectedPlan,
+          plan_status: 'trial',
+          trial_starts_at: now.toISOString(),
+          trial_ends_at: trialEnd.toISOString(),
+        };
+        await supabase.from('tenants').update(updates).eq('id', tid);
+        if (tenantRefresh) await tenantRefresh();
+      }
+      transition(4);
+    } catch (err) {
+      setError(err.message || 'Error al activar plan.');
+    }
+    setSaving(false);
+  };
+
   const handleSkip = () => {
     localStorage.setItem('onboarding_complete', 'true');
     onComplete();
@@ -317,6 +384,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
     if (step === 0) saveStep0();
     else if (step === 1) saveStep1();
     else if (step === 2) saveStep2();
+    else if (step === 3) saveStep3();
   };
 
   const canProceed = step === 0 ? !!orgName.trim() : step === 1 ? !!storeName.trim() : step === 2 ? !!questionText.trim() : true;
@@ -424,7 +492,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
               </button>
             ))}
           </div>
-          {step < 3 && (
+          {step < 4 && (
             <button onClick={handleSkip} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '700', padding: '6px 12px', borderRadius: '8px', transition: 'all 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}>
@@ -598,8 +666,84 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
               </div>
             )}
 
-            {/* ── Step 3: Done ── */}
+            {/* ── Step 3: Plan selection ── */}
             {step === 3 && (
+              <div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2rem', fontWeight: '900', color: '#0D0D12', margin: '0 0 0.5rem', letterSpacing: '-0.03em' }}>
+                    Elige tu plan
+                  </h1>
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
+                    Empieza gratis. Cancela cuando quieras.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  {WIZARD_PLANS.map(plan => {
+                    const active = selectedPlan === plan.slug;
+                    return (
+                      <button
+                        key={plan.slug}
+                        type="button"
+                        onClick={() => setSelectedPlan(plan.slug)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '1rem',
+                          padding: '1rem 1.1rem', borderRadius: '14px', cursor: 'pointer',
+                          border: `2px solid ${active ? plan.color : '#e2e8f0'}`,
+                          background: active ? `${plan.color}10` : 'white',
+                          textAlign: 'left', transition: 'all 0.2s',
+                        }}
+                      >
+                        {/* Radio dot */}
+                        <div style={{
+                          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                          border: `2px solid ${active ? plan.color : '#cbd5e1'}`,
+                          background: active ? plan.color : 'white',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {active && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'white' }} />}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '800', color: active ? plan.color : '#1e293b' }}>{plan.label}</span>
+                            {plan.slug === 'trial' && (
+                              <span style={{ fontSize: '0.65rem', fontWeight: '800', background: '#D1FAE5', color: '#065F46', borderRadius: 999, padding: '2px 8px' }}>RECOMENDADO</span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: '2px' }}>
+                            {plan.features.join(' · ')}
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '1.1rem', fontWeight: '900', color: active ? plan.color : '#1e293b' }}>
+                            {plan.price}<span style={{ fontSize: '0.7rem', fontWeight: 400, color: '#94a3b8' }}>{plan.period}</span>
+                          </div>
+                          <div style={{ fontSize: '0.62rem', color: '#94a3b8' }}>{plan.note}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {selectedPlan !== 'trial' && (
+                  <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: '12px', padding: '0.75rem 1rem', marginBottom: '0.75rem', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span>💳</span>
+                    <p style={{ fontSize: '0.78rem', color: '#92400e', margin: 0 }}>
+                      Empezarás con 14 días gratis. Te contactaremos para configurar el pago al finalizar tu prueba.
+                    </p>
+                  </div>
+                )}
+
+                {error && <ErrBox msg={error} />}
+              </div>
+            )}
+
+            {/* ── Step 4: Done ── */}
+            {step === 4 && (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🎉</div>
                 <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2.25rem', fontWeight: '900', color: '#0D0D12', letterSpacing: '-0.04em', margin: '0 0 0.75rem' }}>
@@ -609,13 +753,31 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                   {t('onboarding.done_desc', 'Tu configuración ha sido guardada con éxito. El código QR de la derecha ya está activo y puedes empezar a recibir feedback ahora mismo.')}
                 </p>
 
+                {/* Plan pill */}
+                {(() => {
+                  const plan = WIZARD_PLANS.find(p => p.slug === selectedPlan) || WIZARD_PLANS[0];
+                  return (
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '8px',
+                      background: `${plan.color}15`, border: `1.5px solid ${plan.color}40`,
+                      borderRadius: 999, padding: '6px 14px', marginBottom: '1.5rem',
+                    }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: plan.color }} />
+                      <span style={{ fontSize: '0.78rem', fontWeight: '800', color: plan.color }}>
+                        Plan {plan.label} activado · 14 días gratis
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* Summary & QR Preview */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr ppx', gap: '20px', marginBottom: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', marginBottom: '2rem' }}>
                   <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '1px solid #f1f5f9', textAlign: 'left' }}>
                     {[
                       { icon: '🏢', label: t('onboarding.sum_store', 'Tienda'), val: storeName || '—' },
                       { icon: '🗂️', label: t('onboarding.sum_area', 'Área'), val: areaName || '—' },
                       { icon: '❓', label: t('onboarding.sum_question', 'Pregunta'), val: questionText || '—' },
+                      { icon: '⚡', label: 'Plan', val: (() => { const p = WIZARD_PLANS.find(pl => pl.slug === selectedPlan); return p ? `${p.name} · ${p.price}${p.period || ' gratis'}` : '—'; })() },
                     ].map(r => (
                       <div key={r.label} style={{ display: 'flex', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc', alignItems: 'flex-start' }}>
                         <span style={{ fontSize: '1rem' }}>{r.icon}</span>
@@ -625,23 +787,15 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
                     ))}
                   </div>
 
-                  <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '2px solid rgba(255,92,58,0.15)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                    <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                      <QRCodeSVG 
-                        id="onboarding-qr"
-                        value={qrUrl}
-                        size={140}
-                        level="H"
-                        includeMargin={true}
-                      />
+                  {/* QR inline */}
+                  {savedStoreId && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.75rem' }}>
+                      <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <QRCodeSVG id="onboarding-qr" value={qrUrl} size={110} level="H" includeMargin={true} />
+                        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '600' }}>Tu QR ya está activo</span>
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => alert(t('qr.print_not_available_yet', 'La impresión estará disponible desde el dashboard principal.'))}
-                      style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '0.72rem', fontWeight: '800', color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      🖨️ {t('onboarding.print_qr', 'Imprimir QR')}
-                    </button>
-                  </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -657,8 +811,8 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
               </div>
             )}
 
-            {/* ── Navigation (steps 0-2) ── */}
-            {step < 3 && (
+            {/* ── Navigation (steps 0-3) ── */}
+            {step < 4 && (
               <button
                 disabled={saving || !canProceed}
                 onClick={handleNext}

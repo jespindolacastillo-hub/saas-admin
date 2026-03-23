@@ -298,12 +298,15 @@ function HappyScreen({ googleUrl }) {
 function UnhappyScreen({ onClose, onContactSubmit }) {
   const [step, setStep]       = useState('ask');   // ask | form | done
   const [phone, setPhone]     = useState('');
+  const [email, setEmail]     = useState('');
   const [sending, setSending] = useState(false);
 
+  const canSubmit = phone.trim() || email.trim();
+
   const handleSend = async () => {
-    if (!phone.trim()) return;
+    if (!canSubmit) return;
     setSending(true);
-    await onContactSubmit?.(phone.trim());
+    await onContactSubmit?.({ phone: phone.trim(), email: email.trim() });
     setSending(false);
     setStep('done');
   };
@@ -329,21 +332,34 @@ function UnhappyScreen({ onClose, onContactSubmit }) {
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📲</div>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: S.ink, marginBottom: 8 }}>
-            ¿A qué número te contactamos?
+            ¿Cómo te contactamos?
           </h2>
           <p style={{ fontSize: '0.9rem', color: S.muted }}>
-            Solo para darte seguimiento a tu caso.
+            Deja tu teléfono o email para darte seguimiento.
           </p>
         </div>
         <input
           type="tel"
-          placeholder="Ej: 55 1234 5678"
+          placeholder="Teléfono: 55 1234 5678"
           value={phone}
           onChange={e => setPhone(e.target.value)}
           style={{
             width: '100%', border: `1.5px solid ${S.border}`, borderRadius: 12,
             padding: '12px 14px', fontFamily: fontStack, fontSize: '1rem',
-            outline: 'none', marginBottom: 16,
+            outline: 'none', marginBottom: 10, boxSizing: 'border-box',
+          }}
+          onFocus={e => e.target.style.borderColor = S.teal}
+          onBlur={e => e.target.style.borderColor = S.border}
+        />
+        <input
+          type="email"
+          placeholder="Email (opcional)"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          style={{
+            width: '100%', border: `1.5px solid ${S.border}`, borderRadius: 12,
+            padding: '12px 14px', fontFamily: fontStack, fontSize: '1rem',
+            outline: 'none', marginBottom: 16, boxSizing: 'border-box',
           }}
           onFocus={e => e.target.style.borderColor = S.teal}
           onBlur={e => e.target.style.borderColor = S.border}
@@ -351,7 +367,7 @@ function UnhappyScreen({ onClose, onContactSubmit }) {
         <button
           className="rf-btn rf-btn-teal"
           onClick={handleSend}
-          disabled={!phone.trim() || sending}
+          disabled={!canSubmit || sending}
         >
           {sending ? 'Enviando…' : 'Confirmar'}
         </button>
@@ -430,7 +446,10 @@ function NeutralScreen() {
 function RecoveryScreen({ config, couponCode, tenantName, onContactSubmit }) {
   const [step, setStep]   = useState('offer'); // offer | form | done
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
+
+  const canSubmit = phone.trim() || email.trim();
 
   const message = renderTemplate(config.message_template || '', {
     oferta:  config.offer_description || '',
@@ -440,9 +459,9 @@ function RecoveryScreen({ config, couponCode, tenantName, onContactSubmit }) {
   });
 
   const handleSend = async () => {
-    if (!phone.trim()) return;
+    if (!canSubmit) return;
     setSending(true);
-    await onContactSubmit?.(phone.trim());
+    await onContactSubmit?.({ phone: phone.trim(), email: email.trim() });
     setSending(false);
     setStep('done');
   };
@@ -465,16 +484,24 @@ function RecoveryScreen({ config, couponCode, tenantName, onContactSubmit }) {
         <Logo />
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📲</div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: S.ink, marginBottom: 8 }}>¿A qué número te contactamos?</h2>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: S.ink, marginBottom: 8 }}>¿Cómo te contactamos?</h2>
+          <p style={{ fontSize: '0.9rem', color: S.muted }}>Teléfono o email para enviarte tu cupón.</p>
         </div>
         <input
-          type="tel" placeholder="Ej: 55 1234 5678" value={phone}
+          type="tel" placeholder="Teléfono: 55 1234 5678" value={phone}
           onChange={e => setPhone(e.target.value)}
-          style={{ width: '100%', border: `1.5px solid ${S.border}`, borderRadius: 12, padding: '12px 14px', fontFamily: fontStack, fontSize: '1rem', outline: 'none', marginBottom: 16 }}
+          style={{ width: '100%', border: `1.5px solid ${S.border}`, borderRadius: 12, padding: '12px 14px', fontFamily: fontStack, fontSize: '1rem', outline: 'none', marginBottom: 10, boxSizing: 'border-box' }}
           onFocus={e => e.target.style.borderColor = S.teal}
           onBlur={e => e.target.style.borderColor = S.border}
         />
-        <button className="rf-btn rf-btn-teal" onClick={handleSend} disabled={!phone.trim() || sending}>{sending ? 'Enviando…' : 'Confirmar'}</button>
+        <input
+          type="email" placeholder="Email (opcional)" value={email}
+          onChange={e => setEmail(e.target.value)}
+          style={{ width: '100%', border: `1.5px solid ${S.border}`, borderRadius: 12, padding: '12px 14px', fontFamily: fontStack, fontSize: '1rem', outline: 'none', marginBottom: 16, boxSizing: 'border-box' }}
+          onFocus={e => e.target.style.borderColor = S.teal}
+          onBlur={e => e.target.style.borderColor = S.border}
+        />
+        <button className="rf-btn rf-btn-teal" onClick={handleSend} disabled={!canSubmit || sending}>{sending ? 'Enviando…' : 'Confirmar'}</button>
         <button className="rf-btn rf-btn-ghost" onClick={() => setStep('offer')}>Volver</button>
         <p className="rf-powered">Powered by retelio.com.mx</p>
       </div>
@@ -763,26 +790,36 @@ export default function FeedbackPublic() {
             config={recovery}
             couponCode={couponCode}
             tenantName={qr?.tenant_name || location?.name}
-            onContactSubmit={async (phone) => {
-              await supabase
-                .from('feedbacks')
-                .update({ contact_phone: phone })
-                .eq('qr_id', qrId)
-                .order('created_at', { ascending: false })
-                .limit(1);
+            onContactSubmit={async ({ phone, email }) => {
+              const update = {};
+              if (phone) update.contact_phone = phone;
+              if (email) update.contact_email = email;
+              if (Object.keys(update).length) {
+                await supabase
+                  .from('feedbacks')
+                  .update(update)
+                  .eq('qr_id', qrId)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+              }
             }}
           />
         )}
         {screen === 'unhappy' && (
           <UnhappyScreen
             onClose={() => setScreen('done')}
-            onContactSubmit={async (phone) => {
-              await supabase
-                .from('feedbacks')
-                .update({ contact_phone: phone })
-                .eq('qr_id', qrId)
-                .order('created_at', { ascending: false })
-                .limit(1);
+            onContactSubmit={async ({ phone, email }) => {
+              const update = {};
+              if (phone) update.contact_phone = phone;
+              if (email) update.contact_email = email;
+              if (Object.keys(update).length) {
+                await supabase
+                  .from('feedbacks')
+                  .update(update)
+                  .eq('qr_id', qrId)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+              }
             }}
           />
         )}

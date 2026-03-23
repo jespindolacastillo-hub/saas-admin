@@ -14,7 +14,7 @@ import {
   Lightbulb, AlertCircle, CheckCircle2, AlertTriangle, Clock,
   Trophy, ShieldCheck, Download, History, HelpCircle, Trash2, Loader,
   Search, Plus, Save, Edit2, Check, Eye, Copy, PlusCircle, UserPlus, Fingerprint, Mail,
-  Sun, Moon, Gift
+  Sun, Moon, Gift, Map
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -28,26 +28,27 @@ import { printQRCodes } from './components/PrintQR';
 import QuestionManager from './components/admin/QuestionManager';
 import UserManagement from './components/admin/UserManagement';
 import ReferenceCode from './components/admin/UserManagement';
-import EmailTemplateManager from './components/admin/EmailTemplateManager';
+import CampaignManager from './components/admin/CampaignManager';
 import BackupManager from './components/admin/BackupManager';
 
 import KpiManager from './components/admin/KpiManager';
 import RetelioDashboard from './components/admin/RetelioDashboard';
 import RecoverySettings from './components/admin/RecoverySettings';
-import { getPlanLimits } from './config/planLimits';
+import { getPlanLimits, isActiveTrial, trialDaysLeft } from './config/planLimits';
 import QRStudio from './components/admin/QRStudio';
 import IssueManagement from './components/admin/IssueManagement';
 import RetellioLeaderboard from './components/admin/RetellioLeaderboard';
 import { getSampleData } from './utils/sampleData';
 import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
+import GeoMap from './components/admin/GeoMap';
 import { useTenant } from './hooks/useTenant';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
 const calculateNPS = (data) => {
   if (!data || data.length === 0) return 0;
-  const promoters = data.filter(f => f.satisfaccion >= 4).length;
-  const detractors = data.filter(f => f.satisfaccion <= 2).length;
+  const promoters = data.filter(f => f.score >= 4).length;
+  const detractors = data.filter(f => f.score <= 2).length;
   return Math.round(((promoters - detractors) / data.length) * 100);
 };
 
@@ -149,7 +150,7 @@ const Dashboard = ({
   // Filtrado por Tienda
   const storeFilteredData = useMemo(() => {
     if (filters.store === 'Todas') return dateFilteredData;
-    return dateFilteredData.filter(f => f.tienda_id === filters.store);
+    return dateFilteredData.filter(f => f.location_id === filters.store);
   }, [dateFilteredData, filters.store]);
 
   // Filtrado por Área
@@ -162,7 +163,7 @@ const Dashboard = ({
   const finalFilteredData = useMemo(() => {
     if (filters.sentiment === 'Todos') return areaFilteredData;
     return areaFilteredData.filter(f => {
-      const s = f.sentimiento || (f.satisfaccion >= 4 ? 'Positivo' : f.satisfaccion <= 2 ? 'Negativo' : 'Neutral');
+      const s = f.sentimiento || (f.score >= 4 ? 'Positivo' : f.score <= 2 ? 'Negativo' : 'Neutral');
       return s === filters.sentiment;
     });
   }, [areaFilteredData, filters.sentiment]);
@@ -331,8 +332,8 @@ const Dashboard = ({
           nps: calculateNPS(data),
           nps_prev: stats.previousNPS, // Constant baseline for comparison
           total: data.length,
-          promoters: data.filter(f => f.satisfaccion >= 4).length,
-          detractors: data.filter(f => f.satisfaccion <= 2).length,
+          promoters: data.filter(f => f.score >= 4).length,
+          detractors: data.filter(f => f.score <= 2).length,
           _sortDate: new Date(data[0].created_at)
         };
       })
@@ -349,8 +350,8 @@ const Dashboard = ({
     const wordsMap = {};
 
     (finalFilteredData || []).forEach(f => {
-      if (!f || typeof f.comentario !== 'string' || !f.comentario.trim()) return;
-      const cleanComments = f.comentario.toLowerCase()
+      if (!f || typeof f.comment !== 'string' || !f.comment.trim()) return;
+      const cleanComments = f.comment.toLowerCase()
         .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
         .split(/\s+/);
 
@@ -386,7 +387,7 @@ const Dashboard = ({
     };
 
     finalFilteredData.forEach(f => {
-      const s = f.sentimiento || (f.satisfaccion >= 4 ? 'Positivo' : f.satisfaccion <= 2 ? 'Negativo' : 'Neutral');
+      const s = f.sentimiento || (f.score >= 4 ? 'Positivo' : f.score <= 2 ? 'Negativo' : 'Neutral');
       if (stats[s] !== undefined) {
         stats[s]++;
         stats.total++;
@@ -1074,7 +1075,7 @@ const Dashboard = ({
                 };
 
                 const count = finalFilteredData.filter(f => {
-                  const comment = (f.comentario || '').toLowerCase();
+                  const comment = (f.comment || '').toLowerCase();
                   // Match DB tags OR simulate from comments
                   return (f.tags_ia && f.tags_ia.includes(cat)) || keywords[cat].some(k => comment.includes(k));
                 }).length;
@@ -1285,16 +1286,16 @@ const Dashboard = ({
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{timeLabel}</div>
                       </td>
                       <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)' }}>{getStoreName(f.tienda_id)}</div>
+                        <div style={{ fontSize: '0.8rem', fontWeight: '800', color: 'var(--text-main)' }}>{getStoreName(f.location_id)}</div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: '600' }}>{getAreaName(f.area_id)}</div>
                       </td>
                       <td style={{ padding: '1rem 1.5rem', verticalAlign: 'top' }}>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, fontStyle: f.comentario ? 'normal' : 'italic', lineHeight: '1.4' }}>
-                          {f.comentario || t('common.no_comment')}
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, fontStyle: f.comment ? 'normal' : 'italic', lineHeight: '1.4' }}>
+                          {f.comment || t('common.no_comment')}
                         </p>
                         <div style={{ marginTop: '8px' }}>
-                          <span className={`badge ${f.satisfaccion >= 4 ? 'badge-success' : f.satisfaccion <= 2 ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
-                            {f.satisfaccion >= 4 ? t('common.promoter') : f.satisfaccion <= 2 ? t('common.detractor') : t('common.passive')}
+                          <span className={`badge ${f.score >= 4 ? 'badge-success' : f.score <= 2 ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.6rem', padding: '2px 8px' }}>
+                            {f.score >= 4 ? t('common.promoter') : f.score <= 2 ? t('common.detractor') : t('common.passive')}
                           </span>
                         </div>
                       </td>
@@ -1330,12 +1331,6 @@ const QRGenerator = () => {
   const [loading, setLoading] = useState(true);
   const [batchMode, setBatchMode] = useState(false);
 
-  useEffect(() => {
-    if (tenant?.id) {
-      fetchData();
-    }
-  }, [tenant?.id]);
-
   const fetchData = async () => {
     if (!tenant?.id) return;
     setLoading(true);
@@ -1348,6 +1343,12 @@ const QRGenerator = () => {
     if (areasRes.data) setAreas(areasRes.data);
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (tenant?.id) {
+      fetchData();
+    }
+  }, [tenant?.id]);
 
   const getQRUrl = (storeId, areaId) => {
     // Usar variable de entorno para la URL base del feedback, fallback a producción
@@ -1716,20 +1717,20 @@ const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {}, load
       return new Date(f.created_at) >= cutoff;
     });
 
-    const uniqueStores = [...new Set(dateFiltered.map(f => f.tienda_id).filter(Boolean))];
+    const uniqueStores = [...new Set(dateFiltered.map(f => f.location_id).filter(Boolean))];
 
 
     return uniqueStores.map(store => {
-      const storeData = dateFiltered.filter(f => f.tienda_id === store);
+      const storeData = dateFiltered.filter(f => f.location_id === store);
       return {
         id: store,
         name: getStoreName(store),
         nps: calculateNPS(storeData),
         volume: storeData.length,
-        avg: (storeData.reduce((acc, curr) => acc + curr.satisfaccion, 0) / storeData.length || 0).toFixed(1)
+        avg: (storeData.reduce((acc, curr) => acc + curr.score, 0) / storeData.length || 0).toFixed(1)
       };
     }).sort((a, b) => b.nps - a.nps);
-  }, [rawData, filters.dateRange, stores]);
+  }, [rawData, filters, stores]);
 
 
   if (loading) return <div style={{ padding: '2rem', textAlign: 'center' }}>{t('menu.loading')}...</div>;
@@ -1959,12 +1960,14 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     '/metas': 'kpi',
     '/preguntas': 'questions',
     '/auditoria': 'audit',
+    '/mapa': 'geomap',
     '/': 'dash'
   };
 
   const activeTab = pathMap[pathname] || 'dash';
 
   const [session, setSession] = useState(null);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1981,6 +1984,28 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [wizardStep, setWizardStep] = useState(0);
+  const [whatsappUsage, setWhatsappUsage] = useState({ used: 0, included: 0, addon: 0 });
+
+  // Fetch WhatsApp usage for current month
+  useEffect(() => {
+    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') return;
+    const period = new Date().toISOString().slice(0, 7);
+    supabase
+      .from('tenant_whatsapp_usage')
+      .select('used_count, included_limit, addon_purchased')
+      .eq('tenant_id', tenant.id)
+      .eq('period', period)
+      .maybeSingle()
+      .then(({ data }) => {
+        const planLimits = getPlanLimits(tenant?.plan || 'trial');
+        const included = data?.included_limit ?? planLimits.whatsapp_limit ?? 20;
+        setWhatsappUsage({
+          used: data?.used_count ?? 0,
+          included,
+          addon: data?.addon_purchased ?? 0,
+        });
+      });
+  }, [tenant?.id, tenant?.plan]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -2022,7 +2047,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
   useEffect(() => {
     fetchIssues();
     const safeRawData = Array.isArray(rawData) ? rawData : [];
-    const criticalFeedback = safeRawData.filter(f => f && f.satisfaccion <= 2 && f.comentario);
+    const criticalFeedback = safeRawData.filter(f => f && f.score <= 2 && f.comment);
     setFeedback(criticalFeedback);
   }, [filters.store, filters.area, rawData, tenant?.id]);
 
@@ -2043,7 +2068,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 
       // Simple, direct fetch with current tenant
       const [fRes, sRes, aRes] = await Promise.all([
-        supabase.from('Feedback').select('*').eq('tenant_id', tenant?.id).order('created_at', { ascending: false }),
+        supabase.from('feedbacks').select('*').eq('tenant_id', tenant?.id).order('created_at', { ascending: false }),
         supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant?.id),
         supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant?.id)
       ]);
@@ -2099,19 +2124,19 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 
   const storeFilteredData = useMemo(() => {
     if (filters.store === 'Todas') return dateFilteredData;
-    return dateFilteredData.filter(f => f.tienda_id === filters.store);
+    return dateFilteredData.filter(f => f.location_id === filters.store);
   }, [dateFilteredData, filters.store]);
 
   const finalFilteredData = useMemo(() => {
     let filtered = storeFilteredData;
     if (filters.area !== 'Todas') filtered = filtered.filter(f => f.area_id === filters.area);
     if (filters.canal !== 'Todos') filtered = filtered.filter(f => f.canal === filters.canal);
-    if (filters.sentiment !== 'Todos') filtered = filtered.filter(f => (f.sentimiento || (f.satisfaccion >= 4 ? 'Positivo' : f.satisfaccion <= 2 ? 'Negativo' : 'Neutral')) === filters.sentiment);
+    if (filters.sentiment !== 'Todos') filtered = filtered.filter(f => (f.sentimiento || (f.score >= 4 ? 'Positivo' : f.score <= 2 ? 'Negativo' : 'Neutral')) === filters.sentiment);
     return filtered;
   }, [storeFilteredData, filters.area, filters.sentiment]);
 
   const handleStoreChange = (newStore) => {
-    const newStoreData = newStore === 'Todas' ? dateFilteredData : dateFilteredData.filter(f => f.tienda_id === newStore);
+    const newStoreData = newStore === 'Todas' ? dateFilteredData : dateFilteredData.filter(f => f.location_id === newStore);
     const availableAreas = [...new Set(newStoreData.map(f => f.area_id).filter(Boolean))];
     const newArea = availableAreas.includes(filters.area) ? filters.area : 'Todas';
     setFilters({ ...filters, store: newStore, area: newArea });
@@ -2145,8 +2170,11 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
       setSession(session);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -2204,8 +2232,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     }
   };
 
-  if (!session) {
-    return <Auth />;
+  if (!session || isPasswordRecovery) {
+    return <Auth passwordRecovery={isPasswordRecovery} onPasswordReset={() => setIsPasswordRecovery(false)} />;
   }
 
   if (tenantLoading) {
@@ -2219,18 +2247,84 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 
   if (showOnboarding) {
     return (
-      <OnboardingWizard 
-        session={session} 
-        initialStep={wizardStep} 
+      <OnboardingWizard
+        session={session}
+        initialStep={wizardStep}
         stores={stores}
         areas={areas}
         refreshData={refreshData}
+        tenantRefresh={tenantRefresh}
         onComplete={async () => {
           if (tenantRefresh) await tenantRefresh();
-          setShowOnboarding(false); 
-          setWizardStep(0); 
-        }} 
+          setShowOnboarding(false);
+          setWizardStep(0);
+        }}
       />
+    );
+  }
+
+  // Upgrade gate: trial expired and not on active paid plan
+  const trialExpired = tenant && !isActiveTrial(tenant) && tenant?.plan_status !== 'active' && tenant?.plan_status !== 'trial';
+
+  if (trialExpired) {
+    const daysOver = tenant?.trial_ends_at
+      ? Math.max(0, Math.ceil((new Date() - new Date(tenant.trial_ends_at)) / (1000 * 60 * 60 * 24)))
+      : null;
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--bg-main)', padding: '2rem', textAlign: 'center',
+      }}>
+        <div style={{ maxWidth: 480 }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔒</div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 900, color: '#0D0D12', marginBottom: '0.5rem' }}>
+            Tu período de prueba terminó
+          </h1>
+          {daysOver !== null && (
+            <p style={{ color: '#6B7280', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              Hace {daysOver} {daysOver === 1 ? 'día' : 'días'} venció tu acceso de 14 días gratis.
+            </p>
+          )}
+          <p style={{ color: '#6B7280', fontSize: '0.95rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+            Activa tu plan para seguir recolectando feedback, ver el dashboard y enviar alertas a tu equipo.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {[
+                { name: 'Starter', price: '$349', desc: '50 WhatsApp · 2 usuarios', color: '#FF5C3A' },
+                { name: 'Growth', price: '$599', desc: '200 WhatsApp · ilimitados', color: '#7C3AED' },
+              ].map(plan => (
+                <div key={plan.name} style={{
+                  flex: 1, minWidth: 160, border: `2px solid ${plan.color}`, borderRadius: 16,
+                  padding: '1.25rem', background: 'white',
+                }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 800, color: plan.color, textTransform: 'uppercase', marginBottom: 4 }}>{plan.name}</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0D0D12' }}>{plan.price}<span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#9CA3AF' }}>/mes</span></div>
+                  <div style={{ fontSize: '0.78rem', color: '#6B7280', marginTop: 4 }}>{plan.desc}</div>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => window.open('https://retelio.com.mx/precios', '_blank')}
+              style={{
+                background: '#FF5C3A', color: 'white', border: 'none', borderRadius: 12,
+                padding: '0.875rem 2rem', fontSize: '1rem', fontWeight: 800, cursor: 'pointer',
+              }}
+            >
+              Ver planes y activar →
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'transparent', color: '#9CA3AF', border: 'none',
+                fontSize: '0.85rem', cursor: 'pointer', padding: '0.25rem',
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -2253,9 +2347,9 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
           </div>
         </div>
 
-        <nav style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <nav style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <ul className="nav-links">
-            {/* Core */}
+            {/* Principal */}
             <li style={{ padding: '0 0.5rem', marginBottom: '0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Principal</span>
             </li>
@@ -2275,9 +2369,14 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
               </button>
             </li>
 
-            {/* Analytics */}
+            {/* Analítica */}
             <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Analítica</span>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'geomap' ? 'active' : ''}`} onClick={() => { navigate('/mapa'); setIsSidebarOpen(false); }}>
+                <Map size={16} /> Mapa geográfico
+              </button>
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => { navigate('/leaderboard'); setIsSidebarOpen(false); }}>
@@ -2290,7 +2389,22 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
               </button>
             </li>
 
-            {/* Config */}
+            {/* Comunicación */}
+            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Comunicación</span>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
+                <Mail size={16} /> Campañas
+              </button>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'recovery' ? 'active' : ''}`} onClick={() => { navigate('/recovery'); setIsSidebarOpen(false); }}>
+                <Gift size={16} /> Recovery
+              </button>
+            </li>
+
+            {/* Configuración */}
             <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Configuración</span>
             </li>
@@ -2309,18 +2423,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
                 <MessageSquare size={16} /> Preguntas
               </button>
             </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
-                <Mail size={16} /> Marketing
-              </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'recovery' ? 'active' : ''}`} onClick={() => { navigate('/recovery'); setIsSidebarOpen(false); }}>
-                <Gift size={16} /> Recovery
-              </button>
-            </li>
 
-            {/* System */}
+            {/* Sistema */}
             <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</span>
             </li>
@@ -2337,26 +2441,87 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
           </ul>
         </nav>
 
-        {/* Plan usage mini */}
-        <div style={{ padding: '0 0.25rem', marginBottom: '0.75rem' }}>
-          {[
-            { label: 'Sucursales', current: stores.length, max: getPlanLimits(tenant?.plan || 'free').maxLocations },
-          ].filter(item => item.max < 999999).map(({ label, current, max }) => {
-            const pct = Math.min(100, Math.round((current / max) * 100));
-            const barColor = pct >= 90 ? '#FF5C3A' : pct >= 70 ? '#F59E0B' : '#00C9A7';
-            return (
-              <div key={label} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', fontWeight: 600, color: '#9CA3AF', marginBottom: 3 }}>
-                  <span>{label}</span>
-                  <span style={{ color: pct >= 90 ? '#FF5C3A' : '#9CA3AF' }}>{current}/{max}</span>
-                </div>
-                <div style={{ height: 4, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 999, transition: 'width 0.3s ease' }} />
-                </div>
+        {/* WhatsApp usage */}
+        {(() => {
+          const planLimits = getPlanLimits(tenant?.plan || 'trial');
+          const waUnlimited = planLimits.whatsapp_limit === -1;
+          const waTotal = whatsappUsage.included + whatsappUsage.addon;
+          if (waUnlimited || waTotal === 0) return null;
+          const pct = Math.min(100, Math.round((whatsappUsage.used / waTotal) * 100));
+          const barColor = pct >= 90 ? '#EF4444' : pct >= 70 ? '#F59E0B' : '#00C9A7';
+          return (
+            <div style={{
+              borderTop: '1px solid var(--border)', paddingTop: '0.75rem',
+              marginBottom: '0.5rem', paddingLeft: '0.25rem', paddingRight: '0.25rem',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span>💬</span> WhatsApp este mes
+                </span>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: pct >= 90 ? '#EF4444' : '#9CA3AF' }}>
+                  {whatsappUsage.used}/{waTotal}
+                </span>
               </div>
-            );
-          })}
-        </div>
+              <div style={{ height: 5, background: '#F1F5F9', borderRadius: 999, overflow: 'hidden', marginBottom: '0.35rem' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 999, transition: 'width 0.4s ease' }} />
+              </div>
+              {pct >= 80 && (
+                <button
+                  onClick={() => window.open('https://retelio.com.mx/precios', '_blank')}
+                  style={{
+                    fontSize: '0.62rem', fontWeight: 700, color: '#FF5C3A',
+                    background: '#FFF1EE', border: 'none', borderRadius: 6,
+                    cursor: 'pointer', padding: '3px 8px', width: '100%', textAlign: 'center',
+                  }}
+                >
+                  + Comprar mensajes →
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Trial banner */}
+        {isActiveTrial(tenant) && (() => {
+          const daysLeft = trialDaysLeft(tenant);
+          const totalDays = 14;
+          const pct = Math.round(((totalDays - daysLeft) / totalDays) * 100);
+          const urgent = daysLeft <= 3;
+          return (
+            <div style={{
+              margin: '0 0 0.75rem 0',
+              background: urgent ? '#FFF1EE' : 'linear-gradient(135deg, #F0FDF4, #ECFDF5)',
+              border: `1px solid ${urgent ? '#FECACA' : '#BBF7D0'}`,
+              borderRadius: 12, padding: '0.75rem',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: urgent ? '#DC2626' : '#059669' }}>
+                  {urgent ? '⚠️ ' : ''}Prueba gratuita
+                </span>
+                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: urgent ? '#DC2626' : '#065F46' }}>
+                  {daysLeft === 0 ? 'Último día' : `${daysLeft} día${daysLeft !== 1 ? 's' : ''}`}
+                </span>
+              </div>
+              <div style={{ height: 4, background: urgent ? '#FEE2E2' : '#D1FAE5', borderRadius: 999, overflow: 'hidden', marginBottom: 8 }}>
+                <div style={{
+                  height: '100%', width: `${pct}%`,
+                  background: urgent ? '#EF4444' : '#10B981',
+                  borderRadius: 999, transition: 'width 0.3s ease',
+                }} />
+              </div>
+              <button
+                onClick={() => window.open('https://retelio.com.mx/precios', '_blank')}
+                style={{
+                  width: '100%', background: urgent ? '#EF4444' : '#10B981',
+                  color: 'white', border: 'none', borderRadius: 8,
+                  padding: '0.4rem', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer',
+                }}
+              >
+                Activar plan →
+              </button>
+            </div>
+          );
+        })()}
 
         {/* User card */}
         <div style={{ flexShrink: 0, marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
@@ -2425,6 +2590,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
                activeTab === 'questions'  ? 'Preguntas'      :
                activeTab === 'kpi'        ? 'Metas'          :
                activeTab === 'backup'     ? 'Respaldos'      :
+               activeTab === 'geomap'     ? 'Mapa'           :
                activeTab === 'audit'      ? 'Auditoría'      : 'Dashboard'}
             </h2>
           </div>
@@ -2547,11 +2713,12 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
           {activeTab === 'issues' && <IssueManagement />}
           {activeTab === 'qr' && <QRStudio />}
           {activeTab === 'users' && <UserManagement session={session} />}
-          {activeTab === 'email' && <EmailTemplateManager />}
+          {activeTab === 'email' && <CampaignManager />}
           {activeTab === 'backup' && <BackupManager />}
           {activeTab === 'kpi' && <KpiManager />}
           {activeTab === 'questions' && <QuestionManager />}
           {activeTab === 'audit' && <AuditTrail />}
+          {activeTab === 'geomap' && <GeoMap />}
         </main>
       </div >
     </div >

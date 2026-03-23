@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogIn, UserPlus, Mail, Lock, ShieldCheck, AlertCircle, Eye, EyeOff, User } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, ShieldCheck, AlertCircle, Eye, EyeOff, User, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const font = "'Plus Jakarta Sans', system-ui, sans-serif";
@@ -33,7 +33,7 @@ const strengthColors = ['#e2e8f0', '#ef4444', '#f59e0b', '#10b981', '#00C9A7'];
 const strengthLabels = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'];
 
 // ─── Main Auth ────────────────────────────────────────────────────────────────
-const Auth = ({ onLogin }) => {
+const Auth = ({ onLogin, passwordRecovery = false, onPasswordReset }) => {
   const { t } = useTranslation();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -43,6 +43,7 @@ const Auth = ({ onLogin }) => {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState(null);
   const [forceChange, setForceChange] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -76,6 +77,35 @@ const Auth = ({ onLogin }) => {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!email) { setError('Ingresa tu correo electrónico'); return; }
+    setLoading(true); setError(null);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (error) throw error;
+      setMessage('Revisa tu correo para restablecer tu contraseña.');
+    } catch (err) { setError(err.message); } finally { setLoading(false); }
+  };
+
+  const handlePasswordRecovery = async (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) { setError('Las contraseñas no coinciden'); return; }
+    if (newPassword.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return; }
+    setLoading(true); setError(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setMessage('¡Contraseña actualizada! Redirigiendo...');
+      setTimeout(async () => {
+        await supabase.auth.signOut();
+        if (onPasswordReset) onPasswordReset();
+      }, 1500);
+    } catch (err) { setError(err.message); } finally { setLoading(false); }
+  };
+
   const handleForceChange = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) { setError(t('auth.alerts.password_mismatch')); return; }
@@ -97,6 +127,29 @@ const Auth = ({ onLogin }) => {
     border: `2px solid ${focused === name ? '#FF5C3A' : '#e2e8f0'}`,
     background: focused === name ? '#FFF1EE' : '#fafafa',
   });
+
+  if (passwordRecovery) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0D0D12, #1a1a2e)', padding: '2rem', fontFamily: font }}>
+        <div style={{ maxWidth: '420px', width: '100%', background: 'white', borderRadius: '28px', boxShadow: '0 50px 100px rgba(0,0,0,0.4)', padding: '2.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <ShieldCheck size={48} color="#FF5C3A" style={{ marginBottom: '1rem' }} />
+            <h1 style={{ fontFamily: font, fontSize: '1.6rem', fontWeight: '900', color: '#0D0D12' }}>Nueva contraseña</h1>
+            <p style={{ color: '#64748b', fontSize: '0.88rem', marginTop: '0.4rem' }}>Elige una contraseña segura para tu cuenta.</p>
+          </div>
+          <form onSubmit={handlePasswordRecovery} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <input type="password" required value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Nueva contraseña (mín. 8 caracteres)" style={{ ...inputStyle('np'), paddingLeft: '1rem' }} />
+            <input type="password" required value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirmar contraseña" style={{ ...inputStyle('cp'), paddingLeft: '1rem' }} />
+            {error && <div style={{ color: '#dc2626', fontSize: '0.8rem', textAlign: 'center' }}>{error}</div>}
+            {message && <div style={{ color: '#10b981', fontSize: '0.8rem', textAlign: 'center' }}>{message}</div>}
+            <button type="submit" disabled={loading} style={{ padding: '1rem', background: '#FF5C3A', color: 'white', border: 'none', borderRadius: '14px', fontWeight: '800', fontSize: '1rem', cursor: 'pointer', fontFamily: font }}>
+              {loading ? '...' : 'Guardar contraseña'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (forceChange) {
     return (
@@ -194,13 +247,42 @@ const Auth = ({ onLogin }) => {
 
         <div style={{ marginBottom: '2.5rem' }}>
           <h1 style={{ fontFamily: font, fontSize: '2rem', fontWeight: '900', color: '#0D0D12', letterSpacing: '-0.03em', margin: '0 0 0.4rem' }}>
-            {isSignUp ? 'Crear cuenta' : 'Bienvenido de vuelta'}
+            {forgotMode ? 'Recuperar contraseña' : isSignUp ? 'Crear cuenta' : 'Bienvenido de vuelta'}
           </h1>
           <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
-            {isSignUp ? 'Comienza gratis. Sin tarjeta de crédito.' : 'Ingresa a tu dashboard de reputación.'}
+            {forgotMode ? 'Te enviaremos instrucciones a tu correo.' : isSignUp ? 'Comienza gratis. Sin tarjeta de crédito.' : 'Ingresa a tu dashboard de reputación.'}
           </p>
         </div>
 
+        {forgotMode ? (
+          <form onSubmit={handleForgotPassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            <div>
+              <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#374151', marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Correo electrónico</label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: focused === 'email' ? '#FF5C3A' : '#cbd5e1', transition: 'color 0.2s' }} />
+                <input autoFocus type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                  onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
+                  placeholder="tu@empresa.com" style={inputStyle('email')} />
+              </div>
+            </div>
+            {error && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.75rem 1rem', borderRadius: '12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '0.82rem', fontWeight: '600' }}>
+                <AlertCircle size={16} />{error}
+              </div>
+            )}
+            {message && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.75rem 1rem', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontSize: '0.82rem', fontWeight: '600' }}>
+                <ShieldCheck size={16} />{message}
+              </div>
+            )}
+            <button type="submit" disabled={loading} style={{ padding: '1rem', borderRadius: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', background: loading ? '#e2e8f0' : '#FF5C3A', color: loading ? '#94a3b8' : 'white', fontSize: '1rem', fontWeight: '800', fontFamily: font, boxShadow: loading ? 'none' : '0 8px 24px rgba(255,92,58,0.3)' }}>
+              {loading ? '⟳ Enviando...' : 'Enviar instrucciones'}
+            </button>
+            <button type="button" onClick={() => { setForgotMode(false); setError(null); setMessage(null); }} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.85rem', fontFamily: font, display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+              <ArrowLeft size={14} /> Volver al inicio de sesión
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
           {isSignUp && (
             <div>
@@ -271,20 +353,32 @@ const Auth = ({ onLogin }) => {
           }}>
             {loading ? '⟳ Procesando...' : isSignUp ? <><UserPlus size={20} /> Crear cuenta gratis</> : <><LogIn size={20} /> Entrar</>}
           </button>
+
+          {!isSignUp && (
+            <div style={{ textAlign: 'center' }}>
+              <button type="button" onClick={() => { setForgotMode(true); setError(null); setMessage(null); }}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.82rem', fontFamily: font }}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+          )}
         </form>
+        )}
 
-        <div style={{ marginTop: '1.75rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.85rem', color: '#94a3b8', fontFamily: font }}>
-            {isSignUp ? '¿Ya tienes cuenta?' : '¿Primera vez aquí?'}
-            {' '}
-            <button onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }}
-              style={{ background: 'none', border: 'none', color: '#FF5C3A', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem', fontFamily: font }}>
-              {isSignUp ? 'Ingresar' : 'Crear cuenta'}
-            </button>
-          </p>
-        </div>
+        {!forgotMode && (
+          <div style={{ marginTop: '1.75rem', textAlign: 'center' }}>
+            <p style={{ fontSize: '0.85rem', color: '#94a3b8', fontFamily: font }}>
+              {isSignUp ? '¿Ya tienes cuenta?' : '¿Primera vez aquí?'}
+              {' '}
+              <button onClick={() => { setIsSignUp(!isSignUp); setError(null); setMessage(null); }}
+                style={{ background: 'none', border: 'none', color: '#FF5C3A', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem', fontFamily: font }}>
+                {isSignUp ? 'Ingresar' : 'Crear cuenta'}
+              </button>
+            </p>
+          </div>
+        )}
 
-        {isSignUp && (
+        {!forgotMode && isSignUp && (
           <p style={{ marginTop: '1.25rem', fontSize: '0.72rem', color: '#cbd5e1', textAlign: 'center', lineHeight: '1.5', fontFamily: font }}>
             Al registrarte aceptas nuestros Términos de Servicio y Política de Privacidad.
           </p>

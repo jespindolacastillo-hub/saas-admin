@@ -29,10 +29,6 @@ export default function RetellioLeaderboard() {
   const [range,        setRange]        = useState(30);
   const [activeTab,    setActiveTab]    = useState('locations');
 
-  useEffect(() => {
-    if (tenant?.id) loadData();
-  }, [tenant?.id, range]);
-
   const loadData = async () => {
     setLoading(true);
     const since = subDays(new Date(), range).toISOString();
@@ -54,6 +50,10 @@ export default function RetellioLeaderboard() {
     if (qrRes.data)  setEmployeeQRs(qrRes.data);
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (tenant?.id) loadData();
+  }, [tenant?.id, range]);
 
   const rankings = useMemo(() => {
     return locations.map(loc => {

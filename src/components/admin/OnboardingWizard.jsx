@@ -187,6 +187,11 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
 
 
+  // Auto-finish when reaching the done step
+  useEffect(() => {
+    if (step === 4) handleFinish('/qr');
+  }, [step]);
+
   // Effect to restore IDs if starting mid-flow
   useEffect(() => {
     if (initialStep > 1 && stores.length > 0) {
@@ -257,6 +262,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
           .from('tenants')
           .insert([{
             name: storeName.trim(),
+            test_mode: true,
             ...(refCode     && { ref_code_used: refCode }),
             ...(affiliateId && { affiliate_id: affiliateId }),
             ...(utm.utm_source   && { utm_source:   utm.utm_source }),
@@ -317,16 +323,29 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
       if (areaName.trim()) {
         const { data: newArea, error: newAreaErr } = await supabase
           .from('Areas_Catalogo')
-          .insert([{ 
-            nombre: areaName.trim(), 
+          .insert([{
+            nombre: areaName.trim(),
             tenant_id: validTid,
-            tienda_id: storeIdToUse 
+            tienda_id: storeIdToUse
           }])
           .select('id').single();
-        
+
         if (newAreaErr) throw newAreaErr;
         setSavedAreaId(newArea?.id);
-        // removed setAreaName as it was causing it to be undefined
+      }
+
+      // 3. Also create in the new QR Studio schema (locations + qr_codes)
+      const { data: newLoc } = await supabase
+        .from('locations')
+        .insert({ tenant_id: validTid, name: storeName.trim() })
+        .select('id').single();
+      if (newLoc && areaName.trim()) {
+        await supabase.from('qr_codes').insert({
+          tenant_id: validTid,
+          location_id: newLoc.id,
+          type: 'area',
+          label: areaName.trim(),
+        });
       }
 
       refreshMRR(validTid); // fire-and-forget
@@ -422,7 +441,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
   const baseUrl = window.location.origin + '/feedback';
   const tid = savedTenantId || getTenantId() || '00000000-0000-0000-0000-000000000000';
-  console.log('Wizard - Base URL used for QR:', baseUrl);
+
   const qrUrl = savedStoreId ? `${baseUrl}?tid=${tid}&t=${savedStoreId}${savedAreaId ? `&a=${savedAreaId}` : ''}` : baseUrl;
 
   return (
@@ -775,70 +794,19 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
 
             {/* ── Step 4: Done ── */}
             {step === 4 && (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>🎉</div>
-                <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2.25rem', fontWeight: '900', color: '#0D0D12', letterSpacing: '-0.04em', margin: '0 0 0.75rem' }}>
-                  {t('onboarding.done_title', '¡Todo listo para empezar!')}
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                <div style={{ fontSize: '5rem', marginBottom: '1.5rem', animation: 'bounce 0.6s ease' }}>🎉</div>
+                <h1 style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontSize: '2rem', fontWeight: '900', color: '#0D0D12', letterSpacing: '-0.04em', margin: '0 0 0.75rem' }}>
+                  ¡Tu QR ya está listo!
                 </h1>
-                <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.65', maxWidth: '380px', margin: '0 auto 2rem' }}>
-                  {t('onboarding.done_desc', 'Tu configuración ha sido guardada con éxito. El código QR de la derecha ya está activo y puedes empezar a recibir feedback ahora mismo.')}
+                <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.65', maxWidth: '340px', margin: '0 auto 2rem' }}>
+                  Configuración completada. Te llevamos a tu código QR en un momento…
                 </p>
-
-                {/* Plan pill */}
-                {(() => {
-                  const plan = WIZARD_PLANS.find(p => p.slug === selectedPlan) || WIZARD_PLANS[0];
-                  return (
-                    <div style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '8px',
-                      background: `${plan.color}15`, border: `1.5px solid ${plan.color}40`,
-                      borderRadius: 999, padding: '6px 14px', marginBottom: '1.5rem',
-                    }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: plan.color }} />
-                      <span style={{ fontSize: '0.78rem', fontWeight: '800', color: plan.color }}>
-                        Plan {plan.label} activado · 14 días gratis
-                      </span>
-                    </div>
-                  );
-                })()}
-
-                {/* Summary & QR Preview */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', marginBottom: '2rem' }}>
-                  <div style={{ background: 'white', borderRadius: '18px', padding: '1.25rem', border: '1px solid #f1f5f9', textAlign: 'left' }}>
-                    {[
-                      { icon: '🏢', label: t('onboarding.sum_store', 'Tienda'), val: storeName || '—' },
-                      { icon: '🗂️', label: t('onboarding.sum_area', 'Área'), val: areaName || '—' },
-                      { icon: '❓', label: t('onboarding.sum_question', 'Pregunta'), val: questionText || '—' },
-                      { icon: '⚡', label: 'Plan', val: (() => { const p = WIZARD_PLANS.find(pl => pl.slug === selectedPlan); return p ? `${p.name} · ${p.price}${p.period || ' gratis'}` : '—'; })() },
-                    ].map(r => (
-                      <div key={r.label} style={{ display: 'flex', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '1rem' }}>{r.icon}</span>
-                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: '#94a3b8', minWidth: '60px', textTransform: 'uppercase', paddingTop: '2px' }}>{r.label}</span>
-                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b' }}>{r.val}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* QR inline */}
-                  {savedStoreId && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '0.75rem' }}>
-                      <div style={{ padding: '12px', background: 'white', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                        <QRCodeSVG id="onboarding-qr" value={qrUrl} size={110} level="H" includeMargin={true} />
-                        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: '600' }}>Tu QR ya está activo</span>
-                      </div>
-                    </div>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#FF5C3A', animation: 'pulse 1s infinite' }} />
+                  <span style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600 }}>Redirigiendo a tus QRs…</span>
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <button onClick={() => handleFinish('/qr')}
-                    style={{ padding: '1rem 2rem', borderRadius: '16px', background: '#FF5C3A', color: 'white', border: 'none', cursor: 'pointer', fontSize: '1rem', fontWeight: '800', fontFamily: "'Plus Jakarta Sans', system-ui", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(255,92,58,0.3)' }}>
-                    <QrCode size={20} /> {t('onboarding.go_qr', 'Ver mis Códigos QR')}
-                  </button>
-                  <button onClick={() => handleFinish(null)}
-                    style={{ padding: '0.9rem', borderRadius: '16px', background: 'white', color: '#64748b', border: '1.5px solid #e2e8f0', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '700' }}>
-                    {t('onboarding.go_dash', 'Ir al Dashboard de métricas')}
-                  </button>
-                </div>
+                <style>{`@keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
               </div>
             )}
 

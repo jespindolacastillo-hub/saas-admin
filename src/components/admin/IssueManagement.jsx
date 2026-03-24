@@ -1072,6 +1072,16 @@ function FeedbackPanel({ alert, locations, tenant, userEmail, onClose, onFeedbac
   const [fbs, setFbs] = useState(alert.feedbacks);
   if (!alert) return null;
 
+  // Refresh feedbacks from DB when panel opens to get latest contact_phone/contact_email
+  useEffect(() => {
+    const ids = alert.feedbacks.map(f => f.id);
+    if (!ids.length || !tenant?.id) return;
+    supabase.from('feedbacks')
+      .select('id, location_id, qr_id, score, comment, followup_answer, recovery_sent, routed_to_google, coupon_code, contact_phone, contact_email, created_at, recovery_status, recovery_channel, recovery_note, recovery_actor, recovery_at, recovery_resolved_at, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, google_note, google_actor, google_at')
+      .in('id', ids)
+      .then(({ data }) => { if (data?.length) setFbs(data); });
+  }, [alert.feedbacks]);
+
   const handleUpdate = updated => {
     setFbs(prev => prev.map(f => f.id === updated.id ? updated : f));
     onFeedbackUpdate?.(updated);

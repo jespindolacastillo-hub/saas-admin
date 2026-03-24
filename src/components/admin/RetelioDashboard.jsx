@@ -823,7 +823,11 @@ function FeedbackTable({ rows, locations, loading, tenant, onUpdate }) {
               ) : rows.map((r, idx) => {
                 const loc = locations.find(l => l.id === r.location_id);
                 return (
-                  <tr key={r.id} onClick={() => setSelected(r)} style={{
+                  <tr key={r.id} onClick={async () => {
+                    setSelected(r);
+                    const { data: fresh } = await supabase.from('feedbacks').select('*, qr_codes(label, type)').eq('id', r.id).single();
+                    if (fresh) setSelected(fresh);
+                  }} style={{
                     borderBottom: `1px solid ${T.border}`,
                     background: selected?.id === r.id ? T.coral + '06' : idx % 2 === 0 ? '#fff' : '#FAFAFA',
                     cursor: 'pointer', transition: 'background 0.15s',

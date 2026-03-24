@@ -47,7 +47,9 @@ body {
 
 .admin-layout {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  height: auto;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }

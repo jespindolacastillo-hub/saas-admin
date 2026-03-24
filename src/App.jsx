@@ -2348,12 +2348,12 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
   }
 
   return (
-    <div className="admin-layout">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
       {/* ── Cintillo global ── */}
       {tenant?.test_mode && (
         <div style={{
-          position: 'sticky', top: 0, zIndex: 9999,
+          flexShrink: 0, zIndex: 9999,
           background: 'linear-gradient(90deg, #1D4ED8 0%, #2563EB 100%)',
           padding: '8px 20px', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
@@ -2396,7 +2396,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
       {/* ── Trial countdown (producción) ── */}
       {!tenant?.test_mode && trialDaysLeftCount !== null && trialDaysLeftCount <= 7 && (
         <div style={{
-          position: 'sticky', top: 0, zIndex: 9999,
+          flexShrink: 0, zIndex: 9999,
           background: trialDaysLeftCount <= 2 ? '#EF4444' : '#F59E0B',
           padding: '7px 20px', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: 12,
@@ -2449,6 +2449,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
         </div>
       )}
 
+      <div className="admin-layout" style={{ flex: 1, height: 'auto', minHeight: 0 }}>
       {/* Sidebar Mobile Overlay */}
       <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
 
@@ -2852,7 +2853,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
           {activeTab === 'affiliates' && <AffiliatesManager />}
         </main>
       </div >
-    </div >
+      </div>
+    </div>
   );
 }
 

@@ -1,6 +1,7 @@
 import { tenantConfig, getTenantId } from '../config/tenant';
 import { PLAN_LIMITS } from '../config/planLimits';
 import { supabase } from '../lib/supabase';
+import { refreshMRR } from './mrrService';
 
 /**
  * StoreService: Gestión de tiendas y su relación con las áreas.
@@ -85,6 +86,7 @@ export const StoreService = {
             if (linkError) throw linkError;
         }
 
+        refreshMRR(getTenantId()); // fire-and-forget
         return { id, ...storeData };
     },
 
@@ -107,5 +109,6 @@ export const StoreService = {
             .eq('tenant_id', getTenantId());
 
         if (error) throw error;
+        refreshMRR(getTenantId()); // fire-and-forget
     }
 };

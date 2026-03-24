@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
-import { PLAN_LIMITS } from '../../config/planLimits';
+import { PLAN_LIMITS, getEffectivePrice } from '../../config/planLimits';
 import { loadStripe } from '@stripe/stripe-js';
 import { Save, CheckCircle2, Zap, Building2, Star } from 'lucide-react';
 
@@ -17,8 +17,10 @@ const T = {
 };
 const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
-const PLAN_ORDER = ['free', 'growth', 'scale', 'people'];
-const PLAN_HIGHLIGHT = 'growth'; // most popular
+const PLAN_ORDER = ['starter', 'growth'];
+const PLAN_HIGHLIGHT = 'growth';
+const ZONE_LABELS = { mx: 'MXN 🇲🇽', usd: 'USD 🇺🇸', br: 'BRL 🇧🇷' };
+const ZONE_SYM    = { mx: '$', usd: '$', br: 'R$' };
 
 export default function OrganizationSettings() {
   const { tenant, refresh } = useTenant();
@@ -84,8 +86,11 @@ export default function OrganizationSettings() {
     }
   };
 
-  const currentPlan = tenant?.plan || 'free';
-  const planKeys = PLAN_ORDER;
+  const currentPlan = tenant?.plan    || 'starter';
+  const zone        = tenant?.zone    || 'mx';
+  const billing     = tenant?.billing || 'monthly';
+  const sym         = ZONE_SYM[zone]  || '$';
+  const planKeys    = PLAN_ORDER;
 
   const input = (label, key, placeholder, hint) => (
     <div style={{ marginBottom: 20 }}>
@@ -161,13 +166,48 @@ export default function OrganizationSettings() {
 
       {/* Plans */}
       <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
           <Star size={18} color={T.coral} />
           <h2 style={{ fontSize: '1rem', fontWeight: 700, color: T.ink }}>Plan activo</h2>
         </div>
-        <p style={{ fontSize: '0.82rem', color: T.muted }}>
-          Precio fijo por empresa. Cambia o cancela cuando quieras.
-        </p>
+        {/* Billing + zone toggles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', background: T.border, borderRadius: 8, padding: 2, gap: 2 }}>
+            {['monthly','annual'].map(b => (
+              <button key={b} onClick={async () => {
+                await supabase.from('tenants').update({ billing: b }).eq('id', tenant.id);
+                await refresh();
+              }} style={{
+                padding: '4px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontFamily: font, fontSize: 12, fontWeight: 700,
+                background: billing === b ? T.ink : 'transparent',
+                color: billing === b ? '#fff' : T.muted,
+              }}>
+                {b === 'monthly' ? 'Mensual' : 'Anual −20%'}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', background: T.border, borderRadius: 8, padding: 2, gap: 2 }}>
+            {Object.entries(ZONE_LABELS).map(([z, label]) => (
+              <button key={z} onClick={async () => {
+                await supabase.from('tenants').update({ zone: z }).eq('id', tenant.id);
+                await refresh();
+              }} style={{
+                padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                fontFamily: font, fontSize: 12, fontWeight: 700,
+                background: zone === z ? T.ink : 'transparent',
+                color: zone === z ? '#fff' : T.muted,
+              }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {tenant?.mrr > 0 && (
+            <span style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>
+              MRR: <strong style={{ color: T.teal }}>{sym}{tenant.mrr.toLocaleString()}</strong>
+            </span>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
@@ -207,11 +247,10 @@ export default function OrganizationSettings() {
                   marginBottom: 4 }}>{plan.name}</h3>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
                   <span style={{ fontSize: '1.7rem', fontWeight: 800, color: T.ink }}>
-                    {plan.priceLabel}
+                    {sym}{getEffectivePrice(zone, key, billing).toLocaleString()}
                   </span>
-                  <span style={{ fontSize: '0.78rem', color: T.muted }}>{plan.period}</span>
+                  <span style={{ fontSize: '0.78rem', color: T.muted }}>/suc/mes</span>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: T.muted, lineHeight: 1.5 }}>{plan.description}</p>
               </div>
 
               <div style={{ flex: 1, marginBottom: 16 }}>
@@ -255,13 +294,13 @@ export default function OrganizationSettings() {
         <div>
           <div style={{ fontSize: '0.7rem', fontWeight: 800, color: T.teal,
             textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-            Enterprise
+            Enterprise · Premium
           </div>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', marginBottom: 4 }}>
-            +16 sucursales — desde $19/suc/mes
+            Grupos grandes · Automotriz · Hoteles · Salud
           </h3>
           <p style={{ fontSize: '0.82rem', color: '#9CA3AF' }}>
-            White-label · POS/CRM · Account manager dedicado · SLA 99.9%
+            Cotización a medida · White-label · API + webhooks · Account manager · SLA 99.9%
           </p>
         </div>
         <a href="mailto:hola@retelio.com.mx" style={{ textDecoration: 'none' }}>
@@ -270,7 +309,7 @@ export default function OrganizationSettings() {
             padding: '10px 24px', fontFamily: font, fontWeight: 800, fontSize: '0.88rem',
             cursor: 'pointer', whiteSpace: 'nowrap',
           }}>
-            Contactar ventas →
+            Solicitar cotización →
           </button>
         </a>
       </div>

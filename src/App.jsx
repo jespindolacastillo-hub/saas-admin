@@ -14,7 +14,7 @@ import {
   Lightbulb, AlertCircle, CheckCircle2, AlertTriangle, Clock,
   Trophy, ShieldCheck, Download, History, HelpCircle, Trash2, Loader,
   Search, Plus, Save, Edit2, Check, Eye, Copy, PlusCircle, UserPlus, Fingerprint, Mail,
-  Sun, Moon, Gift, Map
+  Sun, Moon, Gift, Map, Share2
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -42,6 +42,7 @@ import { getSampleData } from './utils/sampleData';
 import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
 import GeoMap from './components/admin/GeoMap';
+import AffiliatesManager from './components/admin/AffiliatesManager';
 import { useTenant } from './hooks/useTenant';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
@@ -1961,6 +1962,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     '/preguntas': 'questions',
     '/auditoria': 'audit',
     '/mapa': 'geomap',
+    '/distribuidores': 'affiliates',
     '/': 'dash'
   };
 
@@ -2424,6 +2426,16 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
               </button>
             </li>
 
+            {/* Negocio */}
+            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Negocio</span>
+            </li>
+            <li>
+              <button className={`nav-item ${activeTab === 'affiliates' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores'); setIsSidebarOpen(false); }}>
+                <Share2 size={16} /> Distribuidores
+              </button>
+            </li>
+
             {/* Sistema */}
             <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</span>
@@ -2591,7 +2603,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
                activeTab === 'kpi'        ? 'Metas'          :
                activeTab === 'backup'     ? 'Respaldos'      :
                activeTab === 'geomap'     ? 'Mapa'           :
-               activeTab === 'audit'      ? 'Auditoría'      : 'Dashboard'}
+               activeTab === 'audit'      ? 'Auditoría'      :
+               activeTab === 'affiliates' ? 'Distribuidores'  : 'Dashboard'}
             </h2>
           </div>
 
@@ -2719,6 +2732,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
           {activeTab === 'questions' && <QuestionManager />}
           {activeTab === 'audit' && <AuditTrail />}
           {activeTab === 'geomap' && <GeoMap />}
+          {activeTab === 'affiliates' && <AffiliatesManager />}
         </main>
       </div >
     </div >

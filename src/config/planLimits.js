@@ -15,23 +15,23 @@ export async function fetchPricing() {
   }
 }
 
-// Precios por zona — precio por sucursal/mes
-// msrp = precio público · floor = piso mínimo (nunca vender por debajo)
+// Precios POR SUCURSAL / POR MES
+// msrp = precio público · floor = precio con descuento activo (nunca vender por debajo)
 export const PRICING_ZONES = {
   mx: {
     sym: '$', cur: 'MXN',
-    starter: { msrp: 599,   floor: 349,  ann_msrp: 479,  ann_floor: 279  },
-    growth:  { msrp: 999,   floor: 599,  ann_msrp: 799,  ann_floor: 479  },
+    starter: { msrp: 1299,  floor: 499,  ann_msrp: 1039, ann_floor: 399  },
+    growth:  { msrp: 1999,  floor: 899,  ann_msrp: 1599, ann_floor: 699  },
   },
   usd: {
     sym: '$', cur: 'USD',
-    starter: { msrp: 49,    floor: 29,   ann_msrp: 39,   ann_floor: 23   },
-    growth:  { msrp: 79,    floor: 49,   ann_msrp: 63,   ann_floor: 39   },
+    starter: { msrp: 79,    floor: 29,   ann_msrp: 63,   ann_floor: 23   },
+    growth:  { msrp: 129,   floor: 49,   ann_msrp: 103,  ann_floor: 39   },
   },
   br: {
     sym: 'R$', cur: 'BRL',
-    starter: { msrp: 249,   floor: 149,  ann_msrp: 199,  ann_floor: 119  },
-    growth:  { msrp: 399,   floor: 249,  ann_msrp: 319,  ann_floor: 199  },
+    starter: { msrp: 399,   floor: 149,  ann_msrp: 319,  ann_floor: 119  },
+    growth:  { msrp: 649,   floor: 249,  ann_msrp: 519,  ann_floor: 199  },
   },
 };
 
@@ -74,16 +74,16 @@ export const PLAN_LIMITS = {
   },
   starter: {
     slug: 'starter', name: 'Starter',
-    // MXN reference (usar getEffectivePrice para precio real por zona)
-    price_monthly: 599, price_annual: 479,
-    price_floor_monthly: 349, price_floor_annual: 279,
+    // MXN reference por sucursal (usar getEffectivePrice para precio real por zona)
+    price_monthly: 1299, price_annual: 1039,
+    price_floor_monthly: 499, price_floor_annual: 399,
     whatsapp_limit: 50, users_limit: 2,
     features: ['Feedbacks ilimitados', 'QR codes ilimitados', 'Dashboard + alertas', 'Email campañas incluido', 'WhatsApp 50 alertas/mes', '2 usuarios'],
   },
   growth: {
     slug: 'growth', name: 'Growth',
-    price_monthly: 999, price_annual: 799,
-    price_floor_monthly: 599, price_floor_annual: 479,
+    price_monthly: 1999, price_annual: 1599,
+    price_floor_monthly: 899, price_floor_annual: 699,
     whatsapp_limit: 200, users_limit: null,
     features: ['Todo Starter +', 'WhatsApp 200 alertas/mes', 'Campañas masivas', 'Mapa geográfico', 'Leaderboard', 'Usuarios ilimitados'],
   },

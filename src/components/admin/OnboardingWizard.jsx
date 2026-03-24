@@ -4,6 +4,7 @@ import { tenantConfig, getTenantId } from '../../config/tenant';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../../lib/supabase';
+import { refreshMRR } from '../../services/mrrService';
 import {
   Palette, QrCode, ArrowRight, ArrowLeft, CheckCircle2,
   Building2, MessageSquare, X, ChevronRight, Globe2, Zap
@@ -235,13 +236,42 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Debes iniciar sesión primero.');
         
+        // Atribución a distribuidor si viene de un link con ?ref=
+        const refCode = localStorage.getItem('retelio_ref') || null;
+        let affiliateId = null;
+        if (refCode) {
+          const { data: aff } = await supabase
+            .from('affiliates')
+            .select('id')
+            .eq('ref_code', refCode)
+            .eq('active', true)
+            .maybeSingle();
+          if (aff) affiliateId = aff.id;
+        }
+
+        // UTM de adquisición
+        const utmRaw = localStorage.getItem('retelio_utm');
+        const utm = utmRaw ? JSON.parse(utmRaw) : {};
+
         const { data: newTenant, error: tenantErr } = await supabase
           .from('tenants')
-          .insert([{ name: storeName.trim() }])
+          .insert([{
+            name: storeName.trim(),
+            ...(refCode     && { ref_code_used: refCode }),
+            ...(affiliateId && { affiliate_id: affiliateId }),
+            ...(utm.utm_source   && { utm_source:   utm.utm_source }),
+            ...(utm.utm_medium   && { utm_medium:   utm.utm_medium }),
+            ...(utm.utm_campaign && { utm_campaign: utm.utm_campaign }),
+            ...(utm.utm_content  && { utm_content:  utm.utm_content }),
+            ...(utm.utm_term     && { utm_term:     utm.utm_term }),
+          }])
           .select('id').single();
-        
+
         if (tenantErr) throw tenantErr;
         validTid = newTenant?.id;
+        // Limpiar atribución después de usarla
+        if (refCode) localStorage.removeItem('retelio_ref');
+        if (utmRaw)  localStorage.removeItem('retelio_utm');
         
         // Save tenant ID so the QR step can use it before App.jsx refreshes
         setSavedTenantId(validTid);
@@ -299,6 +329,7 @@ const OnboardingWizard = ({ onComplete, session, initialStep = 0, stores = [], a
         // removed setAreaName as it was causing it to be undefined
       }
 
+      refreshMRR(validTid); // fire-and-forget
       await refreshData();
       transition(2);
     } catch (err) {

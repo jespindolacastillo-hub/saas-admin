@@ -804,7 +804,10 @@ export default function FeedbackPublic() {
               if (phone) update.contact_phone = phone;
               if (email) update.contact_email = email;
               if (Object.keys(update).length && submittedFeedbackId) {
-                await supabase.from('feedbacks').update(update).eq('id', submittedFeedbackId);
+                const { error: upErr } = await supabase.from('feedbacks').update(update).eq('id', submittedFeedbackId);
+                if (upErr) console.error('Contact update error:', upErr.message);
+              } else {
+                console.warn('Contact not saved — feedbackId:', submittedFeedbackId, 'update:', update);
               }
             }}
           />
@@ -817,7 +820,10 @@ export default function FeedbackPublic() {
               if (phone) update.contact_phone = phone;
               if (email) update.contact_email = email;
               if (Object.keys(update).length && submittedFeedbackId) {
-                await supabase.from('feedbacks').update(update).eq('id', submittedFeedbackId);
+                const { error: upErr } = await supabase.from('feedbacks').update(update).eq('id', submittedFeedbackId);
+                if (upErr) console.error('Contact update error:', upErr.message);
+              } else {
+                console.warn('Contact not saved — feedbackId:', submittedFeedbackId, 'update:', update);
               }
             }}
           />

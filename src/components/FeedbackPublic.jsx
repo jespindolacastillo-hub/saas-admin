@@ -692,7 +692,9 @@ export default function FeedbackPublic() {
       }).select('id').single();
 
       if (insErr) throw insErr;
+      console.error('[Retelio] insert result — id:', insData?.id, 'data:', insData);
       if (insData?.id) setSubmittedFeedbackId(insData.id);
+      else console.error('[Retelio] WARNING: no feedback ID returned from insert — contact will not save');
 
       // Mark cooldown (skip in test mode so device can submit multiple times)
       if (!testMode) localStorage.setItem(cooldownKey, Date.now().toString());

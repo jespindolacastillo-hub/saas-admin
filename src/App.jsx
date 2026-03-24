@@ -2087,7 +2087,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 
       // Simple, direct fetch with current tenant
       const [fRes, sRes, aRes] = await Promise.all([
-        supabase.from('feedbacks').select('*').eq('tenant_id', tenant?.id).order('created_at', { ascending: false }),
+        supabase.from('feedbacks').select('*').eq('tenant_id', tenant?.id).eq('is_test', tenant?.test_mode === true).order('created_at', { ascending: false }),
         supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant?.id),
         supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant?.id)
       ]);

@@ -23,7 +23,7 @@ import {
   PieChart, Pie, Sector
 } from 'recharts';
 import Auth from './components/Auth';
-import { Bell, MessageSquare, RotateCcw } from 'lucide-react';
+import { Bell, MessageSquare, RotateCcw, FlaskConical, Rocket, Zap } from 'lucide-react';
 import { printQRCodes } from './components/PrintQR';
 import QuestionManager from './components/admin/QuestionManager';
 import UserManagement from './components/admin/UserManagement';
@@ -1352,10 +1352,9 @@ const QRGenerator = () => {
   }, [tenant?.id]);
 
   const getQRUrl = (storeId, areaId) => {
-    // Usar variable de entorno para la URL base del feedback, fallback a producción
     const baseUrl = window.location.origin + '/feedback';
-    console.log('App - Base URL used for QR:', baseUrl);
-    return `${baseUrl}?tid=${tenant?.id}&t=${storeId}&a=${areaId}`;
+    const testSuffix = tenant?.test_mode ? '&test=1' : '';
+    return `${baseUrl}?tid=${tenant?.id}&t=${storeId}&a=${areaId}${testSuffix}`;
   };
 
   const activeAreas = useMemo(() => {
@@ -1986,6 +1985,24 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [wizardStep, setWizardStep] = useState(0);
+  const [goLiveConfirm, setGoLiveConfirm] = useState(false);
+  const [goingLive, setGoingLive] = useState(false);
+
+  const trialDaysLeftCount = tenant?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(tenant.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const handleGoLive = async () => {
+    if (!tenant?.id) return;
+    setGoingLive(true);
+    try {
+      await supabase.from('feedbacks').delete().eq('tenant_id', tenant.id).eq('is_test', true);
+      await supabase.from('tenants').update({ test_mode: false }).eq('id', tenant.id);
+      if (tenantRefresh) await tenantRefresh();
+      setGoLiveConfirm(false);
+    } catch (e) { console.error(e); }
+    setGoingLive(false);
+  };
   const [whatsappUsage, setWhatsappUsage] = useState({ used: 0, included: 0, addon: 0 });
 
   // Fetch WhatsApp usage for current month
@@ -2238,7 +2255,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     return <Auth passwordRecovery={isPasswordRecovery} onPasswordReset={() => setIsPasswordRecovery(false)} />;
   }
 
-  if (tenantLoading) {
+  if (tenantLoading && !showOnboarding) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '1rem', background: 'var(--bg-main)' }}>
         <Loader className="animate-spin" size={40} color="var(--primary)" />
@@ -2332,6 +2349,106 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 
   return (
     <div className="admin-layout">
+
+      {/* ── Cintillo global ── */}
+      {tenant?.test_mode && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 9999,
+          background: 'linear-gradient(90deg, #1D4ED8 0%, #2563EB 100%)',
+          padding: '8px 20px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FlaskConical size={15} color="#fff" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>
+              🧪 Modo prueba activo — el feedback generado no es real
+            </span>
+            {trialDaysLeftCount !== null && (
+              <span style={{
+                background: 'rgba(255,255,255,0.2)', borderRadius: 999,
+                padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700, color: '#fff',
+              }}>
+                ⏱ {trialDaysLeftCount} días de prueba gratuita restantes
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <a href="mailto:hola@retelio.com.mx" style={{ textDecoration: 'none' }}>
+              <button style={{
+                background: '#FCD34D', color: '#1D2329', border: 'none',
+                borderRadius: 8, padding: '5px 14px', fontSize: '0.78rem',
+                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+              }}>
+                <Zap size={13} /> Activar plan
+              </button>
+            </a>
+            <button onClick={() => setGoLiveConfirm(true)} style={{
+              background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)',
+              borderRadius: 8, padding: '5px 14px', fontSize: '0.78rem',
+              fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <Rocket size={13} /> Ir a producción
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Trial countdown (producción) ── */}
+      {!tenant?.test_mode && trialDaysLeftCount !== null && trialDaysLeftCount <= 7 && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 9999,
+          background: trialDaysLeftCount <= 2 ? '#EF4444' : '#F59E0B',
+          padding: '7px 20px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 12,
+        }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#fff' }}>
+            ⏱ Tu prueba gratuita vence en {trialDaysLeftCount} {trialDaysLeftCount === 1 ? 'día' : 'días'}
+          </span>
+          <a href="mailto:hola@retelio.com.mx" style={{ textDecoration: 'none' }}>
+            <button style={{
+              background: '#fff', color: '#1D2329', border: 'none',
+              borderRadius: 8, padding: '4px 14px', fontSize: '0.78rem',
+              fontWeight: 800, cursor: 'pointer',
+            }}>Activar plan →</button>
+          </a>
+        </div>
+      )}
+
+      {/* ── Go Live confirmation modal ── */}
+      {goLiveConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: '28px 32px',
+            maxWidth: 440, width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}>
+            <div style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: 12 }}>🚀</div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 800, textAlign: 'center' }}>
+              ¿Listo para producción?
+            </h2>
+            <p style={{ margin: '0 0 20px', fontSize: '0.85rem', color: '#6B7280', textAlign: 'center', lineHeight: 1.6 }}>
+              Se borrarán todos los <strong>feedbacks de prueba</strong>. Tu configuración (sucursales, áreas, QRs, preguntas) se conserva intacta. A partir de ahora los escaneos generan datos reales.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={handleGoLive} disabled={goingLive} style={{
+                background: '#1D4ED8', color: '#fff', border: 'none', borderRadius: 10,
+                padding: '12px', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}>
+                <Rocket size={16} /> {goingLive ? 'Activando producción…' : 'Sí, ir a producción'}
+              </button>
+              <button onClick={() => setGoLiveConfirm(false)} style={{
+                background: 'white', color: '#6B7280', border: '1px solid #E5E7EB',
+                borderRadius: 10, padding: '10px', fontSize: '0.85rem', cursor: 'pointer',
+              }}>Cancelar, seguir en prueba</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar Mobile Overlay */}
       <div className={`sidebar-overlay ${isSidebarOpen ? 'open' : ''}`} onClick={() => setIsSidebarOpen(false)}></div>
 

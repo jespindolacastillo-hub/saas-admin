@@ -1278,18 +1278,28 @@ export default function IssueManagement() {
   const loadData = async () => {
     setLoading(true);
     const since = subDays(new Date(), 30).toISOString();
-    const [fbRes, locRes, qrRes] = await Promise.all([
+    const [fbRes, locRes, locRes2, qrRes] = await Promise.all([
       supabase.from('feedbacks')
-        .select('id, location_id:tienda_id, qr_id, score, comment, followup_answer, recovery_sent, routed_to_google, coupon_code, contact_phone, contact_email, created_at, recovery_status, recovery_channel, recovery_note, recovery_actor, recovery_at, recovery_resolved_at, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, google_note, google_actor, google_at')
+        .select('id, location_id, tienda_id, qr_id, score, comment, followup_answer, recovery_sent, routed_to_google, coupon_code, contact_phone, contact_email, created_at, recovery_status, recovery_channel, recovery_note, recovery_actor, recovery_at, recovery_resolved_at, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, google_note, google_actor, google_at')
         .eq('tenant_id', tenant.id)
+        .eq('is_test', tenant.test_mode === true)
         .gte('created_at', since)
         .order('created_at', { ascending: false }),
       supabase.from('Tiendas_Catalogo').select('id, name:nombre').eq('tenant_id', tenant.id),
+      supabase.from('locations').select('id, name').eq('tenant_id', tenant.id),
       supabase.from('qr_codes').select('id, label, location_id, type').eq('tenant_id', tenant.id).eq('type', 'employee'),
     ]);
-    if (fbRes.data)  setFeedbacks(fbRes.data);
-    if (locRes.data) setLocations(locRes.data);
-    if (qrRes.data)  setEmployeeQRs(qrRes.data);
+    // Normalize feedbacks: use location_id (new schema) falling back to tienda_id (legacy)
+    const normalizedFbs = (fbRes.data || []).map(f => ({
+      ...f,
+      location_id: f.location_id || f.tienda_id,
+    }));
+    // Merge locations from both schemas (deduplicate by id)
+    const allLocs = [...(locRes.data || []), ...(locRes2.data || [])];
+    const uniqueLocs = Object.values(Object.fromEntries(allLocs.map(l => [l.id, l])));
+    setFeedbacks(normalizedFbs);
+    setLocations(uniqueLocs);
+    if (qrRes.data) setEmployeeQRs(qrRes.data);
     setLoading(false);
   };
 

@@ -652,7 +652,7 @@ export default function FeedbackPublic() {
     // 2. Cooldown check (localStorage) — skipped in test mode
     const cooldownKey = `rf_sent_${qrId}`;
     const last = localStorage.getItem(cooldownKey);
-    if (!isTestMode() && last && Date.now() - parseInt(last) < 12 * 60 * 60 * 1000) {
+    if (!testMode && last && Date.now() - parseInt(last) < 12 * 60 * 60 * 1000) {
       setCooldown(true);
     }
 
@@ -690,8 +690,8 @@ export default function FeedbackPublic() {
       if (insErr) throw insErr;
       if (insData?.id) setSubmittedFeedbackId(insData.id);
 
-      // Mark cooldown
-      localStorage.setItem(cooldownKey, Date.now().toString());
+      // Mark cooldown (skip in test mode so device can submit multiple times)
+      if (!testMode) localStorage.setItem(cooldownKey, Date.now().toString());
 
       // WhatsApp alert for unhappy (non-blocking)
       if (isUnhappy(score) && qr.tenant_id) {

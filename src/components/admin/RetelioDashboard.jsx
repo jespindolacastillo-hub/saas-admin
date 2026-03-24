@@ -786,7 +786,7 @@ function FeedbackTable({ rows, locations, loading, tenant, onUpdate }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
             <thead>
               <tr style={{ background: '#FAFAFA' }}>
-                {['Fecha', 'Sucursal', 'Calificación', 'Google', 'Recovery', 'Comentario'].map(h => (
+                {['Fecha', 'Sucursal', 'Calificación', 'Google', 'Recovery', 'Seguimiento', 'Comentario'].map(h => (
                   <th key={h} style={{
                     padding: '10px 16px', textAlign: 'left', fontWeight: 700,
                     color: T.muted, fontSize: '0.7rem', textTransform: 'uppercase',
@@ -800,11 +800,11 @@ function FeedbackTable({ rows, locations, loading, tenant, onUpdate }) {
               {loading ? (
                 [...Array(6)].map((_, i) => (
                   <tr key={i} style={{ borderBottom: `1px solid ${T.border}` }}>
-                    {[...Array(6)].map((_, j) => (
+                    {[...Array(7)].map((_, j) => (
                       <td key={j} style={{ padding: '14px 16px' }}>
                         <div style={{
                           height: 14, background: '#F1F5F9', borderRadius: 6,
-                          width: j === 5 ? '80%' : '60%',
+                          width: j === 6 ? '80%' : '60%',
                           animation: 'pulse 1.5s ease-in-out infinite',
                         }} />
                       </td>
@@ -813,7 +813,7 @@ function FeedbackTable({ rows, locations, loading, tenant, onUpdate }) {
                 ))
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '48px', textAlign: 'center' }}>
+                  <td colSpan={7} style={{ padding: '48px', textAlign: 'center' }}>
                     <MessageSquare size={32} color="#E5E7EB" style={{ marginBottom: 12 }} />
                     <div style={{ color: T.muted, fontSize: '0.88rem', fontWeight: 500 }}>
                       Aún no hay feedbacks. Escanea un QR para empezar.
@@ -854,6 +854,21 @@ function FeedbackTable({ rows, locations, loading, tenant, onUpdate }) {
                       {r.recovery_sent
                         ? <Zap size={16} color={T.coral} />
                         : <Minus size={16} color="#D1D5DB" />}
+                    </td>
+                    <td style={{
+                      padding: '12px 16px', maxWidth: 160,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {r.followup_answer ? (
+                        <span style={{
+                          fontSize: '0.78rem', fontWeight: 600, color: T.coral,
+                          background: T.coral + '10', borderRadius: 6, padding: '3px 8px',
+                        }}>
+                          {r.followup_answer}
+                        </span>
+                      ) : (
+                        <Minus size={16} color="#D1D5DB" />
+                      )}
                     </td>
                     <td style={{
                       padding: '12px 16px', color: T.muted, maxWidth: 220,

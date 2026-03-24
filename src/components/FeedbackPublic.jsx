@@ -242,6 +242,10 @@ function RatingScreen({ locationName, qrLabel, questionConfig, onSubmit, submitt
                   {opt}
                 </button>
               ))}
+              <textarea className="rf-textarea" rows={3}
+                placeholder="Cuéntanos más (opcional)…"
+                value={comment} onChange={e => setComment(e.target.value)}
+                style={{ marginTop: 8, marginBottom: 0 }} />
             </div>
           ) : (
             <textarea className="rf-textarea" rows={3}

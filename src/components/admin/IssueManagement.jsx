@@ -1280,7 +1280,7 @@ export default function IssueManagement() {
     const since = subDays(new Date(), 30).toISOString();
     const [fbRes, locRes, locRes2, qrRes] = await Promise.all([
       supabase.from('feedbacks')
-        .select('id, location_id, tienda_id, qr_id, score, comment, followup_answer, recovery_sent, routed_to_google, coupon_code, contact_phone, contact_email, created_at, recovery_status, recovery_channel, recovery_note, recovery_actor, recovery_at, recovery_resolved_at, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, google_note, google_actor, google_at')
+        .select('id, location_id, qr_id, score, comment, followup_answer, recovery_sent, routed_to_google, coupon_code, contact_phone, contact_email, created_at, recovery_status, recovery_channel, recovery_note, recovery_actor, recovery_at, recovery_resolved_at, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, google_note, google_actor, google_at')
         .eq('tenant_id', tenant.id)
         .eq('is_test', tenant.test_mode === true)
         .gte('created_at', since)
@@ -1289,11 +1289,7 @@ export default function IssueManagement() {
       supabase.from('locations').select('id, name').eq('tenant_id', tenant.id),
       supabase.from('qr_codes').select('id, label, location_id, type').eq('tenant_id', tenant.id).eq('type', 'employee'),
     ]);
-    // Normalize feedbacks: use location_id (new schema) falling back to tienda_id (legacy)
-    const normalizedFbs = (fbRes.data || []).map(f => ({
-      ...f,
-      location_id: f.location_id || f.tienda_id,
-    }));
+    const normalizedFbs = fbRes.data || [];
     // Merge locations from both schemas (deduplicate by id)
     const allLocs = [...(locRes.data || []), ...(locRes2.data || [])];
     const uniqueLocs = Object.values(Object.fromEntries(allLocs.map(l => [l.id, l])));

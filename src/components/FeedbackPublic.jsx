@@ -599,7 +599,10 @@ export default function FeedbackPublic() {
   const [screen, setScreen]     = useState('rating'); // rating | happy | unhappy | recovery | neutral
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]       = useState(null);
-  const [testMode, setTestMode] = useState(isTestMode());
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlTestMode = urlParams.get('test') === '1';
+  const [testMode, setTestMode] = useState(isTestMode() || urlTestMode);
+  const [submittedFeedbackId, setSubmittedFeedbackId] = useState(null);
 
   useEffect(() => {
     if (!qrId) { setError('QR ID faltante en la URL.'); setLoading(false); return; }
@@ -670,7 +673,7 @@ export default function FeedbackPublic() {
       const code = needsRecovery ? genCode(recovery.coupon_prefix || 'RECOVERY') : null;
 
       // Insert feedback
-      const { error: insErr } = await supabase.from('feedbacks').insert({
+      const { data: insData, error: insErr } = await supabase.from('feedbacks').insert({
         qr_id:            qrId,
         tenant_id:        qr.tenant_id,
         location_id:      qr.location_id,
@@ -681,9 +684,11 @@ export default function FeedbackPublic() {
         recovery_sent:    needsRecovery,
         coupon_code:      code,
         ip_hash:          deviceHash,
-      });
+        is_test:          testMode || false,
+      }).select('id').single();
 
       if (insErr) throw insErr;
+      if (insData?.id) setSubmittedFeedbackId(insData.id);
 
       // Mark cooldown
       localStorage.setItem(cooldownKey, Date.now().toString());
@@ -794,13 +799,8 @@ export default function FeedbackPublic() {
               const update = {};
               if (phone) update.contact_phone = phone;
               if (email) update.contact_email = email;
-              if (Object.keys(update).length) {
-                await supabase
-                  .from('feedbacks')
-                  .update(update)
-                  .eq('qr_id', qrId)
-                  .order('created_at', { ascending: false })
-                  .limit(1);
+              if (Object.keys(update).length && submittedFeedbackId) {
+                await supabase.from('feedbacks').update(update).eq('id', submittedFeedbackId);
               }
             }}
           />
@@ -812,13 +812,8 @@ export default function FeedbackPublic() {
               const update = {};
               if (phone) update.contact_phone = phone;
               if (email) update.contact_email = email;
-              if (Object.keys(update).length) {
-                await supabase
-                  .from('feedbacks')
-                  .update(update)
-                  .eq('qr_id', qrId)
-                  .order('created_at', { ascending: false })
-                  .limit(1);
+              if (Object.keys(update).length && submittedFeedbackId) {
+                await supabase.from('feedbacks').update(update).eq('id', submittedFeedbackId);
               }
             }}
           />

@@ -689,15 +689,19 @@ function FeedbackDrawer({ feedback, locations, onClose, tenant, onUpdate }) {
           )}
 
           {/* Contact */}
-          {feedback.contact_phone && (
+          {(feedback.contact_phone || feedback.contact_email) && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Contacto</div>
               <div style={{
                 background: T.teal + '08', border: `1px solid ${T.teal}20`,
-                borderRadius: 12, padding: '12px 16px',
-                fontSize: '0.88rem', color: T.teal, fontWeight: 700,
+                borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4,
               }}>
-                📱 {feedback.contact_phone}
+                {feedback.contact_phone && (
+                  <span style={{ fontSize: '0.88rem', color: T.teal, fontWeight: 700 }}>📱 {feedback.contact_phone}</span>
+                )}
+                {feedback.contact_email && (
+                  <span style={{ fontSize: '0.88rem', color: T.teal, fontWeight: 700 }}>✉️ {feedback.contact_email}</span>
+                )}
               </div>
             </div>
           )}

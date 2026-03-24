@@ -78,9 +78,10 @@ function printQR(url, label, locationName) {
   win.document.close();
 }
 
-function printAll(qrs, locationName) {
+function printAll(qrs, locationName, testMode) {
+  const testSuffix = testMode ? '?test=1' : '';
   const items = qrs.filter(q => q.active).map(q => ({
-    url: `${window.location.origin}/f/${q.id}`, label: q.label, type: q.type,
+    url: `${window.location.origin}/f/${q.id}${testSuffix}`, label: q.label, type: q.type,
   }));
   const win = window.open('', '_blank');
   win.document.write(`
@@ -135,9 +136,10 @@ function CopyBtn({ text, label = 'Copiar URL' }) {
 }
 
 // ─── QR Drawer ────────────────────────────────────────────────────────────────
-function QRDrawer({ qr, location, onClose, onToggle }) {
+function QRDrawer({ qr, location, onClose, onToggle, testMode }) {
   if (!qr) return null;
-  const url      = `${window.location.origin}/f/${qr.id}`;
+  const testSuffix = testMode ? '?test=1' : '';
+  const url      = `${window.location.origin}/f/${qr.id}${testSuffix}`;
   const svgId    = `drawer-qr-${qr.id}`;
   const typeInfo = getTypeInfo(qr.type);
 
@@ -544,7 +546,7 @@ export default function QRStudio() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {currentQRs.length > 0 && (
-                    <button onClick={() => printAll(currentQRs, currentLocation?.name)} style={{
+                    <button onClick={() => printAll(currentQRs, currentLocation?.name, tenant?.test_mode)} style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       padding: '7px 14px', borderRadius: 9,
                       border: `1px solid ${T.border}`, background: '#fff',
@@ -699,6 +701,7 @@ export default function QRStudio() {
         location={currentLocation}
         onClose={() => setSelectedQR(null)}
         onToggle={handleToggleActive}
+        testMode={tenant?.test_mode}
       />
 
       {/* ── New QR Modal ── */}

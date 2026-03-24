@@ -2485,7 +2485,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
             </li>
             <li>
               <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
-                <AlertTriangle size={16} /> Issues
+                <AlertTriangle size={16} /> Recuperación
               </button>
             </li>
 
@@ -2712,7 +2712,7 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
               {activeTab === 'dash'        ? 'Dashboard'      :
                activeTab === 'qr'         ? 'QR Studio'      :
                activeTab === 'org'        ? 'Configuración'  :
-               activeTab === 'issues'     ? 'Issues'         :
+               activeTab === 'issues'     ? 'Recuperación'   :
                activeTab === 'leaderboard'? 'Leaderboard'    :
                activeTab === 'recovery'  ? 'Recovery & Cupones' :
                activeTab === 'users'      ? 'Equipo'         :

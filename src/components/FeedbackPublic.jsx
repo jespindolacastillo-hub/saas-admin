@@ -529,10 +529,10 @@ export default function FeedbackPublic() {
 
       if (!testMode) localStorage.setItem(`rf_sent_${qrId}`, Date.now().toString());
 
-      // WhatsApp alert (non-blocking)
-      if (isUnhappy(s) && qr.tenant_id) {
+      // WhatsApp alert (non-blocking, only if location has a whatsapp_number configured)
+      if (isUnhappy(s) && qr.tenant_id && location?.whatsapp_number) {
         supabase.functions.invoke('send-whatsapp-alert', {
-          body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location?.whatsapp_number, coupon_code: code },
+          body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, coupon_code: code },
         }).catch(() => {});
       }
 

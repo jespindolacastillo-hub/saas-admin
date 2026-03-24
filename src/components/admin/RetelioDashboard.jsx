@@ -1134,16 +1134,60 @@ function LocationFilter({ locations, selected, onChange }) {
 }
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
+// ── Demo data ─────────────────────────────────────────────────────────────────
+const DEMO_LOCATIONS = [
+  { id: 'demo-loc-1', name: 'Sucursal Centro' },
+  { id: 'demo-loc-2', name: 'Sucursal Norte' },
+  { id: 'demo-loc-3', name: 'Sucursal Sur' },
+];
+function makeDemoFeedbacks() {
+  const comments = [
+    'Excelente atención, volveré pronto',
+    'El servicio fue muy rápido',
+    'Me encantó la atención del personal',
+    'Todo perfecto, muy limpio',
+    'Buen servicio pero tardaron un poco',
+    'El producto llegó en buen estado',
+    'Esperé demasiado tiempo',
+    'Personal amable y servicial',
+    'Precios accesibles',
+    'Instalaciones muy limpias',
+  ];
+  const now = Date.now();
+  return Array.from({ length: 80 }, (_, i) => {
+    const score = [5,5,5,5,4,4,4,3,2,1][i % 10];
+    const loc = DEMO_LOCATIONS[i % 3];
+    return {
+      id: `demo-fb-${i}`,
+      score,
+      location_id: loc.id,
+      routed_to_google: score === 5 && i % 3 !== 0,
+      recovery_sent: score <= 2 && i % 2 === 0,
+      comment: score >= 4 ? comments[i % comments.length] : null,
+      created_at: new Date(now - i * 8 * 3600000).toISOString(),
+      qr_codes: { label: loc.name, type: 'table' },
+    };
+  });
+}
+
 export default function RetelioDashboard() {
   const { tenant } = useTenant();
   const [feedbacks,      setFeedbacks]      = useState([]);
   const [locations,      setLocations]      = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [range,          setRange]          = useState(30);
-  const [selectedLocs,   setSelectedLocs]   = useState([]);   // [] = all
-  const [healthFilter,   setHealthFilter]   = useState('all'); // 'all'|'risk'|'top'
+  const [selectedLocs,   setSelectedLocs]   = useState([]);
+  const [healthFilter,   setHealthFilter]   = useState('all');
+  const [demoMode,       setDemoMode]       = useState(() => localStorage.getItem('retelio_demo') === 'true');
 
-  const loadData = async () => {
+  const toggleDemo = () => {
+    const next = !demoMode;
+    setDemoMode(next);
+    localStorage.setItem('retelio_demo', next ? 'true' : 'false');
+  };
+
+  const loadData = async (withDemo = false) => {
+    if (!tenant?.id) return;
     setLoading(true);
     const since = subDays(new Date(), range).toISOString();
     const [fbRes, locRes] = await Promise.all([
@@ -1151,6 +1195,7 @@ export default function RetelioDashboard() {
         .from('feedbacks')
         .select('*, qr_codes(label, type)')
         .eq('tenant_id', tenant.id)
+        .eq('is_test', tenant?.test_mode ? true : false)
         .gte('created_at', since)
         .order('created_at', { ascending: false })
         .limit(500),
@@ -1159,14 +1204,21 @@ export default function RetelioDashboard() {
         .select('id, name')
         .eq('tenant_id', tenant.id),
     ]);
-    if (fbRes.data)  setFeedbacks(fbRes.data);
-    if (locRes.data) setLocations(locRes.data);
+    const realFeedbacks = fbRes.data || [];
+    const realLocations = locRes.data || [];
+    if (withDemo) {
+      setFeedbacks([...makeDemoFeedbacks(), ...realFeedbacks]);
+      setLocations([...DEMO_LOCATIONS, ...realLocations]);
+    } else {
+      setFeedbacks(realFeedbacks);
+      setLocations(realLocations);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
-    if (tenant?.id) loadData();
-  }, [tenant?.id, range]);
+    if (tenant?.id) loadData(demoMode);
+  }, [tenant?.id, range, demoMode]);
 
   // ── Filtered locations based on health filter ──
   const filteredLocIds = useMemo(() => {
@@ -1254,6 +1306,42 @@ export default function RetelioDashboard() {
   return (
     <div style={{ fontFamily: font, padding: '28px', background: T.bg, minHeight: '100vh' }}>
 
+      {/* ── Test mode banner ── */}
+      {tenant?.test_mode && !demoMode && (
+        <div style={{
+          background: '#EFF6FF', border: '1.5px solid #BFDBFE', borderRadius: 12,
+          padding: '10px 16px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: '1rem' }}>🧪</span>
+          <span style={{ fontSize: '0.83rem', fontWeight: 700, color: '#1E40AF', flex: 1 }}>
+            Modo prueba activo — los QRs y el feedback generado son de prueba. Cuando estés listo, ve a <strong>Configuración → Salir a producción</strong>.
+          </span>
+        </div>
+      )}
+
+      {/* ── Demo banner ── */}
+      {demoMode && (
+        <div style={{
+          background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 12,
+          padding: '10px 16px', marginBottom: 20,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '1rem' }}>🎭</span>
+            <span style={{ fontSize: '0.83rem', fontWeight: 700, color: '#92400E' }}>
+              Modo demo activo — estás viendo datos de ejemplo, no son reales.
+            </span>
+          </div>
+          <button onClick={toggleDemo} style={{
+            background: '#92400E', color: '#fff', border: 'none', borderRadius: 8,
+            padding: '5px 14px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: font,
+          }}>
+            Salir del demo
+          </button>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
@@ -1261,22 +1349,31 @@ export default function RetelioDashboard() {
             Dashboard
           </h1>
           <p style={{ fontSize: '0.85rem', color: T.muted, fontWeight: 500 }}>
-            {tenant?.name || 'Tu negocio'} · últimos {range} días
+            {demoMode ? 'Datos de ejemplo' : (tenant?.name || 'Tu negocio')} · últimos {range} días
           </p>
         </div>
-        <div style={{
-          display: 'flex', gap: 4, background: '#F1F5F9',
-          borderRadius: 12, padding: 4,
-        }}>
-          {[7, 30, 90].map(d => (
-            <button key={d} onClick={() => setRange(d)} style={{
-              padding: '6px 16px', borderRadius: 9, border: 'none',
-              background: range === d ? T.ink : 'transparent',
-              color: range === d ? '#fff' : T.muted,
-              fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
-              fontFamily: font, transition: 'all 0.15s',
-            }}>{d}d</button>
-          ))}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {!demoMode && (
+            <button onClick={toggleDemo} style={{
+              background: 'white', color: T.muted, border: `1px solid ${T.border}`,
+              borderRadius: 10, padding: '6px 14px', fontSize: '0.78rem',
+              fontWeight: 700, cursor: 'pointer', fontFamily: font,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              🎭 Ver demo
+            </button>
+          )}
+          <div style={{ display: 'flex', gap: 4, background: '#F1F5F9', borderRadius: 12, padding: 4 }}>
+            {[7, 30, 90].map(d => (
+              <button key={d} onClick={() => setRange(d)} style={{
+                padding: '6px 16px', borderRadius: 9, border: 'none',
+                background: range === d ? T.ink : 'transparent',
+                color: range === d ? '#fff' : T.muted,
+                fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+                fontFamily: font, transition: 'all 0.15s',
+              }}>{d}d</button>
+            ))}
+          </div>
         </div>
       </div>
 

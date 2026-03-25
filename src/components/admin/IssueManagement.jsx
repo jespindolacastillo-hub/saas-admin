@@ -162,10 +162,20 @@ function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
     if (activeVariant) setText(buildVariant(activeVariant, senderName, v));
   };
 
+  const [copied, setCopied] = useState(false);
+
   const formatPreview = (msg) =>
     msg.replace(/\*([^*]+)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
 
   const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+  const handleSend = async () => {
+    // Copy full message to clipboard (bypass URL length limit)
+    try { await navigator.clipboard.writeText(text); } catch (_) {}
+    setCopied(true);
+    setTimeout(() => setCopied(false), 4000);
+    onSend(text);
+  };
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -307,11 +317,19 @@ function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.bg, fontFamily: font, fontSize: '0.85rem', cursor: 'pointer', color: T.muted, fontWeight: 600 }}>Cancelar</button>
-          <button onClick={() => onSend(text)} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: '#25D366', color: '#fff', fontFamily: font, fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 3px 10px rgba(37,211,102,0.35)' }}>
-            <MessageSquare size={15} /> Abrir en WhatsApp →
-          </button>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ fontSize: '0.78rem', color: copied ? '#15803D' : T.muted, display: 'flex', alignItems: 'center', gap: 6, transition: 'color .2s' }}>
+            {copied
+              ? <><span style={{ fontWeight: 700 }}>✓ Mensaje copiado</span> — solo pega con Ctrl+V en WhatsApp</>
+              : <span style={{ color: T.muted }}>El mensaje se copiará al portapapeles automáticamente</span>
+            }
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.bg, fontFamily: font, fontSize: '0.85rem', cursor: 'pointer', color: T.muted, fontWeight: 600 }}>Cancelar</button>
+            <button onClick={handleSend} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: '#25D366', color: '#fff', fontFamily: font, fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 3px 10px rgba(37,211,102,0.35)' }}>
+              <MessageSquare size={15} /> Abrir en WhatsApp →
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -333,8 +351,11 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
   const assignedCfg = fb.coupon_config_id ? coupons.find(c => c.id === fb.coupon_config_id) : null;
 
   const handleWhatsApp = async (customText) => {
-    const text = customText || buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null);
-    window.open(`https://wa.me/52${fb.contact_phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+    const finalText = customText || buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null);
+    const phone = fb.contact_phone.replace(/\D/g, '');
+    // Use text in URL only if short enough (≤ 500 chars); otherwise clipboard was already set by modal
+    const urlText = finalText.length <= 500 ? `?text=${encodeURIComponent(finalText)}` : '';
+    window.open(`https://wa.me/52${phone}${urlText}`, '_blank');
     setShowWAModal(false);
     if (contacted) return;
     setSaving(true);

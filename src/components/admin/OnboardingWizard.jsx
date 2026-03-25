@@ -346,6 +346,7 @@ const OnboardingWizard = ({
   // Step 3 — question
   const [questionText, setQuestionText] = useState('');
   const [tipoRespuesta, setTipoRespuesta] = useState('stars');
+  const [improving, setImproving]       = useState(false);
 
   // Step 4 — recovery (always start blank — saved to localStorage on proceed)
   const [avgTicket, setAvgTicket]     = useState('');
@@ -1038,9 +1039,38 @@ const OnboardingWizard = ({
                 </div>
 
                 <label style={LS}>O escribe la tuya *</label>
-                <input type="text" value={questionText} onChange={e => setQuestionText(e.target.value)}
-                  placeholder="ej. ¿Cómo calificarías tu visita hoy?"
-                  style={{ ...IS(!!questionText), marginBottom: '1.25rem' }} />
+                <div style={{ position: 'relative', marginBottom: '1.25rem' }}>
+                  <input type="text" value={questionText} onChange={e => setQuestionText(e.target.value)}
+                    placeholder="ej. ¿Cómo calificarías tu visita hoy?"
+                    style={{ ...IS(!!questionText), paddingRight: '3rem', marginBottom: 0 }} />
+                  {questionText.trim().length > 4 && (
+                    <button
+                      type="button"
+                      title="Mejorar con IA"
+                      disabled={improving}
+                      onClick={async () => {
+                        setImproving(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke('improve-question', {
+                            body: { question: questionText, bizType, areaName },
+                          });
+                          if (!error && data?.improved) setQuestionText(data.improved);
+                        } catch (_) {}
+                        setImproving(false);
+                      }}
+                      style={{
+                        position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                        background: improving ? '#e2e8f0' : 'linear-gradient(135deg,#7C3AED,#0EA5E9)',
+                        border: 'none', borderRadius: '8px', width: '30px', height: '30px',
+                        cursor: improving ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: improving ? '0.7rem' : '1rem',
+                        transition: 'all 0.2s',
+                      }}>
+                      {improving ? '⏳' : '✨'}
+                    </button>
+                  )}
+                </div>
 
                 {/* Live preview */}
                 <div style={{ background: '#f1f5f9', borderRadius: '16px', padding: '1.25rem' }}>

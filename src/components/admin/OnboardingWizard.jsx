@@ -203,9 +203,12 @@ const OnboardingWizard = ({
 
   // Step 1 — branch
   const [storeName, setStoreName]     = useState(initialStep > 1 && stores.length ? stores[0]?.nombre || '' : '');
-  const [address, setAddress]         = useState('');
-  const [searchAddr, setSearchAddr]   = useState('');
-  const [mapCoords, setMapCoords]     = useState(null);    // { lat, lng, display }
+  const [cp, setCp]                   = useState('');
+  const [calle, setCalle]             = useState('');
+  const [colonia, setColonia]         = useState('');
+  const [municipio, setMunicipio]     = useState('');
+  const [estado, setEstado]           = useState('');
+  const [mapCoords, setMapCoords]     = useState(null);    // { lat, lng }
   const [geoLoading, setGeoLoading]   = useState(false);
   const [phone, setPhone]             = useState('');
 
@@ -255,14 +258,25 @@ const OnboardingWizard = ({
     reader.readAsDataURL(file);
   };
 
-  // ── Geocode search ──
-  const handleGeoSearch = async () => {
-    if (!searchAddr.trim()) return;
+  // ── CP geocode (auto-trigger on 5 digits) ──
+  const handleCpChange = async (val) => {
+    setCp(val);
+    if (val.length !== 5 || !/^\d{5}$/.test(val)) return;
     setGeoLoading(true);
-    const result = await geocode(searchAddr.trim());
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?postalcode=${val}&country=MX&format=json&limit=1&accept-language=es&addressdetails=1`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.length) {
+        const addr = data[0].address || {};
+        setMunicipio(addr.city || addr.town || addr.municipality || addr.county || '');
+        setEstado(addr.state || '');
+        setMapCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+      } else {
+        setError('CP no encontrado. Verifica el número.');
+      }
+    } catch (_) {}
     setGeoLoading(false);
-    if (result) { setMapCoords(result); setAddress(result.display); }
-    else setError('No se encontró la dirección. Intenta con más detalle.');
   };
 
   // ── Save step 0 → 1 (just local state, no DB yet) ──
@@ -347,7 +361,6 @@ const OnboardingWizard = ({
         } else {
           const { data: newStore, error: storeErr } = await supabase.from('Tiendas_Catalogo').insert([{
             nombre: storeName.trim(), tenant_id: validTid,
-            ...(phone.trim() && { telefono: phone.trim() }),
           }]).select('id').single();
           if (storeErr) throw storeErr;
           storeIdToUse = newStore.id;
@@ -355,13 +368,20 @@ const OnboardingWizard = ({
         setSavedStoreId(storeIdToUse);
       }
 
-      // Create location record (with map data if geocoded)
+      // Create location record with structured address
       try {
+        const fullAddress = [calle.trim(), colonia.trim(), municipio.trim(), estado.trim(), cp.trim()].filter(Boolean).join(', ');
         await supabase.from('locations').insert({
           tenant_id: validTid,
           name: storeName.trim(),
-          ...(mapCoords && { lat: mapCoords.lat, lng: mapCoords.lng, address: mapCoords.display }),
-          ...(phone.trim() && { phone: phone.trim() }),
+          ...(mapCoords && { lat: mapCoords.lat, lng: mapCoords.lng }),
+          ...(fullAddress && { address: fullAddress }),
+          ...(cp.trim()        && { cp: cp.trim() }),
+          ...(calle.trim()     && { calle: calle.trim() }),
+          ...(colonia.trim()   && { colonia: colonia.trim() }),
+          ...(municipio.trim() && { municipio: municipio.trim() }),
+          ...(estado.trim()    && { estado: estado.trim() }),
+          ...(phone.trim()     && { phone: phone.trim() }),
         });
       } catch (_) { /* non-critical */ }
 
@@ -507,7 +527,7 @@ const OnboardingWizard = ({
 
   const canProceed = (() => {
     if (step === 0) return !!orgName.trim();
-    if (step === 1) return !!storeName.trim();
+    if (step === 1) return !!storeName.trim() && cp.length === 5;
     if (step === 2) return areaPreset !== null && (areaPreset !== 5 || !!areaCustom.trim());
     if (step === 3) return !!questionText.trim();
     return true;
@@ -681,50 +701,71 @@ const OnboardingWizard = ({
             {/* ── Step 1: Sucursal ── */}
             {step === 1 && (
               <div>
-                <SectionHead title="Tu primera sucursal" sub="Nombre, dirección y teléfono para alertas WhatsApp." />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                <SectionHead title="Tu primera sucursal" sub="Nombre, ubicación y teléfono para alertas WhatsApp." />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
                   <div>
                     <label style={LS}>Nombre de la sucursal *</label>
                     <input autoFocus type="text" value={storeName} onChange={e => setStoreName(e.target.value)}
-                      placeholder="ej. Sucursal Centro" style={IS(!!storeName)} />
+                      placeholder="ej. Sucursal Interlomas" style={IS(!!storeName)} />
                   </div>
 
+                  {/* CP → auto-fill municipio/estado + mapa */}
                   <div>
-                    <label style={LS}>Dirección <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(para el mapa)</span></label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input type="text" value={searchAddr} onChange={e => setSearchAddr(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleGeoSearch()}
-                        placeholder="ej. Av. Juárez 123, Guadalajara, Jalisco"
-                        style={{ ...IS(!!mapCoords), flex: 1 }} />
-                      <button onClick={handleGeoSearch} disabled={geoLoading || !searchAddr.trim()}
-                        style={{
-                          padding: '0 14px', borderRadius: '12px', border: 'none', cursor: 'pointer',
-                          background: mapCoords ? '#00C9A7' : '#FF5C3A', color: 'white', fontWeight: '800',
-                          display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem',
-                          opacity: geoLoading || !searchAddr.trim() ? 0.6 : 1,
-                        }}>
-                        {geoLoading ? '…' : <Search size={15} />}
-                      </button>
+                    <label style={LS}>
+                      Código postal *
+                      {geoLoading && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px', textTransform: 'none' }}>Buscando…</span>}
+                      {mapCoords && !geoLoading && <span style={{ fontWeight: 400, color: '#00C9A7', marginLeft: '8px', textTransform: 'none' }}>✓ Ubicado</span>}
+                    </label>
+                    <input type="text" inputMode="numeric" maxLength={5} value={cp}
+                      onChange={e => handleCpChange(e.target.value.replace(/\D/g,''))}
+                      placeholder="ej. 52760" style={IS(!!mapCoords)} />
+                  </div>
+
+                  {/* Mapa aparece al geocodificar */}
+                  {mapCoords && (
+                    <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #00C9A7' }}>
+                      <iframe title="map" src={osmEmbedUrl(mapCoords.lat, mapCoords.lng)}
+                        style={{ width: '100%', height: '150px', border: 'none' }} loading="lazy" />
                     </div>
-                    {mapCoords && (
-                      <div style={{ marginTop: '8px', borderRadius: '12px', overflow: 'hidden', border: '2px solid #00C9A7' }}>
-                        <iframe
-                          title="map"
-                          src={osmEmbedUrl(mapCoords.lat, mapCoords.lng)}
-                          style={{ width: '100%', height: '160px', border: 'none' }}
-                          loading="lazy"
-                        />
-                        <div style={{ background: '#f0fdf4', padding: '6px 10px', fontSize: '0.68rem', color: '#065f46', fontWeight: '600' }}>
-                          📍 {mapCoords.display.slice(0, 70)}{mapCoords.display.length > 70 ? '…' : ''}
-                        </div>
+                  )}
+
+                  {/* Municipio/Estado — auto-llenado, editable */}
+                  {(municipio || estado) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={LS}>Municipio / Alcaldía</label>
+                        <input type="text" value={municipio} onChange={e => setMunicipio(e.target.value)}
+                          placeholder="ej. Huixquilucan" style={IS(!!municipio)} />
                       </div>
-                    )}
-                  </div>
+                      <div>
+                        <label style={LS}>Estado</label>
+                        <input type="text" value={estado} onChange={e => setEstado(e.target.value)}
+                          placeholder="ej. Estado de México" style={IS(!!estado)} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Colonia y calle (opcionales) */}
+                  {mapCoords && (
+                    <>
+                      <div>
+                        <label style={LS}>Colonia <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
+                        <input type="text" value={colonia} onChange={e => setColonia(e.target.value)}
+                          placeholder="ej. Bosque Real" style={IS(!!colonia)} />
+                      </div>
+                      <div>
+                        <label style={LS}>Calle y número <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
+                        <input type="text" value={calle} onChange={e => setCalle(e.target.value)}
+                          placeholder="ej. Av. Bosques de las Lomas 123" style={IS(!!calle)} />
+                      </div>
+                    </>
+                  )}
 
                   <div>
-                    <label style={LS}>Teléfono WhatsApp <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(para alertas — incluye lada)</span></label>
+                    <label style={LS}>Teléfono WhatsApp <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(incluye lada)</span></label>
                     <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                      placeholder="ej. +52 33 1234 5678" style={IS(!!phone)} />
+                      placeholder="ej. 55 5073 3331" style={IS(!!phone)} />
                   </div>
                 </div>
 

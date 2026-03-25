@@ -22,16 +22,21 @@ const genCode = (prefix = 'MANUAL') => {
   return `${prefix}-${code}`;
 };
 
-function buildMessage(fb, locationName) {
+function buildMessage(fb, locationName, couponCode, couponDesc, couponDays) {
   const name = locationName || 'nuestro negocio';
+  const couponLine = couponCode
+    ? ` Te queremos compensar con este cupón exclusivo: *${couponCode}*${couponDesc ? ` (${couponDesc})` : ''}${couponDays ? `, válido ${couponDays} días` : ''}. 🎟`
+    : '';
+  const closing = couponCode ? ' ¿Puedes venir a canjearlo?' : ' ¿Tienes un momento?';
+
   if (fb.comment) {
     const q = fb.comment.length > 70 ? fb.comment.slice(0, 70) + '…' : fb.comment;
-    return `Hola, somos ${name}. Vimos tu visita de hoy y notaste que "${q}" 😔 Queremos resolverlo personalmente. ¿Tienes un momento?`;
+    return `Hola, somos ${name}. Vimos tu visita de hoy y notaste que "${q}" 😔 Queremos resolverlo personalmente.${couponLine}${closing}`;
   }
   if (fb.followup_answer) {
-    return `Hola, somos ${name}. Notamos que tuviste un problema con ${fb.followup_answer.toLowerCase()} en tu visita de hoy 😔 Queremos compensarte. ¿Tienes un momento?`;
+    return `Hola, somos ${name}. Notamos que tuviste un problema con ${fb.followup_answer.toLowerCase()} en tu visita de hoy 😔${couponLine}${closing}`;
   }
-  return `Hola, somos ${name}. Notamos que tu experiencia de hoy no fue la que mereces 😔 Queremos hacer algo para resolverlo. ¿Tienes un momento?`;
+  return `Hola, somos ${name}. Notamos que tu experiencia de hoy no fue la que mereces 😔${couponLine}${closing}`;
 }
 
 function Timer({ createdAt }) {
@@ -93,8 +98,15 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
 
   const borderColor = resolved ? T.teal : bucket === 'hot' ? T.red : bucket === 'warm' ? T.amber : T.muted;
 
+  const assignedCfg = fb.coupon_config_id ? coupons.find(c => c.id === fb.coupon_config_id) : null;
+
   const handleWhatsApp = async () => {
-    const msg = encodeURIComponent(buildMessage(fb, locationName));
+    const msg = encodeURIComponent(buildMessage(
+      fb, locationName,
+      fb.coupon_code || null,
+      assignedCfg?.offer_description || null,
+      assignedCfg?.validity_days || null,
+    ));
     window.open(`https://wa.me/52${fb.contact_phone.replace(/\D/g, '')}?text=${msg}`, '_blank');
     if (contacted) return;
     setSaving(true);
@@ -196,7 +208,7 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
       {fb.contact_phone && !resolved && (
         <div style={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.5, marginBottom: 12, padding: '8px 12px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
           <span style={{ fontWeight: 700, color: '#16A34A', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '.06em' }}>Mensaje sugerido · </span>
-          {buildMessage(fb, locationName)}
+          {buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null)}
         </div>
       )}
 

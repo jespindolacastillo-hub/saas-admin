@@ -636,26 +636,23 @@ export default function QRStudio() {
 
       {/* ── Orphan areas banner ── */}
       {orphanAreas.length > 0 && (
-        <div style={{ background: '#FFFBEB', borderBottom: `1px solid #FDE68A`, padding: '10px 28px', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
-          <div style={{ fontSize: '1rem', lineHeight: 1, marginTop: 1 }}>⚠️</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#92400E', marginBottom: 6 }}>
-              {orphanAreas.length} área{orphanAreas.length > 1 ? 's' : ''} sin sucursal asignada — posibles duplicados
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {orphanAreas.map(area => (
-                <div key={area.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FEF3C7', borderRadius: 8, padding: '4px 10px', border: '1px solid #FDE68A' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#92400E' }}>📍 {area.nombre}</span>
-                  <button
-                    onClick={() => handleDeleteArea(area)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, color: '#B45309' }}
-                  >
-                    <X size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
+        <div style={{ background: '#FFFBEB', borderBottom: `1px solid #FDE68A`, padding: '10px 28px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ fontSize: '1rem', lineHeight: 1 }}>⚠️</div>
+          <div style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, color: '#92400E' }}>
+            {orphanAreas.length} área{orphanAreas.length > 1 ? 's' : ''} sin sucursal asignada:{' '}
+            {orphanAreas.map(a => a.nombre).join(', ')}
           </div>
+          <button
+            onClick={async () => {
+              const ids = orphanAreas.map(a => a.id);
+              await supabase.from('qr_codes').update({ area_id: null }).in('area_id', ids);
+              await supabase.from('Areas_Catalogo').delete().in('id', ids);
+              setAreas(prev => prev.filter(a => a.location_id !== null));
+            }}
+            style={{ padding: '5px 14px', borderRadius: 8, border: '1px solid #B45309', background: '#B45309', color: '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}
+          >
+            Eliminar duplicados
+          </button>
         </div>
       )}
 

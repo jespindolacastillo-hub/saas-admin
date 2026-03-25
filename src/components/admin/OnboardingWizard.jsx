@@ -56,13 +56,79 @@ const BIZ_TYPES = [
   { id: 'edu',        emoji: '🎓', label: 'Educación' },
 ];
 
-// ─── Area presets ─────────────────────────────────────────────────────────────
-const AREA_PRESETS = [
-  { icon: '🛒', label: 'Cajas' },
+// ─── Area presets by business type ────────────────────────────────────────────
+const AREA_PRESETS_BY_BIZ = {
+  restaurant: [
+    { icon: '🍽', label: 'Salón / Comedor' },
+    { icon: '🍹', label: 'Bar / Barra' },
+    { icon: '🌿', label: 'Terraza' },
+    { icon: '🛒', label: 'Caja' },
+    { icon: '🚻', label: 'Sanitarios' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  retail: [
+    { icon: '🛒', label: 'Cajas' },
+    { icon: '🚪', label: 'Entrada' },
+    { icon: '👗', label: 'Probadores' },
+    { icon: '📦', label: 'Almacén' },
+    { icon: '📞', label: 'Atención al Cliente' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  hotel: [
+    { icon: '🏨', label: 'Recepción' },
+    { icon: '🛏', label: 'Habitaciones' },
+    { icon: '🍽', label: 'Restaurante' },
+    { icon: '🏊', label: 'Alberca / Spa' },
+    { icon: '🅿️', label: 'Estacionamiento' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  health: [
+    { icon: '🏋️', label: 'Gym / Sala Principal' },
+    { icon: '🧘', label: 'Clases / Estudio' },
+    { icon: '🚿', label: 'Vestidores' },
+    { icon: '📋', label: 'Recepción' },
+    { icon: '💆', label: 'Spa / Masajes' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  auto: [
+    { icon: '🔧', label: 'Taller / Servicio' },
+    { icon: '🚗', label: 'Sala de Espera' },
+    { icon: '🛒', label: 'Caja' },
+    { icon: '🔍', label: 'Diagnóstico' },
+    { icon: '🚘', label: 'Entrega de Vehículo' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  services: [
+    { icon: '🚪', label: 'Recepción' },
+    { icon: '📞', label: 'Atención al Cliente' },
+    { icon: '🛒', label: 'Caja / Cobro' },
+    { icon: '🏢', label: 'Sala de Juntas' },
+    { icon: '📋', label: 'Trámites' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  medical: [
+    { icon: '🏥', label: 'Recepción' },
+    { icon: '🩺', label: 'Consultorios' },
+    { icon: '💊', label: 'Farmacia' },
+    { icon: '🔬', label: 'Laboratorio' },
+    { icon: '🛏', label: 'Urgencias' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+  edu: [
+    { icon: '🎓', label: 'Recepción / Control' },
+    { icon: '📚', label: 'Aulas' },
+    { icon: '🍽', label: 'Cafetería' },
+    { icon: '🏟', label: 'Canchas / Deportivo' },
+    { icon: '📖', label: 'Biblioteca' },
+    { icon: '✍️', label: 'Otro' },
+  ],
+};
+const DEFAULT_AREA_PRESETS = [
   { icon: '🚪', label: 'Entrada / Recepción' },
-  { icon: '🍽', label: 'Comedor / Salón' },
-  { icon: '🚻', label: 'Sanitarios' },
+  { icon: '🛒', label: 'Cajas' },
   { icon: '📞', label: 'Atención al Cliente' },
+  { icon: '🚻', label: 'Sanitarios' },
+  { icon: '🍽', label: 'Comedor / Salón' },
   { icon: '✍️', label: 'Otro' },
 ];
 
@@ -307,8 +373,10 @@ const OnboardingWizard = ({
 
   const goBack = () => step > 0 && transition(step - 1, -1);
 
+  const currentAreaPresets = AREA_PRESETS_BY_BIZ[bizType] || DEFAULT_AREA_PRESETS;
+  const isOtroPreset = areaPreset !== null && currentAreaPresets[areaPreset]?.label === 'Otro';
   const areaName = areaPreset !== null
-    ? (areaPreset === 5 && areaCustom.trim() ? areaCustom.trim() : AREA_PRESETS[areaPreset].label)
+    ? (isOtroPreset && areaCustom.trim() ? areaCustom.trim() : currentAreaPresets[areaPreset].label)
     : '';
 
   // ── Logo drag & drop ──
@@ -485,7 +553,7 @@ const OnboardingWizard = ({
   // ── Save step 2 → 3 (create area) ──
   const saveStep2 = async () => {
     if (areaPreset === null) return;
-    if (areaPreset === 5 && !areaCustom.trim()) return;
+    if (isOtroPreset && !areaCustom.trim()) return;
     setSaving(true); setError('');
     try {
       const tid = savedTenantId || getTenantId();
@@ -877,8 +945,8 @@ const OnboardingWizard = ({
                 <SectionHead title="¿Dónde quieres colocar el primer QR?" sub="Selecciona el área que quieres evaluar." />
                 <label style={LS}>Área de evaluación *</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
-                  {AREA_PRESETS.map((p, i) => (
-                    <button key={i} type="button" onClick={() => setAreaPreset(i)}
+                  {currentAreaPresets.map((p, i) => (
+                    <button key={i} type="button" onClick={() => { setAreaPreset(i); setAreaCustom(''); }}
                       style={{
                         padding: '0.9rem 0.5rem', borderRadius: '14px', cursor: 'pointer', textAlign: 'center',
                         border: `2px solid ${areaPreset === i ? '#0EA5E9' : '#e2e8f0'}`,
@@ -890,7 +958,7 @@ const OnboardingWizard = ({
                   ))}
                 </div>
 
-                {areaPreset === 5 && (
+                {isOtroPreset && (
                   <div>
                     <label style={LS}>¿Cómo se llama esta área? *</label>
                     <input autoFocus type="text" value={areaCustom} onChange={e => setAreaCustom(e.target.value)}
@@ -899,11 +967,20 @@ const OnboardingWizard = ({
                   </div>
                 )}
 
-                {areaPreset !== null && areaPreset !== 5 && (
+                {areaPreset !== null && !isOtroPreset && (
                   <div style={{ background: '#e0f2fe', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '1.1rem' }}>{AREA_PRESETS[areaPreset].icon}</span>
+                    <span style={{ fontSize: '1.1rem' }}>{currentAreaPresets[areaPreset].icon}</span>
                     <div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0369a1' }}>Área: {AREA_PRESETS[areaPreset].label}</div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0369a1' }}>Área: {currentAreaPresets[areaPreset].label}</div>
+                      <div style={{ fontSize: '0.68rem', color: '#0284c7' }}>Tu QR quedará etiquetado con esta área.</div>
+                    </div>
+                  </div>
+                )}
+                {isOtroPreset && areaCustom.trim() && (
+                  <div style={{ background: '#e0f2fe', borderRadius: '12px', padding: '0.75rem 1rem', display: 'flex', gap: '10px', alignItems: 'center', marginTop: '0.75rem' }}>
+                    <span style={{ fontSize: '1.1rem' }}>✍️</span>
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0369a1' }}>Área: {areaCustom.trim()}</div>
                       <div style={{ fontSize: '0.68rem', color: '#0284c7' }}>Tu QR quedará etiquetado con esta área.</div>
                     </div>
                   </div>

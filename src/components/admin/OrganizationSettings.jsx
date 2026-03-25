@@ -101,18 +101,20 @@ export default function OrganizationSettings() {
     try {
       const tid = tenant.id;
       // Delete all tenant data in order (FK constraints)
-      await supabase.from('feedbacks').delete().eq('tenant_id', tid);
+      await supabase.from('Feedback').delete().eq('tenant_id', tid);
       await supabase.from('Issues').delete().eq('tenant_id', tid);
       await supabase.from('Alerts').delete().eq('tenant_id', tid);
+      await supabase.from('Metas_KPI').delete().eq('tenant_id', tid);
       await supabase.from('Area_Preguntas').delete().eq('tenant_id', tid);
       await supabase.from('Tienda_Areas').delete().eq('tenant_id', tid);
       await supabase.from('Areas_Catalogo').delete().eq('tenant_id', tid);
       await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', tid);
       await supabase.from('locations').delete().eq('tenant_id', tid);
       await supabase.from('qr_codes').delete().eq('tenant_id', tid);
-      // Reset tenant to blank state
+      // Reset tenant to blank state (keep ID and user linked)
       await supabase.from('tenants').update({
         name: '', plan: 'trial', plan_status: 'trial',
+        logo_url: null, avg_ticket: null, business_type: null,
         trial_starts_at: new Date().toISOString(),
         trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
       }).eq('id', tid);

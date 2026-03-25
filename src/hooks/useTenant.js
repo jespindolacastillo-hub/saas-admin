@@ -56,6 +56,13 @@ export const useTenant = () => {
         .eq('id', cleanTid)
         .single();
 
+      // If the tenant row doesn't exist in DB (was deleted), force zero UUID to re-trigger onboarding
+      if (!tenantData && cleanTid !== '00000000-0000-0000-0000-000000000000') {
+        console.warn('Tenant record not found in DB — forcing onboarding.');
+        cleanTid = '00000000-0000-0000-0000-000000000000';
+        localStorage.removeItem('onboarding_complete');
+      }
+
       const finalTenant = {
         id: cleanTid,
         name: tenantData?.name || 'Empresa',

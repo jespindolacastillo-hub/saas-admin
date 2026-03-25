@@ -43,6 +43,8 @@ import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
 import GeoMap from './components/admin/GeoMap';
 import AffiliatesManager from './components/admin/AffiliatesManager';
+import CouponValidation from './components/admin/CouponValidation';
+import CouponManagement from './components/admin/CouponManagement';
 import { useTenant } from './hooks/useTenant';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
@@ -1942,7 +1944,13 @@ const AuditTrail = () => {
   );
 };
 
-function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' directly from props
+const ROLE_PERMS = {
+  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','backup','audit'],
+  gerente: ['dash','issues','validar','leaderboard','kpi','geomap'],
+  caja:    ['validar'],
+};
+
+function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use 'tenant' directly from props
   const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -1953,7 +1961,9 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     '/issues': 'issues',
     '/qr': 'qr',
     '/leaderboard': 'leaderboard',
-    '/recovery': 'recovery',
+    '/recovery': 'cupones',
+    '/cupones': 'cupones',
+    '/validar': 'validar',
     '/estructura': 'users',
     '/marketing': 'email',
     '/respaldos': 'backup',
@@ -1964,6 +1974,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     '/distribuidores': 'affiliates',
     '/': 'dash'
   };
+
+  const allowedTabs = ROLE_PERMS[userRole] || ROLE_PERMS['admin'];
 
   const activeTab = pathMap[pathname] || 'dash';
 
@@ -2347,6 +2359,19 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
     );
   }
 
+  // Caja role: minimal layout — only coupon validation
+  if (userRole === 'caja') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#F7F8FC', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#0D0D12', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontWeight: 800, fontSize: '1.1rem', color: '#fff', letterSpacing: '-0.02em' }}>retelio</span>
+          <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: '0.82rem' }}>Salir</button>
+        </div>
+        <CouponValidation userEmail={session?.user?.email} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
@@ -2473,101 +2498,116 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
             <li style={{ padding: '0 0.5rem', marginBottom: '0.25rem' }}>
               <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Principal</span>
             </li>
-            <li>
+            {allowedTabs.includes('dash') && <li>
               <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>
                 <LayoutDashboard size={16} /> Dashboard
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('qr') && <li>
               <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { navigate('/qr'); setIsSidebarOpen(false); }}>
                 <QrCode size={16} /> QR Studio
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('issues') && <li>
               <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
                 <AlertTriangle size={16} /> Recuperación
               </button>
-            </li>
+            </li>}
+            {allowedTabs.includes('validar') && <li>
+              <button className={`nav-item ${activeTab === 'validar' ? 'active' : ''}`} onClick={() => { navigate('/validar'); setIsSidebarOpen(false); }}>
+                <CheckCircle2 size={16} /> Validar Cupones
+              </button>
+            </li>}
 
             {/* Analítica */}
-            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Analítica</span>
-            </li>
-            <li>
+            {(allowedTabs.includes('geomap') || allowedTabs.includes('leaderboard') || allowedTabs.includes('kpi')) && (
+              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Analítica</span>
+              </li>
+            )}
+            {allowedTabs.includes('geomap') && <li>
               <button className={`nav-item ${activeTab === 'geomap' ? 'active' : ''}`} onClick={() => { navigate('/mapa'); setIsSidebarOpen(false); }}>
                 <Map size={16} /> Mapa geográfico
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('leaderboard') && <li>
               <button className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`} onClick={() => { navigate('/leaderboard'); setIsSidebarOpen(false); }}>
                 <Trophy size={16} /> Leaderboard
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('kpi') && <li>
               <button className={`nav-item ${activeTab === 'kpi' ? 'active' : ''}`} onClick={() => { navigate('/metas'); setIsSidebarOpen(false); }}>
                 <Target size={16} /> Metas KPI
               </button>
-            </li>
+            </li>}
 
             {/* Comunicación */}
-            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Comunicación</span>
-            </li>
-            <li>
+            {(allowedTabs.includes('email') || allowedTabs.includes('cupones')) && (
+              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Comunicación</span>
+              </li>
+            )}
+            {allowedTabs.includes('email') && <li>
               <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
                 <Mail size={16} /> Campañas
               </button>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'recovery' ? 'active' : ''}`} onClick={() => { navigate('/recovery'); setIsSidebarOpen(false); }}>
-                <Gift size={16} /> Recovery
+            </li>}
+            {allowedTabs.includes('cupones') && <li>
+              <button className={`nav-item ${activeTab === 'cupones' ? 'active' : ''}`} onClick={() => { navigate('/cupones'); setIsSidebarOpen(false); }}>
+                <Gift size={16} /> Cupones
               </button>
-            </li>
+            </li>}
 
             {/* Configuración */}
-            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Configuración</span>
-            </li>
-            <li>
+            {(allowedTabs.includes('org') || allowedTabs.includes('users') || allowedTabs.includes('questions')) && (
+              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Configuración</span>
+              </li>
+            )}
+            {allowedTabs.includes('org') && <li>
               <button className={`nav-item ${activeTab === 'org' ? 'active' : ''}`} onClick={() => { navigate('/ajustes'); setIsSidebarOpen(false); }}>
                 <Building size={16} /> Organización
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('users') && <li>
               <button className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { navigate('/estructura'); setIsSidebarOpen(false); }}>
                 <Users size={16} /> Equipo
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('questions') && <li>
               <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
                 <MessageSquare size={16} /> Preguntas
               </button>
-            </li>
+            </li>}
 
             {/* Negocio */}
-            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Negocio</span>
-            </li>
-            <li>
-              <button className={`nav-item ${activeTab === 'affiliates' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores'); setIsSidebarOpen(false); }}>
-                <Share2 size={16} /> Distribuidores
-              </button>
-            </li>
+            {allowedTabs.includes('affiliates') && <>
+              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Negocio</span>
+              </li>
+              <li>
+                <button className={`nav-item ${activeTab === 'affiliates' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores'); setIsSidebarOpen(false); }}>
+                  <Share2 size={16} /> Distribuidores
+                </button>
+              </li>
+            </>}
 
             {/* Sistema */}
-            <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</span>
-            </li>
-            <li>
+            {(allowedTabs.includes('backup') || allowedTabs.includes('audit')) && (
+              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</span>
+              </li>
+            )}
+            {allowedTabs.includes('backup') && <li>
               <button className={`nav-item ${activeTab === 'backup' ? 'active' : ''}`} onClick={() => { navigate('/respaldos'); setIsSidebarOpen(false); }}>
                 <RotateCcw size={16} /> Respaldos
               </button>
-            </li>
-            <li>
+            </li>}
+            {allowedTabs.includes('audit') && <li>
               <button className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { navigate('/auditoria'); setIsSidebarOpen(false); }}>
                 <ShieldCheck size={16} /> Auditoría
               </button>
-            </li>
+            </li>}
           </ul>
         </nav>
 
@@ -2714,7 +2754,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
                activeTab === 'org'        ? 'Configuración'  :
                activeTab === 'issues'     ? 'Recuperación'   :
                activeTab === 'leaderboard'? 'Leaderboard'    :
-               activeTab === 'recovery'  ? 'Recovery & Cupones' :
+               activeTab === 'cupones'   ? 'Cupones'         :
+               activeTab === 'validar'   ? 'Validar Cupones' :
                activeTab === 'users'      ? 'Equipo'         :
                activeTab === 'email'      ? 'Marketing'      :
                activeTab === 'questions'  ? 'Preguntas'      :
@@ -2840,7 +2881,8 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
           {activeTab === 'dash' && <RetelioDashboard />}
 
           {activeTab === 'leaderboard' && <RetellioLeaderboard />}
-          {activeTab === 'recovery' && <RecoverySettings />}
+          {activeTab === 'cupones' && <CouponManagement />}
+          {activeTab === 'validar' && <CouponValidation userEmail={session?.user?.email} />}
           {activeTab === 'issues' && <IssueManagement />}
           {activeTab === 'qr' && <QRStudio />}
           {activeTab === 'users' && <UserManagement session={session} />}
@@ -2859,13 +2901,13 @@ function AdminPanel({ tenant, tenantLoading, tenantRefresh }) { // Use 'tenant' 
 }
 
 export default function App() {
-  const { tenant, loading: tenantLoading, refresh: tenantRefresh } = useTenant();
-  
+  const { tenant, userRole, loading: tenantLoading, refresh: tenantRefresh } = useTenant();
+
   return (
     <Routes>
       <Route path="/f/:qrId" element={<FeedbackPublic />} />
       <Route path="/feedback" element={<Feedback />} />
-      <Route path="/*" element={<AdminPanel tenant={tenant} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
+      <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
     </Routes>
   );
 }

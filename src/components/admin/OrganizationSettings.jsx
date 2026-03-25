@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
 import { PLAN_LIMITS, getEffectivePrice } from '../../config/planLimits';
 import { loadStripe } from '@stripe/stripe-js';
-import { Save, CheckCircle2, Zap, Building2, Star } from 'lucide-react';
+import { Save, CheckCircle2, Zap, Building2, Star, AlertTriangle, RotateCcw, FlaskConical, Rocket } from 'lucide-react';
 
 const T = {
   coral:  '#FF5C3A',
@@ -24,9 +24,14 @@ const ZONE_SYM    = { mx: '$', usd: '$', br: 'R$' };
 
 export default function OrganizationSettings() {
   const { tenant, refresh } = useTenant();
-  const [saving, setSaving]     = useState(false);
+  const [saving, setSaving]       = useState(false);
   const [upgrading, setUpgrading] = useState(null);
-  const [saved, setSaved]       = useState(false);
+  const [saved, setSaved]         = useState(false);
+  const [resetting, setResetting]       = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
+  const [togglingTest, setTogglingTest] = useState(false);
+  const [goingLive, setGoingLive]       = useState(false);
+  const [liveConfirm, setLiveConfirm]   = useState(false);
   const [form, setForm]         = useState({
     name: '', google_review_url: '', whatsapp_number: '',
   });
@@ -63,6 +68,63 @@ export default function OrganizationSettings() {
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleToggleTestMode = async () => {
+    if (!tenant?.id) return;
+    setTogglingTest(true);
+    const next = !tenant.test_mode;
+    await supabase.from('tenants').update({ test_mode: next }).eq('id', tenant.id);
+    await refresh();
+    setTogglingTest(false);
+  };
+
+  const handleGoLive = async () => {
+    if (!tenant?.id) return;
+    setGoingLive(true);
+    try {
+      // Delete all test feedback for this tenant
+      await supabase.from('feedbacks').delete().eq('tenant_id', tenant.id).eq('is_test', true);
+      // Turn off test mode
+      await supabase.from('tenants').update({ test_mode: false }).eq('id', tenant.id);
+      await refresh();
+      setLiveConfirm(false);
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+    setGoingLive(false);
+  };
+
+  const handleReset = async () => {
+    if (!tenant?.id) return;
+    setResetting(true);
+    try {
+      const tid = tenant.id;
+      // Delete all tenant data in order (FK constraints)
+      await supabase.from('feedbacks').delete().eq('tenant_id', tid);
+      await supabase.from('Issues').delete().eq('tenant_id', tid);
+      await supabase.from('Alerts').delete().eq('tenant_id', tid);
+      await supabase.from('Area_Preguntas').delete().eq('tenant_id', tid);
+      await supabase.from('Tienda_Areas').delete().eq('tenant_id', tid);
+      await supabase.from('Areas_Catalogo').delete().eq('tenant_id', tid);
+      await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', tid);
+      await supabase.from('locations').delete().eq('tenant_id', tid);
+      await supabase.from('qr_codes').delete().eq('tenant_id', tid);
+      // Reset tenant to blank state
+      await supabase.from('tenants').update({
+        name: '', plan: 'trial', plan_status: 'trial',
+        trial_starts_at: new Date().toISOString(),
+        trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
+      }).eq('id', tid);
+      // Clear onboarding flag and reload
+      localStorage.removeItem('onboarding_complete');
+      localStorage.removeItem('saas_tenant_config');
+      window.location.reload();
+    } catch (e) {
+      console.error('Reset error:', e);
+      alert('Error al reiniciar: ' + e.message);
+    }
+    setResetting(false);
   };
 
   const handleUpgrade = async (planKey) => {
@@ -312,6 +374,106 @@ export default function OrganizationSettings() {
             Solicitar cotización →
           </button>
         </a>
+      </div>
+
+      {/* ── Modo prueba ── */}
+      <div style={{ marginTop: 32, border: `1.5px solid ${tenant?.test_mode ? '#93C5FD' : T.border}`, borderRadius: 14, padding: '20px 24px', background: tenant?.test_mode ? '#EFF6FF' : T.card }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <FlaskConical size={18} color={tenant?.test_mode ? '#1D4ED8' : T.muted} />
+            <div>
+              <h3 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800, color: tenant?.test_mode ? '#1D4ED8' : T.ink, fontFamily: font }}>
+                Modo prueba {tenant?.test_mode ? '— ACTIVO' : ''}
+              </h3>
+              <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: T.muted, fontFamily: font }}>
+                Crea sucursales, áreas, QRs y prueba el flujo completo. El feedback generado se marca como prueba y no contamina tus métricas reales.
+              </p>
+            </div>
+          </div>
+          <button onClick={handleToggleTestMode} disabled={togglingTest} style={{
+            background: tenant?.test_mode ? '#1D4ED8' : 'white',
+            color: tenant?.test_mode ? 'white' : T.ink,
+            border: `1.5px solid ${tenant?.test_mode ? '#1D4ED8' : T.border}`,
+            borderRadius: 8, padding: '8px 18px', fontFamily: font,
+            fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+          }}>
+            {togglingTest ? '…' : tenant?.test_mode ? 'Desactivar prueba' : 'Activar modo prueba'}
+          </button>
+        </div>
+
+        {tenant?.test_mode && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #BFDBFE' }}>
+            <p style={{ margin: '0 0 12px', fontSize: '0.8rem', color: '#1E40AF', fontFamily: font, fontWeight: 600 }}>
+              ¿Listo para salir a producción? Se borrarán todos los feedbacks de prueba. Tu configuración (sucursales, áreas, QRs) se conserva.
+            </p>
+            {!liveConfirm ? (
+              <button onClick={() => setLiveConfirm(true)} style={{
+                background: '#1D4ED8', color: 'white', border: 'none',
+                borderRadius: 8, padding: '9px 20px', fontFamily: font,
+                fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <Rocket size={14} /> Salir a producción
+              </button>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.82rem', color: '#1E40AF', fontFamily: font, fontWeight: 600 }}>¿Confirmas? Se borrará el feedback de prueba.</span>
+                <button onClick={handleGoLive} disabled={goingLive} style={{
+                  background: '#1D4ED8', color: 'white', border: 'none',
+                  borderRadius: 8, padding: '8px 18px', fontFamily: font,
+                  fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                }}>
+                  {goingLive ? 'Procesando…' : 'Sí, ir a producción'}
+                </button>
+                <button onClick={() => setLiveConfirm(false)} style={{
+                  background: 'white', color: T.muted, border: `1px solid ${T.border}`,
+                  borderRadius: 8, padding: '8px 14px', fontFamily: font,
+                  fontSize: '0.82rem', cursor: 'pointer',
+                }}>Cancelar</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Zona de pruebas ── */}
+      <div style={{ marginTop: 32, border: '1.5px solid #FCA5A5', borderRadius: 14, padding: '20px 24px', background: '#FFF5F5' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <AlertTriangle size={16} color="#DC2626" />
+          <h3 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: '#DC2626', fontFamily: font }}>Zona de pruebas</h3>
+        </div>
+        <p style={{ margin: '0 0 16px', fontSize: '0.8rem', color: '#7F1D1D', fontFamily: font, lineHeight: 1.5 }}>
+          Borra todos los datos (feedback, sucursales, áreas, preguntas) y regresa al onboarding.
+          Útil para probar el flujo sin crear correos nuevos. <strong>No se puede deshacer.</strong>
+        </p>
+        {!resetConfirm ? (
+          <button onClick={() => setResetConfirm(true)} style={{
+            background: 'white', color: '#DC2626', border: '1.5px solid #FCA5A5',
+            borderRadius: 8, padding: '8px 18px', fontFamily: font,
+            fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <RotateCcw size={14} /> Reiniciar cuenta
+          </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', color: '#7F1D1D', fontFamily: font, fontWeight: 600 }}>¿Confirmas? Se borrarán todos tus datos.</span>
+            <button onClick={handleReset} disabled={resetting} style={{
+              background: '#DC2626', color: 'white', border: 'none',
+              borderRadius: 8, padding: '8px 18px', fontFamily: font,
+              fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+            }}>
+              {resetting ? 'Reiniciando…' : 'Sí, borrar todo'}
+            </button>
+            <button onClick={() => setResetConfirm(false)} style={{
+              background: 'white', color: T.muted, border: `1px solid ${T.border}`,
+              borderRadius: 8, padding: '8px 14px', fontFamily: font,
+              fontSize: '0.82rem', cursor: 'pointer',
+            }}>
+              Cancelar
+            </button>
+          </div>
+        )}
       </div>
 
     </div>

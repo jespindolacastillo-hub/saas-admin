@@ -283,10 +283,14 @@ function StepContact({ submitting, onSubmit, onSkip }) {
       <Logo />
       <Progress total={3} current={1} />
       <p className="rf-step-label">Paso 2 de 2</p>
-      <h2 className="rf-step-title">¿Te contactamos para resolverlo?</h2>
-      <p style={{ fontSize: '0.88rem', color: S.muted, marginBottom: 20, lineHeight: 1.5 }}>
-        Deja tu teléfono y un manager te contactará pronto.
-      </p>
+      <div style={{ background: '#FFF3F0', border: '1.5px solid #FFCFC4', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>🚨</span>
+        <div>
+          <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#B91C1C', marginBottom: 2 }}>Ya notificamos al gerente</p>
+          <p style={{ fontSize: '0.78rem', color: S.muted, lineHeight: 1.45 }}>Tu caso está en revisión. ¿Quieres que te contacten para resolverlo hoy?</p>
+        </div>
+      </div>
+      <h2 className="rf-step-title">¿Te llamamos para resolverlo?</h2>
       <input
         type="tel"
         className="rf-input"
@@ -296,15 +300,15 @@ function StepContact({ submitting, onSubmit, onSkip }) {
         autoFocus
       />
       <button
-        className="rf-btn rf-btn-teal"
+        className="rf-btn rf-btn-primary"
         disabled={!phone.trim() || submitting}
         onClick={() => onSubmit(phone.trim())}
-        style={{ marginBottom: 4 }}
+        style={{ marginBottom: 8 }}
       >
-        {submitting ? 'Enviando…' : 'Confirmar y enviar'}
+        {submitting ? 'Enviando…' : 'Sí, que me llamen'}
       </button>
       <button className="rf-btn rf-btn-ghost" disabled={submitting} onClick={onSkip}>
-        Omitir, solo enviar
+        No, gracias
       </button>
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
@@ -312,14 +316,16 @@ function StepContact({ submitting, onSubmit, onSkip }) {
 }
 
 // ─── Done: bad score ──────────────────────────────────────────────────────────
-function DoneBad({ couponCode, couponConfig }) {
+function DoneBad({ couponCode, couponConfig, hasPhone }) {
   return (
     <div className="rf-card rf-state">
       <Logo />
-      <div className="rf-state-icon">⚡</div>
-      <h2 className="rf-state-title">Notificamos al equipo</h2>
+      <div className="rf-state-icon">{hasPhone ? '📞' : '⚡'}</div>
+      <h2 className="rf-state-title">{hasPhone ? '¡Listo! Te contactamos pronto' : 'Notificamos al equipo'}</h2>
       <p className="rf-state-desc">
-        Un manager ya recibió tu reporte y te contactará pronto para resolverlo.
+        {hasPhone
+          ? 'Un manager te contactará en menos de 2 horas para resolver tu caso personalmente.'
+          : 'Un manager revisará tu caso hoy y tomará acción para mejorar tu experiencia.'}
       </p>
       {couponCode && couponConfig && (
         <div className="rf-coupon" style={{ textAlign: 'left' }}>
@@ -337,34 +343,117 @@ function DoneBad({ couponCode, couponConfig }) {
 }
 
 // ─── Done: neutral ────────────────────────────────────────────────────────────
-function DoneNeutral() {
+function DoneNeutral({ onSuggest }) {
+  const [comment, setComment] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSuggest = () => {
+    if (!comment.trim()) return;
+    onSuggest(comment.trim());
+    setSubmitted(true);
+  };
+
   return (
     <div className="rf-card rf-state">
       <Logo />
       <div className="rf-state-icon">🙏</div>
       <h2 className="rf-state-title">¡Gracias por tu opinión!</h2>
       <p className="rf-state-desc">Tu comentario nos ayuda a mejorar cada día.</p>
+      <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 20, textAlign: 'left' }}>
+        {!submitted ? (
+          <>
+            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: S.ink, marginBottom: 10 }}>
+              ¿Qué mejoraría tu experiencia?{' '}
+              <span style={{ color: S.muted, fontWeight: 400 }}>(opcional)</span>
+            </p>
+            <textarea
+              className="rf-textarea"
+              rows={3}
+              placeholder="Tu sugerencia…"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+            />
+            {comment.trim() && (
+              <button
+                className="rf-btn rf-btn-teal"
+                onClick={handleSuggest}
+                style={{ width: 'auto', padding: '11px 20px', fontSize: '0.9rem' }}
+              >
+                Compartir sugerencia →
+              </button>
+            )}
+          </>
+        ) : (
+          <p style={{ fontSize: '0.9rem', color: S.teal, fontWeight: 600, textAlign: 'center' }}>✓ Sugerencia enviada, gracias</p>
+        )}
+      </div>
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
   );
 }
 
 // ─── Done: happy ──────────────────────────────────────────────────────────────
-function DoneHappy({ googleUrl }) {
+function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty }) {
+  const [showPhone, setShowPhone] = useState(false);
+  const [phone, setPhone]         = useState('');
+  const [loyaltyDone, setLoyaltyDone] = useState(false);
+
+  const handleLoyalty = () => {
+    if (!phone.trim()) return;
+    onLoyalty(phone.trim());
+    setLoyaltyDone(true);
+  };
+
   return (
     <div className="rf-card rf-state">
       <Logo />
       <div className="rf-state-icon">🌟</div>
       <h2 className="rf-state-title">¡Nos alegra mucho!</h2>
-      <p className="rf-state-desc">
-        Tu opinión nos motiva a seguir mejorando.
+      <p className="rf-state-desc" style={{ marginBottom: 20 }}>
+        Tu visita de hoy nos motiva a seguir dando lo mejor.
       </p>
+
       {googleUrl && (
         <a href={googleUrl} target="_blank" rel="noreferrer"
-          style={{ display: 'block', padding: '15px', background: S.teal, color: '#fff', borderRadius: 14, fontFamily: fontStack, fontWeight: 700, fontSize: '1rem', textDecoration: 'none', textAlign: 'center' }}>
-          Dejar reseña en Google ⭐
+          style={{ display: 'block', padding: '16px', background: S.teal, color: '#fff', borderRadius: 14, fontFamily: fontStack, fontWeight: 700, fontSize: '1rem', textDecoration: 'none', textAlign: 'center', marginBottom: 16 }}>
+          ⭐ Escribir reseña en Google
         </a>
       )}
+
+      {/* Loyalty coupon — shown automatically if configured */}
+      {loyaltyCouponCode && loyaltyConfig && (
+        <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16 }}>
+          <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
+          <p className="rf-coupon-code">{loyaltyCouponCode}</p>
+          <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
+          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
+            Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar
+          </p>
+        </div>
+      )}
+
+      {/* Loyalty phone capture — only if no coupon configured */}
+      {!loyaltyCouponCode && (
+        <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16 }}>
+          {loyaltyDone ? (
+            <p style={{ fontSize: '0.9rem', color: S.teal, fontWeight: 600, textAlign: 'center' }}>✓ ¡Listo! Te avisaremos de las mejores ofertas</p>
+          ) : !showPhone ? (
+            <button className="rf-btn rf-btn-ghost" onClick={() => setShowPhone(true)}
+              style={{ color: S.ink, fontSize: '0.9rem' }}>
+              🎁 Recibir ofertas exclusivas
+            </button>
+          ) : (
+            <div style={{ textAlign: 'left' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 600, color: S.ink, marginBottom: 10 }}>Tu teléfono para ofertas exclusivas</p>
+              <input type="tel" className="rf-input" placeholder="55 1234 5678" value={phone} onChange={e => setPhone(e.target.value)} autoFocus />
+              <button className="rf-btn rf-btn-primary" disabled={!phone.trim()} onClick={handleLoyalty}>
+                Recibir ofertas →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
   );
@@ -402,6 +491,7 @@ export default function FeedbackPublic() {
   const [qr, setQr]                   = useState(null);
   const [location, setLocation]       = useState(null);
   const [recovery, setRecovery]       = useState(null);
+  const [loyalty, setLoyalty]         = useState(null);
   const [questionConfig, setQuestionConfig] = useState(null);
   const [loading, setLoading]         = useState(true);
   const [cooldown, setCooldown]       = useState(false);
@@ -409,10 +499,13 @@ export default function FeedbackPublic() {
   const [submitting, setSubmitting]   = useState(false);
 
   // Collected data across steps
-  const [score, setScore]       = useState(null);
-  const [category, setCategory] = useState(null);
-  const [comment, setComment]   = useState(null);
+  const [score, setScore]           = useState(null);
+  const [category, setCategory]     = useState(null);
+  const [comment, setComment]       = useState(null);
   const [couponCode, setCouponCode] = useState(null);
+  const [loyaltyCouponCode, setLoyaltyCouponCode] = useState(null);
+  const [feedbackId, setFeedbackId] = useState(null);
+  const [contactPhone, setContactPhone] = useState(null);
 
   // screen: 'score' | 'reason' | 'contact' | 'done-bad' | 'done-neutral' | 'done-happy'
   const [screen, setScreen] = useState('score');
@@ -430,7 +523,7 @@ export default function FeedbackPublic() {
     setLoading(true);
     const { data: qrData, error: qrErr } = await supabase
       .from('qr_codes')
-      .select('*, locations(name, google_review_url, whatsapp_number)')
+      .select('*, locations(name, google_review_url, whatsapp_number), qr_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type))')
       .eq('id', qrId)
       .eq('active', true)
       .single();
@@ -454,9 +547,11 @@ export default function FeedbackPublic() {
       .from('recovery_config')
       .select('*')
       .eq('tenant_id', qrData.tenant_id)
-      .eq('enabled', true)
       .maybeSingle();
-    if (rcData) setRecovery(rcData);
+    if (rcData) {
+      if (rcData.enabled) setRecovery(rcData);
+      if (rcData.loyalty_enabled) setLoyalty(rcData);
+    }
 
     const cooldownKey = `rf_sent_${qrId}`;
     const last = localStorage.getItem(cooldownKey);
@@ -494,6 +589,7 @@ export default function FeedbackPublic() {
   };
 
   const handleContactSubmit = (phone) => {
+    setContactPhone(phone);
     submitFeedback({ score, category, comment, phone });
   };
 
@@ -501,18 +597,44 @@ export default function FeedbackPublic() {
     submitFeedback({ score, category, comment, phone: null });
   };
 
+  const updateFeedback = async (updates) => {
+    if (!feedbackId) return;
+    await supabase.from('feedbacks').update(updates).eq('id', feedbackId);
+  };
+
   // ── Single INSERT ─────────────────────────────────────────────────────────────
   const submitFeedback = async ({ score: s, category: cat, comment: cmt, phone }) => {
     if (!qr) return;
     setSubmitting(true);
 
+    // Cascade: QR-level → Area-level → Global
+    const qrCouponCfg = qr.qr_coupon || qr.area?.area_coupon || null;
+
     const triggerScore  = recovery?.trigger_score ?? 2;
-    const needsRecovery = recovery?.enabled && s <= triggerScore;
-    const code          = needsRecovery ? genCode(recovery.coupon_prefix || 'RECOVERY') : null;
+    const needsRecovery = (qrCouponCfg?.trigger_type === 'recovery' || recovery?.enabled) && s <= triggerScore;
+    const recoveryPrefix = qrCouponCfg?.trigger_type === 'recovery'
+      ? (qrCouponCfg.coupon_prefix || 'RECOVERY')
+      : (recovery?.coupon_prefix || 'RECOVERY');
+    const code = needsRecovery ? genCode(recoveryPrefix) : null;
     if (code) setCouponCode(code);
 
+    const loyaltyPrefix = qrCouponCfg?.trigger_type === 'loyalty'
+      ? (qrCouponCfg.coupon_prefix || 'LOYAL')
+      : (loyalty?.loyalty_coupon_prefix || 'LOYAL');
+    const loyaltyCode = isHappy(s) && (qrCouponCfg?.trigger_type === 'loyalty' || loyalty?.loyalty_enabled)
+      ? genCode(loyaltyPrefix) : null;
+    if (loyaltyCode) setLoyaltyCouponCode(loyaltyCode);
+
+    // Use QR coupon config for display if applicable
+    if (qrCouponCfg?.trigger_type === 'recovery' && code) {
+      setRecovery({ ...recovery, offer_description: qrCouponCfg.offer_description, validity_days: qrCouponCfg.validity_days });
+    }
+    if (qrCouponCfg?.trigger_type === 'loyalty' && loyaltyCode) {
+      setLoyalty({ ...loyalty, loyalty_offer_description: qrCouponCfg.offer_description, loyalty_validity_days: qrCouponCfg.validity_days, loyalty_enabled: true });
+    }
+
     try {
-      await supabase.from('feedbacks').insert({
+      const { data: inserted } = await supabase.from('feedbacks').insert({
         qr_id:            qrId,
         tenant_id:        qr.tenant_id,
         location_id:      qr.location_id,
@@ -520,12 +642,15 @@ export default function FeedbackPublic() {
         comment:          cmt || null,
         followup_answer:  cat || null,
         routed_to_google: isHappy(s),
-        recovery_sent:    needsRecovery,
-        coupon_code:      code,
+        recovery_sent:    needsRecovery || !!loyaltyCode,
+        coupon_code:      code || loyaltyCode || null,
+        coupon_config_id: qrCouponCfg?.id || null,
+        area_id:          qr.area_id || null,
         ip_hash:          getDeviceHash(),
         is_test:          testMode || false,
         contact_phone:    phone || null,
-      });
+      }).select('id').single();
+      if (inserted?.id) setFeedbackId(inserted.id);
 
       if (!testMode) localStorage.setItem(`rf_sent_${qrId}`, Date.now().toString());
 
@@ -578,13 +703,13 @@ export default function FeedbackPublic() {
     return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} />);
 
   if (screen === 'done-bad')
-    return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} />);
+    return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} hasPhone={!!contactPhone} />);
 
   if (screen === 'done-neutral')
-    return wrap(<DoneNeutral />);
+    return wrap(<DoneNeutral onSuggest={(cmt) => updateFeedback({ comment: cmt })} />);
 
   if (screen === 'done-happy')
-    return wrap(<DoneHappy googleUrl={location?.google_review_url} />);
+    return wrap(<DoneHappy googleUrl={location?.google_review_url} loyaltyCouponCode={loyaltyCouponCode} loyaltyConfig={loyalty} onLoyalty={(ph) => updateFeedback({ contact_phone: ph })} />);
 
   return null;
 }

@@ -35,8 +35,9 @@ const strengthLabels = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'];
 // ─── Main Auth ────────────────────────────────────────────────────────────────
 const Auth = ({ onLogin, passwordRecovery = false, onPasswordReset }) => {
   const { t } = useTranslation();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
+  const params = new URLSearchParams(window.location.search);
+  const [isSignUp, setIsSignUp] = useState(!!params.get('email'));
+  const [email, setEmail] = useState(params.get('email') || '');
   const [password, setPassword] = useState('');
   const [nombre, setNombre] = useState('');
   const [loading, setLoading] = useState(false);

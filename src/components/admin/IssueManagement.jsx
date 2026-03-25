@@ -83,13 +83,12 @@ function UrgencyPanel({ hot, warm, cold, activeFilter, onFilter }) {
 }
 
 // ─── Table row ────────────────────────────────────────────────────────────────
-function TableRow({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUpdate, isEscalated }) {
-  const [expanded, setExpanded] = useState(false);
-  const [saving, setSaving]     = useState(false);
+function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUpdate, isEscalated }) {
+  const [saving, setSaving]         = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
 
-  const contacted = fb.recovery_status === 'contacted' || fb.recovery_status === 'resolved';
-  const resolved  = fb.recovery_status === 'resolved' || fb.coupon_redeemed;
+  const contacted  = fb.recovery_status === 'contacted' || fb.recovery_status === 'resolved';
+  const resolved   = fb.recovery_status === 'resolved' || fb.coupon_redeemed;
   const scoreColor = fb.score <= 1 ? T.red : T.coral;
 
   const borderColor = resolved ? T.teal : bucket === 'hot' ? T.red : bucket === 'warm' ? T.amber : T.muted;
@@ -137,196 +136,157 @@ function TableRow({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUpd
         {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
       </span>;
 
+  const accentColor = resolved ? T.teal : isEscalated ? T.red : bucket === 'hot' ? T.red : bucket === 'warm' ? T.amber : T.muted;
+
   return (
-    <>
-      <tr
-        onClick={() => setExpanded(e => !e)}
-        style={{
-          borderLeft: `3px solid ${isEscalated ? T.red : borderColor}`,
-          cursor: 'pointer',
-          background: expanded ? T.bg : resolved ? '#F0FDF4' : isEscalated ? '#FFF5F5' : T.card,
-          opacity: resolved ? 0.75 : 1,
-          transition: 'background .1s',
-          animation: isEscalated ? 'escalate-pulse 2s ease-in-out infinite' : 'none',
-        }}
-      >
-        {/* Score */}
-        <td style={td}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: scoreColor + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: scoreColor, fontSize: '0.88rem' }}>
+    <div style={{
+      background: resolved ? '#F0FDF4' : isEscalated ? '#FFF5F5' : T.card,
+      border: `1.5px solid ${resolved ? '#BBF7D0' : isEscalated ? '#FECACA' : T.border}`,
+      borderLeft: `4px solid ${accentColor}`,
+      borderRadius: 14, padding: '16px 18px',
+      animation: isEscalated ? 'escalate-pulse 2s ease-in-out infinite' : 'none',
+      opacity: resolved ? 0.8 : 1,
+    }}>
+
+      {/* Top row: score + location + time + urgency badge */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: scoreColor + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: scoreColor, fontSize: '1rem', flexShrink: 0 }}>
             {fb.score}★
           </div>
-        </td>
-
-        {/* Location + area + time */}
-        <td style={td}>
-          <div style={{ fontWeight: 700, color: T.ink, fontSize: '0.82rem' }}>{locationName || '—'}</div>
-          {qrLabel && (
-            <div style={{ fontSize: '0.7rem', color: T.purple, fontWeight: 600, marginTop: 1 }}>📍 {qrLabel}</div>
-          )}
-          <div style={{ fontSize: '0.7rem', color: T.muted, marginTop: 1 }}>
-            {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
+          <div>
+            <div style={{ fontWeight: 700, color: T.ink, fontSize: '0.88rem' }}>
+              {locationName || '—'}
+              {qrLabel && <span style={{ fontWeight: 600, color: T.purple, fontSize: '0.78rem' }}> · 📍 {qrLabel}</span>}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>
+              {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
+            </div>
           </div>
-        </td>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {resolved
+            ? <span style={badge(T.teal)}>✓ Recuperado</span>
+            : contacted
+            ? <span style={badge(T.teal)}>Contactado</span>
+            : bucket === 'hot'
+            ? <Timer createdAt={fb.created_at} />
+            : bucket === 'warm'
+            ? <span style={{ fontSize: '0.72rem', color: T.amber, fontWeight: 700 }}>⏳ Hoy</span>
+            : <span style={{ fontSize: '0.72rem', color: T.muted, fontWeight: 600 }}>
+                {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
+              </span>
+          }
+        </div>
+      </div>
 
-        {/* Reason */}
-        <td style={td}>
+      {/* Problem — full text visible */}
+      {(fb.followup_answer || fb.comment) && (
+        <div style={{ background: T.bg, borderRadius: 10, padding: '10px 14px', marginBottom: 12, border: `1px solid ${T.border}` }}>
           {fb.followup_answer && (
-            <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.coral }}>{fb.followup_answer}</span>
+            <span style={{ fontWeight: 700, color: T.coral, fontSize: '0.85rem' }}>{fb.followup_answer}{fb.comment ? ' · ' : ''}</span>
           )}
           {fb.comment && (
-            <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              "{fb.comment}"
-            </div>
+            <span style={{ fontSize: '0.85rem', color: T.ink, fontStyle: 'italic' }}>"{fb.comment}"</span>
           )}
-          {!fb.followup_answer && !fb.comment && <span style={{ fontSize: '0.72rem', color: T.muted }}>—</span>}
-        </td>
+        </div>
+      )}
 
-        {/* Phone */}
-        <td style={td}>
+      {/* WA message preview */}
+      {fb.contact_phone && !resolved && (
+        <div style={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.5, marginBottom: 12, padding: '8px 12px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+          <span style={{ fontWeight: 700, color: '#16A34A', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '.06em' }}>Mensaje sugerido · </span>
+          {buildMessage(fb, locationName)}
+        </div>
+      )}
+
+      {/* Bottom row: phone + coupon + actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {fb.contact_phone
             ? <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Phone size={11} color="#25D366" />
-                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.green }}>{fb.contact_phone}</span>
+                <Phone size={13} color="#25D366" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: T.ink }}>{fb.contact_phone}</span>
               </div>
-            : <span style={{ fontSize: '0.72rem', color: T.border }}>Sin teléfono</span>
+            : <span style={{ fontSize: '0.75rem', color: T.muted }}>Sin teléfono</span>
           }
           {fb.coupon_code && (
-            <div style={{ fontSize: '0.65rem', color: T.purple, fontWeight: 700, marginTop: 2 }}>🎟 {fb.coupon_code}</div>
+            <span style={{ fontSize: '0.72rem', color: T.purple, fontWeight: 700, background: T.purple + '10', borderRadius: 999, padding: '2px 8px' }}>
+              🎟 {fb.coupon_code}
+            </span>
           )}
-        </td>
+        </div>
 
-        {/* Urgency */}
-        <td style={{ ...td, whiteSpace: 'nowrap' }}>{urgencyBadge}</td>
-
-        {/* Actions */}
-        <td style={{ ...td, textAlign: 'right' }} onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
-            {fb.contact_phone && !resolved && (
-              <button onClick={handleWhatsApp} disabled={saving} title="Abrir WhatsApp" style={{
-                padding: '6px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: contacted ? '#25D36615' : '#25D366',
-                color: contacted ? '#16A34A' : '#fff',
-                fontFamily: font, fontSize: '0.75rem', fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: 4,
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Assign coupon */}
+          {!fb.coupon_code && coupons.length > 0 && !resolved && (
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setCouponOpen(o => !o)} disabled={saving} style={{
+                padding: '8px 12px', borderRadius: 9, border: `1.5px dashed ${T.border}`,
+                background: T.card, cursor: 'pointer', fontFamily: font,
+                fontSize: '0.78rem', fontWeight: 600, color: T.muted,
+                display: 'flex', alignItems: 'center', gap: 5,
               }}>
-                {saving ? <Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <MessageSquare size={11} />}
-                WA
+                <Tag size={12} /> Cupón ▾
               </button>
-            )}
-            {contacted && !resolved && (
-              <button onClick={handleResolved} disabled={saving} title="Marcar recuperado" style={{
-                padding: '6px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: T.teal, color: '#fff', fontFamily: font, fontSize: '0.75rem', fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>
-                <CheckCircle2 size={11} /> ✓
-              </button>
-            )}
-            <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.muted, display: 'flex', padding: 4 }}>
-              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-            </button>
-          </div>
-        </td>
-      </tr>
-
-      {/* Expanded detail row */}
-      {expanded && (
-        <tr style={{ background: T.bg }}>
-          <td colSpan={6} style={{ padding: '12px 16px 16px', borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
-
-              {/* Message preview */}
-              <div>
-                {(fb.comment || fb.followup_answer || qrLabel) && (
-                  <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>
-                      Comentario del cliente
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: T.ink, lineHeight: 1.6, background: T.card, borderRadius: 10, padding: '10px 12px', border: `1px solid ${T.border}` }}>
-                      {qrLabel && (
-                        <div style={{ fontSize: '0.72rem', color: T.purple, fontWeight: 700, marginBottom: fb.followup_answer || fb.comment ? 6 : 0 }}>
-                          📍 {locationName} · {qrLabel}
-                        </div>
-                      )}
-                      {fb.followup_answer && (
-                        <span style={{ fontWeight: 700, color: T.coral }}>{fb.followup_answer}{fb.comment ? ' · ' : ''}</span>
-                      )}
-                      {fb.comment && `"${fb.comment}"`}
-                    </div>
-                  </div>
-                )}
-                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>
-                  Mensaje pre-llenado para WhatsApp
-                </div>
-                <div style={{ fontSize: '0.82rem', color: T.ink, lineHeight: 1.6, background: T.card, borderRadius: 10, padding: '10px 12px', border: `1px solid ${T.border}`, fontStyle: 'italic' }}>
-                  "{buildMessage(fb, locationName)}"
-                </div>
-              </div>
-
-              {/* Coupon assignment */}
-              <div style={{ minWidth: 180 }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 6 }}>
-                  Cupón
-                </div>
-                {fb.coupon_code ? (
-                  <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '8px 12px' }}>
-                    <div style={{ fontSize: '0.68rem', color: T.purple, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>Asignado</div>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '1rem', color: T.ink }}>{fb.coupon_code}</div>
-                  </div>
-                ) : coupons.length > 0 ? (
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => setCouponOpen(o => !o)}
-                      disabled={saving || resolved}
-                      style={{
-                        padding: '8px 12px', borderRadius: 10, border: `1.5px dashed ${T.border}`,
-                        background: T.card, cursor: 'pointer', fontFamily: font,
-                        fontSize: '0.78rem', fontWeight: 600, color: T.muted,
-                        display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-                      }}
-                    >
-                      <Tag size={12} /> Asignar cupón ▾
-                    </button>
-                    {couponOpen && (
-                      <div style={{
-                        position: 'absolute', top: '100%', right: 0, marginTop: 4, zIndex: 20,
-                        background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 12,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 220, overflow: 'hidden',
+              {couponOpen && (
+                <>
+                  <div onClick={() => setCouponOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+                  <div style={{
+                    position: 'absolute', bottom: '100%', right: 0, marginBottom: 4, zIndex: 20,
+                    background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 12,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 240, overflow: 'hidden',
+                  }}>
+                    {coupons.map((cfg, i) => (
+                      <button key={i} onClick={() => handleAssignCoupon(cfg)} style={{
+                        width: '100%', padding: '10px 14px', border: 'none', background: 'none',
+                        cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                        borderBottom: i < coupons.length - 1 ? `1px solid ${T.border}` : 'none',
                       }}>
-                        {coupons.map((cfg, i) => (
-                          <button key={i} onClick={() => handleAssignCoupon(cfg)} style={{
-                            width: '100%', padding: '10px 14px', border: 'none', background: 'none',
-                            cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                            borderBottom: i < coupons.length - 1 ? `1px solid ${T.border}` : 'none',
-                          }}>
-                            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>{cfg.offer_description || cfg.coupon_prefix}</div>
-                            <div style={{ fontSize: '0.68rem', color: T.muted, marginTop: 2 }}>
-                              Válido {cfg.validity_days || 30} días · prefijo {cfg.coupon_prefix || 'MANUAL'}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>{cfg.offer_description || cfg.coupon_prefix}</div>
+                        <div style={{ fontSize: '0.68rem', color: T.muted, marginTop: 2 }}>Válido {cfg.validity_days || 30} días · {cfg.coupon_prefix}</div>
+                      </button>
+                    ))}
                   </div>
-                ) : (
-                  <div style={{ fontSize: '0.75rem', color: T.muted, fontStyle: 'italic' }}>Sin cupones configurados</div>
-                )}
-              </div>
+                </>
+              )}
             </div>
-          </td>
-        </tr>
-      )}
-    </>
+          )}
+
+          {/* Mark resolved */}
+          {contacted && !resolved && (
+            <button onClick={handleResolved} disabled={saving} style={{
+              padding: '9px 16px', borderRadius: 9, border: 'none',
+              background: T.teal, color: '#fff', fontFamily: font,
+              fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <CheckCircle2 size={14} /> Recuperado
+            </button>
+          )}
+
+          {/* WhatsApp — primary CTA */}
+          {fb.contact_phone && !resolved && (
+            <button onClick={handleWhatsApp} disabled={saving} style={{
+              padding: '9px 18px', borderRadius: 9, border: 'none',
+              background: contacted ? '#F0FDF4' : '#25D366',
+              color: contacted ? '#16A34A' : '#fff',
+              fontFamily: font, fontSize: '0.88rem', fontWeight: 800,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+              boxShadow: contacted ? 'none' : '0 3px 10px rgba(37,211,102,0.35)',
+            }}>
+              {saving
+                ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                : <MessageSquare size={14} />
+              }
+              {contacted ? 'Reenviar WA' : 'WhatsApp →'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
-
-const td = {
-  padding: '12px 14px',
-  verticalAlign: 'middle',
-  borderBottom: `1px solid ${T.border}`,
-  fontSize: '0.82rem',
-  color: T.ink,
-};
 
 const badge = (color) => ({
   fontSize: '0.65rem', fontWeight: 700, color, background: color + '15',
@@ -670,7 +630,7 @@ export default function IssueManagement() {
 
           {/* Urgency panel */}
           <UrgencyPanel
-            hot={hotAll.length} warm={warmAll.length} cold={coldAll.length}
+            hot={hot.length} warm={warm.length} cold={cold.length}
             activeFilter={filter} onFilter={setFilter}
           />
         </>
@@ -714,29 +674,18 @@ export default function IssueManagement() {
           </div>
         ) : (
           <>
-            <div style={{ background: T.card, borderRadius: 16, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: T.bg }}>
-                    {['Cal.', 'Sucursal', 'Razón', 'Teléfono', 'Urgencia', ''].map((h, i) => (
-                      <th key={i} style={{ padding: '9px 14px', textAlign: i === 5 ? 'right' : 'left', fontSize: '0.65rem', fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '.07em', borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {queueRows.map(fb => (
-                    <TableRow key={fb.id} fb={fb}
-                      locationName={locations.find(l => l.id === fb.location_id)?.name}
-                      qrLabel={qrLabels[fb.qr_id] || null}
-                      bucket={getBucket(fb)}
-                      userEmail={userEmail}
-                      coupons={coupons}
-                      onUpdate={updateFeedback}
-                      isEscalated={escalationBanner.some(e => e.id === fb.id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {queueRows.map(fb => (
+                <QueueCard key={fb.id} fb={fb}
+                  locationName={locations.find(l => l.id === fb.location_id)?.name}
+                  qrLabel={qrLabels[fb.qr_id] || null}
+                  bucket={getBucket(fb)}
+                  userEmail={userEmail}
+                  coupons={coupons}
+                  onUpdate={updateFeedback}
+                  isEscalated={escalationBanner.some(e => e.id === fb.id)}
+                />
+              ))}
             </div>
 
             {noPhone.length > 0 && !filter && (

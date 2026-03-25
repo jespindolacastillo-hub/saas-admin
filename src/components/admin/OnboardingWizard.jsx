@@ -474,12 +474,10 @@ const OnboardingWizard = ({
         setGeoLoading(false);
       } else {
         setCpStatus('error');
-        setError('CP no encontrado. Verifica el número.');
       }
     } catch (_) {
       // Network timeout or API error — let user proceed anyway
       setCpStatus('error');
-      setError('No se pudo verificar el CP. Puedes continuar sin colonia.');
     }
   };
 
@@ -961,20 +959,12 @@ const OnboardingWizard = ({
                       Código postal *
                       {cpStatus === 'loading' && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px', textTransform: 'none' }}>Buscando…</span>}
                       {cpStatus === 'found'   && <span style={{ fontWeight: 400, color: '#00C9A7', marginLeft: '8px', textTransform: 'none' }}>✓ {municipio}</span>}
-                      {cpStatus === 'error'   && <span style={{ fontWeight: 400, color: '#ef4444', marginLeft: '8px', textTransform: 'none' }}>CP no encontrado</span>}
+                      {cpStatus === 'error'   && <span style={{ fontWeight: 400, color: '#f59e0b', marginLeft: '8px', textTransform: 'none' }}>CP no reconocido — puedes continuar</span>}
                     </label>
                     <input type="text" inputMode="numeric" maxLength={5} value={cp}
                       onChange={e => handleCpChange(e.target.value)}
                       placeholder="ej. 53900" style={IS(cpStatus === 'found')} />
                   </div>
-
-                  {/* Mapa al ubicar */}
-                  {mapCoords && !geoLoading && (
-                    <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #00C9A7' }}>
-                      <iframe title="map" src={osmEmbedUrl(mapCoords.lat, mapCoords.lng)}
-                        style={{ width: '100%', height: '150px', border: 'none' }} loading="lazy" />
-                    </div>
-                  )}
 
                   {/* Municipio / Estado — auto-llenados */}
                   {cpStatus === 'found' && (

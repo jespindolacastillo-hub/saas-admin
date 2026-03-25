@@ -160,6 +160,60 @@ const PhonePreview = ({ question, tipo, logoUrl }) => {
   );
 };
 
+// ─── Smart question suggestions by giro + área ───────────────────────────────
+const Q = {
+  restaurant: {
+    'Cajas':               [{ t:'¿Qué tan rápido fue tu proceso de pago?', tipo:'stars' }, { t:'¿La cuenta fue correcta?', tipo:'si_no' }],
+    'Comedor / Salón':     [{ t:'¿Cómo calificarías tu experiencia gastronómica hoy?', tipo:'stars' }, { t:'¿La comida y el servicio superaron tus expectativas?', tipo:'emoji' }],
+    'Entrada / Recepción': [{ t:'¿Cómo fue la bienvenida al llegar?', tipo:'stars' }],
+    'Sanitarios':          [{ t:'¿Cómo encontraste los sanitarios?', tipo:'emoji' }, { t:'¿Los sanitarios estaban limpios y abastecidos?', tipo:'si_no' }],
+  },
+  retail: {
+    'Cajas':               [{ t:'¿Qué tan satisfecho estás con la atención en caja?', tipo:'stars' }, { t:'¿El tiempo de espera fue razonable?', tipo:'si_no' }],
+    'Entrada / Recepción': [{ t:'¿Cómo fue la atención al entrar a la tienda?', tipo:'stars' }, { t:'¿Encontraste fácilmente lo que buscabas?', tipo:'si_no' }],
+    'Atención al Cliente': [{ t:'¿Resolvimos tu consulta o problema?', tipo:'si_no' }, { t:'¿Cómo fue la atención que recibiste?', tipo:'stars' }],
+    'Sanitarios':          [{ t:'¿Cómo encontraste los sanitarios?', tipo:'emoji' }],
+  },
+  hotel: {
+    'Entrada / Recepción': [{ t:'¿Cómo fue tu proceso de check-in?', tipo:'stars' }, { t:'¿El personal fue amable y eficiente?', tipo:'si_no' }],
+    'Comedor / Salón':     [{ t:'¿Cómo calificarías el restaurante del hotel?', tipo:'stars' }],
+    'Sanitarios':          [{ t:'¿Tu habitación e instalaciones estaban limpias?', tipo:'si_no' }],
+  },
+  health: {
+    'Cajas':               [{ t:'¿Qué tan fácil fue tu proceso de pago o registro?', tipo:'stars' }],
+    'Atención al Cliente': [{ t:'¿Te sentiste bien atendido y orientado?', tipo:'si_no' }, { t:'¿Cómo fue la atención del equipo?', tipo:'stars' }],
+  },
+  medical: {
+    'Entrada / Recepción': [{ t:'¿Cómo fue el proceso de registro y tiempo de espera?', tipo:'stars' }, { t:'¿Fuiste atendido en tu horario de cita?', tipo:'si_no' }],
+    'Atención al Cliente': [{ t:'¿Te sentiste escuchado y bien atendido?', tipo:'si_no' }],
+  },
+  auto: {
+    'Cajas':               [{ t:'¿El proceso de cobro fue claro y justo?', tipo:'si_no' }],
+    'Atención al Cliente': [{ t:'¿Recibiste una explicación clara del servicio?', tipo:'si_no' }, { t:'¿Cómo calificarías el servicio de tu vehículo?', tipo:'stars' }],
+  },
+  services: {
+    'Atención al Cliente': [{ t:'¿Resolvimos tu necesidad hoy?', tipo:'si_no' }, { t:'¿Cómo calificarías la atención recibida?', tipo:'stars' }],
+    'Cajas':               [{ t:'¿El proceso de pago fue sencillo y claro?', tipo:'si_no' }],
+  },
+  edu: {
+    'Entrada / Recepción': [{ t:'¿Cómo fue el proceso de admisión o registro?', tipo:'stars' }],
+    'Atención al Cliente': [{ t:'¿Recibiste orientación clara sobre tus dudas?', tipo:'si_no' }],
+  },
+};
+const Q_DEFAULT = {
+  'Cajas':               [{ t:'¿Qué tan satisfecho estás con la atención en caja?', tipo:'stars' }, { t:'¿El tiempo de espera fue razonable?', tipo:'si_no' }],
+  'Entrada / Recepción': [{ t:'¿Cómo fue la bienvenida?', tipo:'stars' }],
+  'Comedor / Salón':     [{ t:'¿Cómo calificarías tu experiencia hoy?', tipo:'stars' }],
+  'Sanitarios':          [{ t:'¿Cómo encontraste los sanitarios?', tipo:'emoji' }, { t:'¿Los sanitarios estaban limpios?', tipo:'si_no' }],
+  'Atención al Cliente': [{ t:'¿Resolvimos tu necesidad?', tipo:'si_no' }, { t:'¿Cómo fue la atención?', tipo:'stars' }],
+  _default:              [{ t:'¿Cómo calificarías tu experiencia hoy?', tipo:'stars' }, { t:'¿El servicio cumplió tus expectativas?', tipo:'si_no' }, { t:'¿Nos recomendarías a un amigo?', tipo:'nps' }],
+};
+const getSmartSuggestions = (bizType, areaLabel) => {
+  const byType = Q[bizType] || {};
+  return byType[areaLabel] || Q_DEFAULT[areaLabel] || Q_DEFAULT._default;
+};
+const TIPO_LABELS = { stars:'⭐ Estrellas', si_no:'👍 Sí / No', nps:'📊 NPS', emoji:'😊 Emojis' };
+
 // ─── SEPOMEX CP lookup (same API as QRStudio) ────────────────────────────────
 const lookupCP = async (cp) => {
   try {
@@ -227,10 +281,10 @@ const OnboardingWizard = ({
   const [questionText, setQuestionText] = useState('');
   const [tipoRespuesta, setTipoRespuesta] = useState('stars');
 
-  // Step 4 — recovery
+  // Step 4 — recovery (always start blank — saved to localStorage on proceed)
   const [avgTicket, setAvgTicket]     = useState('');
-  const [senderName, setSenderName]   = useState(() => localStorage.getItem('wa_sender_name') || '');
-  const [senderRole, setSenderRole]   = useState(() => localStorage.getItem('wa_sender_role') || '');
+  const [senderName, setSenderName]   = useState('');
+  const [senderRole, setSenderRole]   = useState('');
 
   // Step 5 — plan
   const [selectedPlan, setSelectedPlan] = useState('trial');
@@ -354,7 +408,7 @@ const OnboardingWizard = ({
         }).eq('id', validTid);
       }
 
-      // Upload logo if provided
+      // Upload logo: try Storage first, fallback to base64 in DB
       if (logoFile && validTid) {
         try {
           const ext = logoFile.name.split('.').pop();
@@ -363,8 +417,16 @@ const OnboardingWizard = ({
           if (!upErr) {
             const { data: { publicUrl } } = supabase.storage.from('tenant-logos').getPublicUrl(path);
             await supabase.from('tenants').update({ logo_url: publicUrl }).eq('id', validTid);
+          } else {
+            // Storage bucket not configured — save as base64 directly
+            const base64 = await new Promise(resolve => {
+              const r = new FileReader();
+              r.onload = e => resolve(e.target.result);
+              r.readAsDataURL(logoFile);
+            });
+            await supabase.from('tenants').update({ logo_url: base64 }).eq('id', validTid);
           }
-        } catch (_) { /* logo upload is non-critical */ }
+        } catch (_) { /* logo is non-critical */ }
       }
 
       // Create store (idempotent by name)
@@ -864,19 +926,29 @@ const OnboardingWizard = ({
                   ))}
                 </div>
 
-                <label style={LS}>Tu pregunta *</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '0.75rem' }}>
-                  {[
-                    '¿Cómo calificarías tu experiencia hoy?',
-                    '¿El servicio cumplió tus expectativas?',
-                    '¿Nos recomendarías a un amigo?',
-                  ].map(s => (
-                    <button key={s} type="button" onClick={() => setQuestionText(s)}
-                      style={{ padding: '5px 10px', borderRadius: '20px', border: `1.5px solid ${questionText === s ? '#8b5cf6' : '#e2e8f0'}`, background: questionText === s ? '#faf5ff' : 'white', color: questionText === s ? '#7c3aed' : '#64748b', fontSize: '0.7rem', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }}>
-                      {s}
-                    </button>
-                  ))}
+                {/* Smart suggestions based on bizType + area */}
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.6rem' }}>
+                    💡 Sugerencias para {areaName || 'tu área'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {getSmartSuggestions(bizType, areaName).map((s, i) => (
+                      <button key={i} type="button"
+                        onClick={() => { setQuestionText(s.t); setTipoRespuesta(s.tipo); }}
+                        style={{
+                          padding: '0.65rem 1rem', borderRadius: '12px', textAlign: 'left', cursor: 'pointer',
+                          border: `1.5px solid ${questionText === s.t ? '#8b5cf6' : '#e2e8f0'}`,
+                          background: questionText === s.t ? '#faf5ff' : 'white', transition: 'all 0.15s',
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px',
+                        }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '600', color: questionText === s.t ? '#7c3aed' : '#1e293b' }}>{s.t}</span>
+                        <span style={{ fontSize: '0.62rem', color: '#94a3b8', whiteSpace: 'nowrap', flexShrink: 0 }}>{TIPO_LABELS[s.tipo]}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <label style={LS}>O escribe la tuya *</label>
                 <input type="text" value={questionText} onChange={e => setQuestionText(e.target.value)}
                   placeholder="ej. ¿Cómo calificarías tu visita hoy?"
                   style={{ ...IS(!!questionText), marginBottom: '1.25rem' }} />

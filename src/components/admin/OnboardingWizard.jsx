@@ -568,14 +568,14 @@ const OnboardingWizard = ({
       await supabase.from('Areas_Catalogo').delete().eq('tenant_id', validTid);
       await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', validTid);
       await supabase.from('locations').delete().eq('tenant_id', validTid);
-      // Reset local state so nothing from a previous partial run carries over
+      // Reset local state (async — don't read these state vars below this point)
       setSavedStoreId(null);
       setSavedLocationId(null);
       setSavedAreaId(null);
 
-      // Create store
-      let storeIdToUse = savedStoreId;
-      if (!storeIdToUse) {
+      // Always create fresh store after wipe (never reuse stale savedStoreId)
+      let storeIdToUse = null;
+      {
         const { data: existingStore } = await supabase.from('Tiendas_Catalogo').select('id').eq('nombre', storeName.trim()).eq('tenant_id', validTid).maybeSingle();
         if (existingStore?.id) {
           storeIdToUse = existingStore.id;

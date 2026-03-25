@@ -447,6 +447,17 @@ const OnboardingWizard = ({
 
       // Create location record (same fields as QRStudio)
       try {
+        // Re-geocode at save time using all available address fields for better precision
+        let coords = mapCoords;
+        if (!coords && (municipio || estado)) {
+          try {
+            const q = [calle.trim(), colonia.trim(), municipio.trim(), estado.trim(), 'México'].filter(Boolean).join(', ');
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+            const geoData = await geoRes.json();
+            if (geoData.length) coords = { lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) };
+          } catch (_) {}
+        }
+
         const { data: newLoc } = await supabase.from('locations').insert({
           tenant_id: validTid,
           name: storeName.trim(),
@@ -456,7 +467,7 @@ const OnboardingWizard = ({
           municipio:  municipio.trim() || null,
           estado:     estado.trim()    || null,
           whatsapp_number: phone.trim() || null,
-          ...(mapCoords && { lat: mapCoords.lat, lng: mapCoords.lng }),
+          ...(coords && { lat: coords.lat, lng: coords.lng }),
         }).select('id').single();
         if (newLoc?.id) setSavedLocationId(newLoc.id);
       } catch (_) { /* non-critical */ }

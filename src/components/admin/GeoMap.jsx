@@ -150,50 +150,31 @@ export default function GeoMap() {
     setLoading(true);
     setError(null);
     try {
-      // Get stores from admin catalog (has tenant_id + nombre)
-      const { data: catalogData, error: catErr } = await supabase
-        .from('Tiendas_Catalogo')
-        .select('id, nombre')
-        .eq('tenant_id', tenant.id);
-
-      if (catErr) throw catErr;
-      if (!catalogData || catalogData.length === 0) {
-        setStores([]);
-        setLoading(false);
-        return;
-      }
-
-      const catalogIds = catalogData.map(s => s.id);
-
-      // Get coordinates from locations table (same IDs, where lat/lng were added)
+      // Query locations directly by tenant_id — each location has its own UUID
       const { data: locData, error: locErr } = await supabase
         .from('locations')
-        .select('id, lat, lng, ciudad')
-        .in('id', catalogIds)
+        .select('id, name, lat, lng')
+        .eq('tenant_id', tenant.id)
         .not('lat', 'is', null)
         .not('lng', 'is', null);
 
       if (locErr) throw locErr;
 
-      // Merge: catalog name + location coordinates
-      const locMap = {};
-      (locData || []).forEach(l => { locMap[l.id] = l; });
-
-      const storeData = catalogData
-        .filter(s => locMap[s.id])
-        .map(s => ({ ...s, ...locMap[s.id] }));
-
-      if (storeData.length === 0) {
+      if (!locData || locData.length === 0) {
         setStores([]);
         setLoading(false);
         return;
       }
 
-      // Get feedback aggregates per store — filter by store IDs (avoids tenant_id dependency)
+      // Normalize: use `nombre` key for compatibility with the rest of the component
+      const storeData = locData.map(l => ({ ...l, nombre: l.name }));
+      const locationIds = storeData.map(s => s.id);
+
+      // Get feedback aggregates per location
       const { data: fbData, error: fbErr } = await supabase
-        .from('feedbacks')
+        .from('Feedback')
         .select('location_id, score')
-        .in('location_id', catalogIds);
+        .in('location_id', locationIds);
 
       if (fbErr) throw fbErr;
 

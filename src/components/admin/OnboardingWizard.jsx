@@ -514,32 +514,42 @@ const OnboardingWizard = ({
         setSavedStoreId(storeIdToUse);
       }
 
-      // Create location record (same fields as QRStudio)
-      try {
-        // Re-geocode at save time using all available address fields for better precision
-        let coords = mapCoords;
-        if (!coords && (municipio || estado)) {
-          try {
-            const q = [calle.trim(), colonia.trim(), municipio.trim(), estado.trim(), 'México'].filter(Boolean).join(', ');
-            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
-            const geoData = await geoRes.json();
-            if (geoData.length) coords = { lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) };
-          } catch (_) {}
-        }
+      // Create location record (idempotent — skip if already created this session)
+      if (!savedLocationId) {
+        try {
+          // Check if a location with this name already exists for this tenant
+          const { data: existingLoc } = await supabase.from('locations')
+            .select('id').eq('name', storeName.trim()).eq('tenant_id', validTid).maybeSingle();
 
-        const { data: newLoc } = await supabase.from('locations').insert({
-          tenant_id: validTid,
-          name: storeName.trim(),
-          cp:         cp.trim()        || null,
-          calle:      calle.trim()     || null,
-          colonia:    colonia.trim()   || null,
-          municipio:  municipio.trim() || null,
-          estado:     estado.trim()    || null,
-          whatsapp_number: phone.trim() || null,
-          ...(coords && { lat: coords.lat, lng: coords.lng }),
-        }).select('id').single();
-        if (newLoc?.id) setSavedLocationId(newLoc.id);
-      } catch (_) { /* non-critical */ }
+          if (existingLoc?.id) {
+            setSavedLocationId(existingLoc.id);
+          } else {
+            // Re-geocode at save time using all available address fields for better precision
+            let coords = mapCoords;
+            if (!coords && (municipio || estado)) {
+              try {
+                const q = [calle.trim(), colonia.trim(), municipio.trim(), estado.trim(), 'México'].filter(Boolean).join(', ');
+                const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+                const geoData = await geoRes.json();
+                if (geoData.length) coords = { lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) };
+              } catch (_) {}
+            }
+
+            const { data: newLoc } = await supabase.from('locations').insert({
+              tenant_id: validTid,
+              name: storeName.trim(),
+              cp:         cp.trim()        || null,
+              calle:      calle.trim()     || null,
+              colonia:    colonia.trim()   || null,
+              municipio:  municipio.trim() || null,
+              estado:     estado.trim()    || null,
+              whatsapp_number: phone.trim() || null,
+              ...(coords && { lat: coords.lat, lng: coords.lng }),
+            }).select('id').single();
+            if (newLoc?.id) setSavedLocationId(newLoc.id);
+          }
+        } catch (_) { /* non-critical */ }
+      }
 
       refreshMRR(validTid);
       await refreshData();

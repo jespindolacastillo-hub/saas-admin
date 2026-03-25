@@ -98,26 +98,33 @@ export default function OrganizationSettings() {
   const handleReset = async () => {
     if (!tenant?.id) return;
     setResetting(true);
+    const tid = tenant.id;
+    const errors = [];
+    const del = async (table) => {
+      const { error } = await supabase.from(table).delete().eq('tenant_id', tid);
+      if (error) errors.push(`${table}: ${error.message}`);
+    };
     try {
-      const tid = tenant.id;
-      // Delete all tenant data in order (FK constraints)
-      await supabase.from('Feedback').delete().eq('tenant_id', tid);
-      await supabase.from('Issues').delete().eq('tenant_id', tid);
-      await supabase.from('Alerts').delete().eq('tenant_id', tid);
-      await supabase.from('Metas_KPI').delete().eq('tenant_id', tid);
-      await supabase.from('Area_Preguntas').delete().eq('tenant_id', tid);
-      await supabase.from('Tienda_Areas').delete().eq('tenant_id', tid);
-      await supabase.from('Areas_Catalogo').delete().eq('tenant_id', tid);
-      await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', tid);
-      await supabase.from('locations').delete().eq('tenant_id', tid);
-      await supabase.from('qr_codes').delete().eq('tenant_id', tid);
+      // Delete all tenant data in dependency order
+      await del('feedbacks');
+      await del('Feedback');
+      await del('Issues');
+      await del('Alerts');
+      await del('Metas_KPI');
+      await del('Area_Preguntas');
+      await del('Tienda_Areas');
+      await del('Areas_Catalogo');
+      await del('Tiendas_Catalogo');
+      await del('qr_codes');
+      await del('locations');
       // Reset tenant to blank state (keep ID and user linked)
       await supabase.from('tenants').update({
         name: '', plan: 'trial', plan_status: 'trial',
-        logo_url: null, avg_ticket: null,
+        logo_url: null,
         trial_starts_at: new Date().toISOString(),
         trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
       }).eq('id', tid);
+      if (errors.length) console.warn('Reset partial errors:', errors);
       // Clear onboarding flag and reload
       localStorage.removeItem('onboarding_complete');
       localStorage.removeItem('saas_tenant_config');

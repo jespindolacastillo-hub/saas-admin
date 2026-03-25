@@ -117,15 +117,15 @@ export default function OrganizationSettings() {
       await del('Tiendas_Catalogo');
       await del('qr_codes');
       await del('locations');
-      // Reset tenant to blank state (keep ID and user linked)
-      await supabase.from('tenants').update({
-        name: '', plan: 'trial', plan_status: 'trial',
-        logo_url: null,
-        trial_starts_at: new Date().toISOString(),
-        trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
-      }).eq('id', tid);
+      // Delete the tenant row entirely so useTenant forces zero UUID on next load
+      await supabase.from('tenants').delete().eq('id', tid);
+      // Unlink user from tenant so wizard creates a truly fresh one
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('Usuarios').update({ tenant_id: null }).eq('email', user.email);
+      }
       if (errors.length) console.warn('Reset partial errors:', errors);
-      // Clear onboarding flag and reload
+      // Clear all local state and reload
       localStorage.removeItem('onboarding_complete');
       localStorage.removeItem('saas_tenant_config');
       window.location.reload();

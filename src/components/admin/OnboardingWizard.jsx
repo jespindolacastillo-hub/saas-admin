@@ -748,7 +748,7 @@ const OnboardingWizard = ({
   const canProceed = (() => {
     if (step === 0) return !!orgName.trim();
     if (step === 1) return !!storeName.trim() && cp.length === 5;
-    if (step === 2) return areaPreset !== null && (areaPreset !== 5 || !!areaCustom.trim());
+    if (step === 2) return areaPreset !== null && (!isOtroPreset || !!areaCustom.trim());
     if (step === 3) return !!questionText.trim();
     return true;
   })();

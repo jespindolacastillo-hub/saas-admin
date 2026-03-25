@@ -89,33 +89,46 @@ function UrgencyPanel({ hot, warm, cold, activeFilter, onFilter }) {
 
 // ─── WhatsApp compose modal ────────────────────────────────────────────────────
 function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
-  const name = locationName || 'nuestro negocio';
+  const bizName  = locationName || 'nuestro negocio';
   const couponCode = fb.coupon_code || null;
 
-  const buildVariant = (style) => {
+  const [senderName, setSenderName] = useState(() => localStorage.getItem('wa_sender_name') || '');
+  const [senderRole, setSenderRole] = useState(() => localStorage.getItem('wa_sender_role') || '');
+  const [activeVariant, setActiveVariant] = useState('empatico');
+  const [text, setText] = useState('');
+
+  const buildVariant = (style, sName, sRole) => {
     const couponBlock = couponCode
       ? (style === 'oferta'
           ? `\n\n🎟 *Cupón: ${couponCode}*${assignedCfg?.offer_description ? `\n📌 ${assignedCfg.offer_description}` : ''}${assignedCfg?.validity_days ? `\n📅 Válido ${assignedCfg.validity_days} días` : ''}`
-          : ` Te queremos compensar con este cupón exclusivo: *${couponCode}*${assignedCfg?.offer_description ? ` (${assignedCfg.offer_description})` : ''}${assignedCfg?.validity_days ? `, válido ${assignedCfg.validity_days} días` : ''}. 🎟`)
+          : ` Te queremos compensar con este cupón: *${couponCode}*${assignedCfg?.offer_description ? ` (${assignedCfg.offer_description})` : ''}${assignedCfg?.validity_days ? `, válido ${assignedCfg.validity_days} días` : ''}. 🎟`)
       : '';
-    const issue = fb.followup_answer
-      ? fb.followup_answer.toLowerCase()
-      : fb.comment ? 'lo que mencionaste' : 'tu experiencia';
+    const issue   = fb.followup_answer ? fb.followup_answer.toLowerCase() : fb.comment ? 'lo que mencionaste' : 'tu experiencia';
     const comment = fb.comment ? `"${fb.comment.slice(0,80)}${fb.comment.length > 80 ? '…' : ''}"` : null;
 
+    // Greeting line — personal if name provided
+    const greet = sName
+      ? `Hola, soy *${sName}*${sRole ? `, ${sRole}` : ''} de ${bizName}.`
+      : `Hola, somos ${bizName}.`;
+
+    // Signature — only if name provided
+    const sig = sName
+      ? `\n\n— *${sName}*${sRole ? `\n  ${sRole}` : ''}`
+      : '';
+
     if (style === 'empatico') return comment
-      ? `Hola, somos ${name}. Vimos que tu visita de hoy no fue lo que mereces: ${comment} 😔\n\nNos importa mucho tu opinión y queremos hacerlo bien.${couponBlock}\n\n¿Tienes un momento para que lo resolvamos juntos?`
-      : `Hola, somos ${name}. Notamos que tuviste un problema con ${issue} en tu visita de hoy y eso nos preocupa 😔\n\nQueremos que tu próxima visita sea perfecta.${couponBlock}\n\n¿Tienes un momento?`;
+      ? `${greet} Vi personalmente que tu visita de hoy no fue lo que mereces: ${comment} 😔\n\nMe importa mucho tu opinión y quiero hacerlo bien.${couponBlock}\n\n¿Tienes un momento para que lo resolvamos juntos?${sig}`
+      : `${greet} Noté que tuviste un problema con ${issue} en tu visita de hoy y eso me preocupa 😔\n\nQuiero que tu próxima visita sea perfecta.${couponBlock}\n\n¿Tienes un momento?${sig}`;
 
     if (style === 'directo') return comment
-      ? `Hola, somos ${name}. Notamos: ${comment} de hoy.${couponBlock} ¿Podemos compensarte?`
-      : `Hola, somos ${name}. Notamos el problema con ${issue} de hoy.${couponBlock} ¿Podemos compensarte?`;
+      ? `${greet} Noté: ${comment} de hoy.${couponBlock} ¿Puedo compensarte?${sig}`
+      : `${greet} Noté el problema con ${issue} de hoy.${couponBlock} ¿Puedo compensarte?${sig}`;
 
     if (style === 'oferta') return couponCode
-      ? `Hola, somos ${name} 👋\n\nSabemos que tu visita de hoy no fue perfecta. Por eso, te tenemos un regalo:${couponBlock}\n\n¿Lo aceptas?`
-      : `Hola, somos ${name}. Notamos que tu visita de hoy no fue perfecta 😔 Queremos compensarte con algo especial. ¿Tienes un momento?`;
+      ? `${greet} 👋\n\nSé que tu visita de hoy no fue perfecta. Por eso, quiero invitarte de regreso con este regalo:${couponBlock}\n\n¿Lo aceptas?${sig}`
+      : `${greet} Sé que tu visita de hoy no fue perfecta 😔 Quiero compensarte con algo especial. ¿Tienes un momento?${sig}`;
 
-    if (style === 'formal') return `Estimado cliente, le saluda ${name}.\n\nNos informamos de que su experiencia durante su visita de hoy no fue completamente satisfactoria${fb.followup_answer ? ` respecto a ${fb.followup_answer.toLowerCase()}` : ''}.${couponBlock}\n\nNos ponemos a su disposición para atender su caso. ¿Cuándo podría atenderle?`;
+    if (style === 'formal') return `Estimado cliente, le habla ${sName ? `*${sName}*${sRole ? `, ${sRole}` : ''}` : bizName}.\n\nMe informé de que su experiencia durante su visita de hoy no fue completamente satisfactoria${fb.followup_answer ? ` respecto a ${fb.followup_answer.toLowerCase()}` : ''}.${couponBlock}\n\nQuedo a su disposición personalmente para atender su caso. ¿Cuándo podría comunicarme con usted?${sig}`;
 
     return buildMessage(fb, locationName, couponCode, assignedCfg?.offer_description, assignedCfg?.validity_days);
   };
@@ -127,12 +140,26 @@ function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
     { key: 'formal',   label: '🏢 Formal'      },
   ];
 
-  const [activeVariant, setActiveVariant] = useState('empatico');
-  const [text, setText] = useState(() => buildVariant('empatico'));
+  // Initialize text on mount
+  useEffect(() => {
+    setText(buildVariant('empatico', senderName, senderRole));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const applyVariant = (key) => {
     setActiveVariant(key);
-    setText(buildVariant(key));
+    setText(buildVariant(key, senderName, senderRole));
+  };
+
+  const handleSenderName = (v) => {
+    setSenderName(v);
+    localStorage.setItem('wa_sender_name', v);
+    if (activeVariant) setText(buildVariant(activeVariant, v, senderRole));
+  };
+
+  const handleSenderRole = (v) => {
+    setSenderRole(v);
+    localStorage.setItem('wa_sender_role', v);
+    if (activeVariant) setText(buildVariant(activeVariant, senderName, v));
   };
 
   const formatPreview = (msg) =>
@@ -158,6 +185,36 @@ function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
 
           {/* Left: editor */}
           <div style={{ flex: 1, padding: 24, overflowY: 'auto', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Sender identity */}
+            <div style={{ background: T.bg, borderRadius: 12, padding: '14px 16px', border: `1.5px solid ${T.border}` }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>👤 ¿Quién envía el mensaje?</div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.7rem', color: T.muted, marginBottom: 4 }}>Tu nombre</div>
+                  <input
+                    value={senderName}
+                    onChange={e => handleSenderName(e.target.value)}
+                    placeholder="Jorge Espindola"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${senderName ? '#25D366' : T.border}`, fontFamily: font, fontSize: '0.85rem', color: T.ink, outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.7rem', color: T.muted, marginBottom: 4 }}>Tu cargo</div>
+                  <input
+                    value={senderRole}
+                    onChange={e => handleSenderRole(e.target.value)}
+                    placeholder="Director de Servicio a Clientes"
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${senderRole ? '#25D366' : T.border}`, fontFamily: font, fontSize: '0.85rem', color: T.ink, outline: 'none', background: '#fff', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              {senderName && (
+                <div style={{ marginTop: 8, fontSize: '0.72rem', color: '#15803D' }}>
+                  ✓ El mensaje irá firmado como <strong>{senderName}{senderRole ? `, ${senderRole}` : ''}</strong>
+                </div>
+              )}
+            </div>
 
             {/* Tone chips */}
             <div>

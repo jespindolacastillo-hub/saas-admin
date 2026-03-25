@@ -309,7 +309,6 @@ const OnboardingWizard = ({
 
         const { data: newTenant, error: tenantErr } = await supabase.from('tenants').insert([{
           name: orgName.trim() || storeName.trim(),
-          ...(bizType                && { business_type: bizType }),
           test_mode: true,
           ...(refCode     && { ref_code_used: refCode }),
           ...(affiliateId && { affiliate_id: affiliateId }),
@@ -335,7 +334,6 @@ const OnboardingWizard = ({
         // Update existing tenant with new info
         await supabase.from('tenants').update({
           name: orgName.trim() || undefined,
-          ...(bizType && { business_type: bizType }),
         }).eq('id', validTid);
       }
 

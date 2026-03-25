@@ -114,7 +114,7 @@ export default function OrganizationSettings() {
       // Reset tenant to blank state (keep ID and user linked)
       await supabase.from('tenants').update({
         name: '', plan: 'trial', plan_status: 'trial',
-        logo_url: null, avg_ticket: null, business_type: null,
+        logo_url: null, avg_ticket: null,
         trial_starts_at: new Date().toISOString(),
         trial_ends_at: new Date(Date.now() + 14 * 86400000).toISOString(),
       }).eq('id', tid);

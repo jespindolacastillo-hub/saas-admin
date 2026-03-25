@@ -492,6 +492,7 @@ const OnboardingWizard = ({
       if (label && !savedAreaId) {
         const { data: newArea, error: aErr } = await supabase.from('Areas_Catalogo').insert([{
           nombre: label, tenant_id: validTid, tienda_id: savedStoreId,
+          location_id: savedLocationId || null,
         }]).select('id').single();
         if (aErr) throw aErr;
         setSavedAreaId(newArea.id);

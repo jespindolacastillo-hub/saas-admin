@@ -160,15 +160,20 @@ const PhonePreview = ({ question, tipo, logoUrl }) => {
   );
 };
 
-// ─── Nominatim geocoding ──────────────────────────────────────────────────────
-const geocode = async (query) => {
+// ─── SEPOMEX CP lookup (same API as QRStudio) ────────────────────────────────
+const lookupCP = async (cp) => {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=es`;
-    const res = await fetch(url);
-    if (!res.ok) return null;
+    const res = await fetch(`https://sepomex.icalialabs.com/api/v1/zip_codes?zip_code=${cp}`);
     const data = await res.json();
-    if (!data.length) return null;
-    return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), display: data[0].display_name };
+    const zips = data.zip_codes || [];
+    if (!zips.length) return null;
+    const colonias = [...new Set(zips.map(z => z.d_asenta))].sort();
+    const first = zips[0];
+    return {
+      colonias,
+      municipio: first.D_mnpio || first.d_ciudad || '',
+      estado: first.d_estado || '',
+    };
   } catch { return null; }
 };
 
@@ -204,11 +209,13 @@ const OnboardingWizard = ({
   // Step 1 — branch
   const [storeName, setStoreName]     = useState(initialStep > 1 && stores.length ? stores[0]?.nombre || '' : '');
   const [cp, setCp]                   = useState('');
+  const [cpStatus, setCpStatus]       = useState('idle'); // idle | loading | found | error
+  const [coloniaOptions, setColoniaOptions] = useState([]);
   const [calle, setCalle]             = useState('');
   const [colonia, setColonia]         = useState('');
   const [municipio, setMunicipio]     = useState('');
   const [estado, setEstado]           = useState('');
-  const [mapCoords, setMapCoords]     = useState(null);    // { lat, lng }
+  const [mapCoords, setMapCoords]     = useState(null);
   const [geoLoading, setGeoLoading]   = useState(false);
   const [phone, setPhone]             = useState('');
 
@@ -229,9 +236,10 @@ const OnboardingWizard = ({
   const [selectedPlan, setSelectedPlan] = useState('trial');
 
   // Saved DB IDs
-  const [savedTenantId, setSavedTenantId] = useState(null);
-  const [savedStoreId, setSavedStoreId]   = useState(initialStep > 1 && stores.length ? stores[0]?.id || null : null);
-  const [savedAreaId, setSavedAreaId]     = useState(initialStep > 2 && areas.length ? areas[0]?.id || null : null);
+  const [savedTenantId, setSavedTenantId]     = useState(null);
+  const [savedStoreId, setSavedStoreId]       = useState(initialStep > 1 && stores.length ? stores[0]?.id || null : null);
+  const [savedAreaId, setSavedAreaId]         = useState(initialStep > 2 && areas.length ? areas[0]?.id || null : null);
+  const [savedLocationId, setSavedLocationId] = useState(null);
 
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
@@ -258,25 +266,34 @@ const OnboardingWizard = ({
     reader.readAsDataURL(file);
   };
 
-  // ── CP geocode (auto-trigger on 5 digits) ──
+  // ── CP lookup via SEPOMEX (same as QRStudio) ──
   const handleCpChange = async (val) => {
-    setCp(val);
-    if (val.length !== 5 || !/^\d{5}$/.test(val)) return;
-    setGeoLoading(true);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?postalcode=${val}&country=MX&format=json&limit=1&accept-language=es&addressdetails=1`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.length) {
-        const addr = data[0].address || {};
-        setMunicipio(addr.city || addr.town || addr.municipality || addr.county || '');
-        setEstado(addr.state || '');
-        setMapCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
-      } else {
-        setError('CP no encontrado. Verifica el número.');
-      }
-    } catch (_) {}
-    setGeoLoading(false);
+    const clean = val.replace(/\D/g, '');
+    setCp(clean);
+    if (clean.length !== 5) { setCpStatus('idle'); setColoniaOptions([]); return; }
+    setCpStatus('loading');
+    setColoniaOptions([]);
+    const result = await lookupCP(clean);
+    if (result) {
+      setColoniaOptions(result.colonias);
+      setMunicipio(result.municipio);
+      setEstado(result.estado);
+      setColonia(result.colonias.length === 1 ? result.colonias[0] : '');
+      setCpStatus('found');
+      // Geocode for map using municipio + estado + CP
+      setGeoLoading(true);
+      try {
+        const q = `${result.municipio}, ${result.estado}, México`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.length) setMapCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+      } catch (_) {}
+      setGeoLoading(false);
+    } else {
+      setCpStatus('error');
+      setError('CP no encontrado. Verifica el número.');
+    }
   };
 
   // ── Save step 0 → 1 (just local state, no DB yet) ──
@@ -366,21 +383,20 @@ const OnboardingWizard = ({
         setSavedStoreId(storeIdToUse);
       }
 
-      // Create location record with structured address
+      // Create location record (same fields as QRStudio)
       try {
-        const fullAddress = [calle.trim(), colonia.trim(), municipio.trim(), estado.trim(), cp.trim()].filter(Boolean).join(', ');
-        await supabase.from('locations').insert({
+        const { data: newLoc } = await supabase.from('locations').insert({
           tenant_id: validTid,
           name: storeName.trim(),
+          cp:         cp.trim()        || null,
+          calle:      calle.trim()     || null,
+          colonia:    colonia.trim()   || null,
+          municipio:  municipio.trim() || null,
+          estado:     estado.trim()    || null,
+          whatsapp_number: phone.trim() || null,
           ...(mapCoords && { lat: mapCoords.lat, lng: mapCoords.lng }),
-          ...(fullAddress && { address: fullAddress }),
-          ...(cp.trim()        && { cp: cp.trim() }),
-          ...(calle.trim()     && { calle: calle.trim() }),
-          ...(colonia.trim()   && { colonia: colonia.trim() }),
-          ...(municipio.trim() && { municipio: municipio.trim() }),
-          ...(estado.trim()    && { estado: estado.trim() }),
-          ...(phone.trim()     && { phone: phone.trim() }),
-        });
+        }).select('id').single();
+        if (newLoc?.id) setSavedLocationId(newLoc.id);
       } catch (_) { /* non-critical */ }
 
       refreshMRR(validTid);
@@ -418,12 +434,14 @@ const OnboardingWizard = ({
         if (aErr) throw aErr;
         setSavedAreaId(newArea.id);
 
-        // QR codes table
+        // QR codes table — linked to the location created in step 1
         try {
           await supabase.from('qr_codes').insert({
-            tenant_id: validTid, location_id: null,
-            type: 'area', label,
-            icon: AREA_PRESETS[areaPreset < 5 ? areaPreset : 0].icon,
+            tenant_id: validTid,
+            location_id: savedLocationId || null,
+            area_id: newArea.id,
+            type: 'area',
+            label,
           });
         } catch (_) {}
       }
@@ -707,56 +725,65 @@ const OnboardingWizard = ({
                       placeholder="ej. Sucursal Interlomas" style={IS(!!storeName)} />
                   </div>
 
-                  {/* CP → auto-fill municipio/estado + mapa */}
+                  {/* CP → SEPOMEX → colonias dropdown */}
                   <div>
                     <label style={LS}>
                       Código postal *
-                      {geoLoading && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px', textTransform: 'none' }}>Buscando…</span>}
-                      {mapCoords && !geoLoading && <span style={{ fontWeight: 400, color: '#00C9A7', marginLeft: '8px', textTransform: 'none' }}>✓ Ubicado</span>}
+                      {cpStatus === 'loading' && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px', textTransform: 'none' }}>Buscando…</span>}
+                      {cpStatus === 'found'   && <span style={{ fontWeight: 400, color: '#00C9A7', marginLeft: '8px', textTransform: 'none' }}>✓ {municipio}</span>}
+                      {cpStatus === 'error'   && <span style={{ fontWeight: 400, color: '#ef4444', marginLeft: '8px', textTransform: 'none' }}>CP no encontrado</span>}
                     </label>
                     <input type="text" inputMode="numeric" maxLength={5} value={cp}
-                      onChange={e => handleCpChange(e.target.value.replace(/\D/g,''))}
-                      placeholder="ej. 52760" style={IS(!!mapCoords)} />
+                      onChange={e => handleCpChange(e.target.value)}
+                      placeholder="ej. 53900" style={IS(cpStatus === 'found')} />
                   </div>
 
-                  {/* Mapa aparece al geocodificar */}
-                  {mapCoords && (
+                  {/* Mapa al ubicar */}
+                  {mapCoords && !geoLoading && (
                     <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #00C9A7' }}>
                       <iframe title="map" src={osmEmbedUrl(mapCoords.lat, mapCoords.lng)}
                         style={{ width: '100%', height: '150px', border: 'none' }} loading="lazy" />
                     </div>
                   )}
 
-                  {/* Municipio/Estado — auto-llenado, editable */}
-                  {(municipio || estado) && (
+                  {/* Municipio / Estado — auto-llenados */}
+                  {cpStatus === 'found' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       <div>
                         <label style={LS}>Municipio / Alcaldía</label>
                         <input type="text" value={municipio} onChange={e => setMunicipio(e.target.value)}
-                          placeholder="ej. Huixquilucan" style={IS(!!municipio)} />
+                          style={IS(!!municipio)} />
                       </div>
                       <div>
                         <label style={LS}>Estado</label>
                         <input type="text" value={estado} onChange={e => setEstado(e.target.value)}
-                          placeholder="ej. Estado de México" style={IS(!!estado)} />
+                          style={IS(!!estado)} />
                       </div>
                     </div>
                   )}
 
-                  {/* Colonia y calle (opcionales) */}
-                  {mapCoords && (
-                    <>
-                      <div>
-                        <label style={LS}>Colonia <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
-                        <input type="text" value={colonia} onChange={e => setColonia(e.target.value)}
-                          placeholder="ej. Bosque Real" style={IS(!!colonia)} />
-                      </div>
-                      <div>
-                        <label style={LS}>Calle y número <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
-                        <input type="text" value={calle} onChange={e => setCalle(e.target.value)}
-                          placeholder="ej. Av. Bosques de las Lomas 123" style={IS(!!calle)} />
-                      </div>
-                    </>
+                  {/* Colonia — dropdown si hay opciones, input si no */}
+                  {cpStatus === 'found' && (
+                    <div>
+                      <label style={LS}>Colonia <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
+                      {coloniaOptions.length > 1
+                        ? <select value={colonia} onChange={e => setColonia(e.target.value)}
+                            style={{ ...IS(!!colonia), appearance: 'none', cursor: 'pointer' }}>
+                            <option value="">Selecciona una colonia…</option>
+                            {coloniaOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        : <input type="text" value={colonia} onChange={e => setColonia(e.target.value)}
+                            placeholder="ej. Viveros de la Loma" style={IS(!!colonia)} />}
+                    </div>
+                  )}
+
+                  {/* Calle */}
+                  {cpStatus === 'found' && (
+                    <div>
+                      <label style={LS}>Calle y número <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
+                      <input type="text" value={calle} onChange={e => setCalle(e.target.value)}
+                        placeholder="ej. Eje Satélite Tlalnepantla 9" style={IS(!!calle)} />
+                    </div>
                   )}
 
                   <div>

@@ -302,6 +302,58 @@ const osmEmbedUrl = (lat, lng) => {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - d},${lat - d},${lng + d},${lat + d}&layer=mapnik&marker=${lat},${lng}`;
 };
 
+// ─── Smart local question improver ───────────────────────────────────────────
+const improveQuestion = (raw, bizType, areaName) => {
+  let q = raw.trim();
+  if (!q) return q;
+
+  // 1. Fix irregular capitalization (Title Case mid-sentence → lowercase except first word)
+  q = q.replace(/([a-záéíóúüñA-ZÁÉÍÓÚÜÑ]+)/g, (word, _, offset) => {
+    if (offset === 0) return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    // Keep acronyms
+    if (word === word.toUpperCase() && word.length > 1) return word;
+    return word.toLowerCase();
+  });
+
+  // 2. Remove extra spaces
+  q = q.replace(/\s+/g, ' ').trim();
+
+  // 3. Fix spacing around punctuation
+  q = q.replace(/\s([?,!.])/g, '$1');
+
+  // 4. Ensure ends with ?
+  if (!/[?!]$/.test(q)) q += '?';
+
+  // 5. Add opening ¿ if missing
+  if (!q.startsWith('¿') && !q.startsWith('¡')) q = '¿' + q;
+
+  // 6. Pattern rewrites — convert flat statements into engaging questions
+  const rewrites = [
+    // "fue correcta/buena/bien" patterns
+    [/¿(.+?)\s+fue\s+correcta\?$/i, '¿$1 cumplió con tus expectativas?'],
+    [/¿(.+?)\s+fue\s+bien\?$/i, '¿Cómo estuvo $1?'],
+    [/¿(.+?)\s+estuvo\s+bien\?$/i, '¿Cómo estuvo $1?'],
+    // "está/están bien" patterns
+    [/¿(.+?)\s+está(?:n)?\s+bien\?$/i, '¿Cómo encontraste $1?'],
+    // "hay/tiene" patterns
+    [/¿(.+?)\s+(?:hay|tiene|había)\s+(.+?)\?$/i, '¿$1 contaba con $2?'],
+    // Strip leading "La/El/Los/Las" from noun-first questions
+    [/^¿(La|El|Los|Las)\s+([a-záéíóúüñ].+)/, (_, art, rest) => `¿${art} ${rest}`],
+  ];
+
+  for (const [pattern, replacement] of rewrites) {
+    const replaced = q.replace(pattern, replacement);
+    if (replaced !== q) { q = replaced; break; }
+  }
+
+  // 7. Final capitalization fix after rewrites
+  q = q.charAt(0) + q.slice(1, 2).toUpperCase() + q.slice(2);
+  // Make sure after ¿ is uppercase
+  q = q.replace(/^¿(.)/, (_, c) => '¿' + c.toUpperCase());
+
+  return q;
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 const OnboardingWizard = ({
   onComplete, session,
@@ -1061,10 +1113,16 @@ const OnboardingWizard = ({
                       onClick={async () => {
                         setImproving(true);
                         try {
-                          const { data, error } = await supabase.functions.invoke('improve-question', {
-                            body: { question: questionText, bizType, areaName },
-                          });
-                          if (!error && data?.improved) setQuestionText(data.improved);
+                          // Try edge function first (only if deployed); fallback to local
+                          let improved = null;
+                          try {
+                            const { data, error } = await supabase.functions.invoke('improve-question', {
+                              body: { question: questionText, bizType, areaName },
+                            });
+                            if (!error && data?.improved) improved = data.improved;
+                          } catch (_) {}
+                          // Local smart improvement as fallback
+                          setQuestionText(improved || improveQuestion(questionText, bizType, areaName));
                         } catch (_) {}
                         setImproving(false);
                       }}

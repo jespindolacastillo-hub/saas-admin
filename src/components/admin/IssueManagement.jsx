@@ -357,7 +357,6 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
     const urlText = finalText.length <= 500 ? `?text=${encodeURIComponent(finalText)}` : '';
     window.open(`https://wa.me/52${phone}${urlText}`, '_blank');
     setShowWAModal(false);
-    if (contacted) return;
     setSaving(true);
     const now = new Date().toISOString();
     const u = { recovery_status: 'contacted', recovery_at: now, recovery_actor: userEmail };
@@ -556,6 +555,172 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
           onSend={handleWhatsApp}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Followup card (En seguimiento) ───────────────────────────────────────────
+function FollowupCard({ fb, locationName, qrLabel, userEmail, coupons, onUpdate }) {
+  const [saving, setSaving]   = useState(false);
+  const [showWAModal, setShowWAModal] = useState(false);
+  const [couponOpen, setCouponOpen]   = useState(false);
+
+  const status      = fb.recovery_status;
+  const scoreColor  = fb.score <= 1 ? T.red : T.coral;
+  const assignedCfg = fb.coupon_config_id ? coupons.find(c => c.id === fb.coupon_config_id) : null;
+
+  const STATUS_META = {
+    contacted: { label: '📤 Enviado',      color: '#3B82F6', bg: '#EFF6FF' },
+    responded:  { label: '💬 Respondió',    color: T.amber,   bg: '#FFFBEB' },
+    committed:  { label: '🤝 Comprometido', color: T.teal,    bg: '#F0FDF4' },
+  };
+  const meta = STATUS_META[status] || STATUS_META.contacted;
+
+  const ACTIONS = {
+    contacted: { primary: { label: '💬 Respondió',       next: 'responded' }, secondary: { label: 'Sin respuesta', next: 'lost' } },
+    responded:  { primary: { label: '🤝 Va a regresar',   next: 'committed' }, secondary: { label: 'No le interesa', next: 'lost' } },
+    committed:  { primary: { label: '✅ Recuperado',       next: 'resolved'  }, secondary: { label: 'No regresó',     next: 'lost' } },
+  };
+  const act = ACTIONS[status] || ACTIONS.contacted;
+
+  const advance = async (newStatus) => {
+    setSaving(true);
+    const now = new Date().toISOString();
+    const u = (newStatus === 'resolved' || newStatus === 'lost')
+      ? { recovery_status: newStatus, recovery_resolved_at: now }
+      : { recovery_status: newStatus };
+    await supabase.from('feedbacks').update(u).eq('id', fb.id);
+    onUpdate({ ...fb, ...u });
+    setSaving(false);
+  };
+
+  const handleWhatsApp = async (customText) => {
+    const finalText = customText || buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null);
+    const phone = fb.contact_phone.replace(/\D/g, '');
+    const urlText = finalText.length <= 500 ? `?text=${encodeURIComponent(finalText)}` : '';
+    window.open(`https://wa.me/52${phone}${urlText}`, '_blank');
+    setShowWAModal(false);
+  };
+
+  const handleAssignCoupon = async (cfg) => {
+    setSaving(true); setCouponOpen(false);
+    const code = genCode(cfg.coupon_prefix || 'MANUAL');
+    const upd = { coupon_code: code, coupon_config_id: cfg.id, recovery_sent: true };
+    await supabase.from('feedbacks').update(upd).eq('id', fb.id);
+    onUpdate({ ...fb, ...upd });
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ background: meta.bg, border: `1.5px solid ${meta.color}30`, borderLeft: `4px solid ${meta.color}`, borderRadius: 14, padding: '16px 18px' }}>
+      {/* Top row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: scoreColor + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: scoreColor, fontSize: '1rem', flexShrink: 0 }}>{fb.score}★</div>
+          <div>
+            <div style={{ fontWeight: 700, color: T.ink, fontSize: '0.88rem' }}>
+              {locationName || '—'}
+              {qrLabel && <span style={{ fontWeight: 600, color: T.purple, fontSize: '0.78rem' }}> · 📍 {qrLabel}</span>}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>
+              {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
+              {fb.recovery_at && <span> · Contactado {formatDistanceToNow(new Date(fb.recovery_at), { locale: es, addSuffix: true })}</span>}
+            </div>
+          </div>
+        </div>
+        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: meta.color, background: meta.color + '18', padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' }}>{meta.label}</span>
+      </div>
+
+      {/* Problem */}
+      {(fb.followup_answer || fb.comment) && (
+        <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 10, padding: '10px 14px', marginBottom: 12, border: `1px solid ${meta.color}20` }}>
+          {fb.followup_answer && <span style={{ fontWeight: 700, color: T.coral, fontSize: '0.85rem' }}>{fb.followup_answer}{fb.comment ? ' · ' : ''}</span>}
+          {fb.comment && <span style={{ fontSize: '0.85rem', color: T.ink, fontStyle: 'italic' }}>"{fb.comment}"</span>}
+        </div>
+      )}
+
+      {/* Bottom row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {fb.contact_phone && <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Phone size={13} color="#25D366" /><span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>{fb.contact_phone}</span></div>}
+          {fb.coupon_code
+            ? <span style={{ fontSize: '0.72rem', color: T.purple, fontWeight: 700, background: T.purple + '10', borderRadius: 999, padding: '2px 8px' }}>🎟 {fb.coupon_code}</span>
+            : coupons.length > 0 && (
+              <div style={{ position: 'relative' }}>
+                <button onClick={() => setCouponOpen(o => !o)} style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px dashed ${T.border}`, background: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontFamily: font, fontSize: '0.75rem', color: T.muted, display: 'flex', alignItems: 'center', gap: 4 }}><Tag size={11} /> Cupón ▾</button>
+                {couponOpen && (
+                  <>
+                    <div onClick={() => setCouponOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 19 }} />
+                    <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 4, zIndex: 20, background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 240, overflow: 'hidden' }}>
+                      {coupons.map((cfg, i) => (
+                        <button key={i} onClick={() => handleAssignCoupon(cfg)} style={{ width: '100%', padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: font, borderBottom: i < coupons.length - 1 ? `1px solid ${T.border}` : 'none' }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>{cfg.offer_description || cfg.coupon_prefix}</div>
+                          <div style={{ fontSize: '0.68rem', color: T.muted, marginTop: 2 }}>Válido {cfg.validity_days || 30} días · {cfg.coupon_prefix}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          }
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => advance(act.secondary.next)} disabled={saving} style={{ padding: '7px 12px', borderRadius: 9, border: `1.5px solid ${T.border}`, background: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: font, fontSize: '0.75rem', fontWeight: 600, color: T.muted }}>{act.secondary.label}</button>
+          {fb.contact_phone && (
+            <button onClick={() => setShowWAModal(true)} disabled={saving} style={{ padding: '7px 12px', borderRadius: 9, border: `1.5px solid #25D366`, background: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontFamily: font, fontSize: '0.75rem', fontWeight: 700, color: '#16A34A', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <MessageSquare size={12} /> WA
+            </button>
+          )}
+          <button onClick={() => advance(act.primary.next)} disabled={saving} style={{ padding: '9px 16px', borderRadius: 9, border: 'none', background: meta.color, color: '#fff', fontFamily: font, fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: `0 3px 8px ${meta.color}40` }}>
+            {saving ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : act.primary.label}
+          </button>
+        </div>
+      </div>
+
+      {showWAModal && <WAComposeModal fb={fb} locationName={locationName} assignedCfg={assignedCfg} onClose={() => setShowWAModal(false)} onSend={handleWhatsApp} />}
+    </div>
+  );
+}
+
+// ─── History card ──────────────────────────────────────────────────────────────
+function HistoryCard({ fb, locationName, qrLabel }) {
+  const recovered  = fb.recovery_status === 'resolved' || fb.coupon_redeemed;
+  const scoreColor = fb.score <= 1 ? T.red : T.coral;
+
+  return (
+    <div style={{ background: T.card, border: `1.5px solid ${T.border}`, borderLeft: `4px solid ${recovered ? T.teal : T.muted}`, borderRadius: 14, padding: '14px 18px', opacity: 0.9 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 9, background: scoreColor + '14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: scoreColor, fontSize: '0.9rem', flexShrink: 0 }}>{fb.score}★</div>
+          <div>
+            <div style={{ fontWeight: 700, color: T.ink, fontSize: '0.85rem' }}>
+              {locationName || '—'}
+              {qrLabel && <span style={{ fontWeight: 600, color: T.purple, fontSize: '0.75rem' }}> · 📍 {qrLabel}</span>}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: T.muted, marginTop: 1 }}>
+              {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
+              {fb.recovery_resolved_at && <span> · Cerrado {formatDistanceToNow(new Date(fb.recovery_resolved_at), { locale: es, addSuffix: true })}</span>}
+            </div>
+            {(fb.followup_answer || fb.comment) && (
+              <div style={{ fontSize: '0.75rem', color: T.muted, marginTop: 3 }}>
+                {fb.followup_answer && <span style={{ color: T.coral, fontWeight: 600 }}>{fb.followup_answer}{fb.comment ? ' — ' : ''}</span>}
+                {fb.comment && <span style={{ fontStyle: 'italic' }}>"{fb.comment.slice(0,80)}{fb.comment.length > 80 ? '…' : ''}"</span>}
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {fb.coupon_code && (
+            <span style={{ fontSize: '0.7rem', color: T.purple, fontWeight: 700, background: T.purple + '10', borderRadius: 999, padding: '2px 8px' }}>
+              🎟 {fb.coupon_code}{fb.coupon_redeemed ? ' ✓' : ''}
+            </span>
+          )}
+          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: recovered ? T.teal : T.muted, background: (recovered ? T.teal : T.muted) + '15', padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+            {recovered ? '✅ Recuperado' : '❌ No recuperado'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -787,18 +952,22 @@ export default function IssueManagement() {
 
   const now = new Date();
 
-  // Bucket every feedback by age (regardless of phone — for urgency panel counts)
+  // ── Pending (Sin atender) ──────────────────────────────────────────────────
   const allPending = feedbacks.filter(f => !f.recovery_status || f.recovery_status === 'pending');
-  const hotAll  = allPending.filter(f => new Date(f.created_at) > subHours(now, 2));
-  const warmAll = allPending.filter(f => new Date(f.created_at) <= subHours(now, 2) && new Date(f.created_at) > subHours(now, 24));
-  const coldAll = allPending.filter(f => new Date(f.created_at) <= subHours(now, 24));
+  const hotAll     = allPending.filter(f => new Date(f.created_at) > subHours(now, 2));
+  const warmAll    = allPending.filter(f => new Date(f.created_at) <= subHours(now, 2) && new Date(f.created_at) > subHours(now, 24));
+  const expiredAll = allPending.filter(f => new Date(f.created_at) <= subHours(now, 24));
 
-  // Actionable queue (has phone) — used in table
   const hot     = hotAll.filter(f => f.contact_phone);
   const warm    = warmAll.filter(f => f.contact_phone);
-  const cold    = coldAll.filter(f => f.contact_phone);
-  const contacted = feedbacks.filter(f => f.recovery_status === 'contacted');
+  const expired = expiredAll.filter(f => f.contact_phone);
   const noPhone = allPending.filter(f => !f.contact_phone);
+
+  // ── En seguimiento ─────────────────────────────────────────────────────────
+  const followupRows = feedbacks.filter(f => ['contacted', 'responded', 'committed'].includes(f.recovery_status));
+
+  // ── Historial ──────────────────────────────────────────────────────────────
+  const historyRows = feedbacks.filter(f => ['resolved', 'lost'].includes(f.recovery_status) || f.coupon_redeemed);
 
   const getBucket = (fb) => {
     if (new Date(fb.created_at) > subHours(now, 2)) return 'hot';
@@ -806,12 +975,11 @@ export default function IssueManagement() {
     return 'cold';
   };
 
-  // Build filtered rows for table
   const queueRows = useMemo(() => {
-    let rows = [...hot, ...warm, ...cold, ...contacted];
-    if (filter === 'hot')  rows = rows.filter(f => new Date(f.created_at) > subHours(now, 2));
-    if (filter === 'warm') rows = rows.filter(f => new Date(f.created_at) <= subHours(now, 2) && new Date(f.created_at) > subHours(now, 24));
-    if (filter === 'cold') rows = rows.filter(f => new Date(f.created_at) <= subHours(now, 24));
+    let rows = [...hot, ...warm];
+    if (filter === 'hot')  rows = hot;
+    if (filter === 'warm') rows = warm;
+    if (filter === 'cold') rows = expired;
     return rows;
   }, [feedbacks, filter]);
 
@@ -826,7 +994,7 @@ export default function IssueManagement() {
         <div>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: T.ink, marginBottom: 2 }}>Recuperación</h2>
           <p style={{ fontSize: '0.82rem', color: T.muted }}>
-            {loading ? 'Cargando…' : totalActionable === 0 ? 'Sin clientes pendientes' : `${totalActionable} cliente${totalActionable !== 1 ? 's' : ''} por contactar`}
+            {loading ? 'Cargando…' : `${totalActionable} por contactar · ${followupRows.length} en seguimiento · ${expired.length} vencidos`}
           </p>
         </div>
         <button onClick={loadData} disabled={loading} style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.card, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8rem', fontWeight: 600, color: T.muted }}>
@@ -909,10 +1077,12 @@ export default function IssueManagement() {
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: T.bg, borderRadius: 12, padding: 4, width: 'fit-content' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: T.bg, borderRadius: 12, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
         {[
-          { key: 'queue',      label: 'Cola de recuperación', badge: totalActionable, badgeColor: T.red   },
-          { key: 'validation', label: 'Validar cupones',      badge: pendingCoupons,  badgeColor: T.amber },
+          { key: 'queue',      label: 'Sin atender',     badge: totalActionable + expired.length, badgeColor: totalActionable > 0 ? T.red : T.muted },
+          { key: 'followup',   label: 'En seguimiento',  badge: followupRows.length, badgeColor: '#3B82F6' },
+          { key: 'validation', label: 'Validar cupones', badge: pendingCoupons,      badgeColor: T.amber },
+          { key: 'history',    label: 'Historial',       badge: 0,                  badgeColor: T.muted },
         ].map(({ key, label, badge: b, badgeColor }) => (
           <button key={key} onClick={() => setTab(key)} style={{
             padding: '7px 16px', borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -928,37 +1098,64 @@ export default function IssueManagement() {
         ))}
       </div>
 
-      {/* Queue table */}
+      {/* Tab: Sin atender */}
       {tab === 'queue' && (
         loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {[1,2,3].map(i => <div key={i} style={{ height: 56, background: T.card, borderRadius: 12, border: `1px solid ${T.border}`, animation: 'pulse 1.5s ease-in-out infinite' }} />)}
           </div>
-        ) : queueRows.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏆</div>
-            <div style={{ fontWeight: 800, color: T.ink, fontSize: '1.1rem', marginBottom: 8 }}>
-              {filter ? 'Sin clientes en este rango' : 'Sin clientes en riesgo'}
-            </div>
-            <div style={{ fontSize: '0.88rem', color: T.muted }}>
-              {filter ? <button onClick={() => setFilter(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.coral, fontFamily: font, fontSize: '0.88rem', textDecoration: 'underline' }}>Ver todos</button> : 'No hay feedback negativo reciente que requiera acción.'}
-            </div>
-          </div>
         ) : (
           <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {queueRows.map(fb => (
-                <QueueCard key={fb.id} fb={fb}
-                  locationName={locations.find(l => l.id === fb.location_id)?.name}
-                  qrLabel={qrLabels[fb.qr_id] || null}
-                  bucket={getBucket(fb)}
-                  userEmail={userEmail}
-                  coupons={coupons}
-                  onUpdate={updateFeedback}
-                  isEscalated={escalationBanner.some(e => e.id === fb.id)}
-                />
-              ))}
-            </div>
+            {queueRows.length === 0 && !expired.length ? (
+              <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+                <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏆</div>
+                <div style={{ fontWeight: 800, color: T.ink, fontSize: '1.1rem', marginBottom: 8 }}>Sin clientes por atender</div>
+                <div style={{ fontSize: '0.88rem', color: T.muted }}>No hay feedback negativo reciente que requiera acción.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {queueRows.map(fb => (
+                  <QueueCard key={fb.id} fb={fb}
+                    locationName={locations.find(l => l.id === fb.location_id)?.name}
+                    qrLabel={qrLabels[fb.qr_id] || null}
+                    bucket={getBucket(fb)}
+                    userEmail={userEmail}
+                    coupons={coupons}
+                    onUpdate={updateFeedback}
+                    isEscalated={escalationBanner.some(e => e.id === fb.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Vencidos section */}
+            {expired.length > 0 && !filter && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <div style={{ flex: 1, height: 1, background: T.border }} />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>
+                    ⚠️ Vencidos sin contactar ({expired.length}) — ventana de recuperación cerrada
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: T.border }} />
+                </div>
+                <div style={{ fontSize: '0.75rem', color: T.muted, marginBottom: 10, padding: '8px 12px', background: '#FFFBEB', borderRadius: 8, border: '1px solid #FDE68A' }}>
+                  💡 La probabilidad de recuperar baja a ~15%, pero aún vale el intento. Un mensaje tardío es mejor que ninguno.
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {expired.map(fb => (
+                    <QueueCard key={fb.id} fb={fb}
+                      locationName={locations.find(l => l.id === fb.location_id)?.name}
+                      qrLabel={qrLabels[fb.qr_id] || null}
+                      bucket="cold"
+                      userEmail={userEmail}
+                      coupons={coupons}
+                      onUpdate={updateFeedback}
+                      isEscalated={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {noPhone.length > 0 && !filter && (
               <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 12, background: T.bg, border: `1px solid ${T.border}`, fontSize: '0.78rem', color: T.muted }}>
@@ -969,8 +1166,66 @@ export default function IssueManagement() {
         )
       )}
 
+      {/* Tab: En seguimiento */}
+      {tab === 'followup' && !loading && (
+        followupRows.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>💬</div>
+            <div style={{ fontWeight: 800, color: T.ink, marginBottom: 8 }}>Sin conversaciones activas</div>
+            <div style={{ fontSize: '0.85rem', color: T.muted }}>Los clientes que contactes por WhatsApp aparecerán aquí para hacer seguimiento.</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {followupRows.map(fb => (
+              <FollowupCard key={fb.id} fb={fb}
+                locationName={locations.find(l => l.id === fb.location_id)?.name}
+                qrLabel={qrLabels[fb.qr_id] || null}
+                userEmail={userEmail}
+                coupons={coupons}
+                onUpdate={updateFeedback}
+              />
+            ))}
+          </div>
+        )
+      )}
+
+      {/* Tab: Validar cupones */}
       {tab === 'validation' && !loading && (
         <ValidationTab feedbacks={feedbacks} locations={locations} tenant={tenant} userEmail={userEmail} onUpdate={updateFeedback} />
+      )}
+
+      {/* Tab: Historial */}
+      {tab === 'history' && !loading && (
+        historyRows.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📋</div>
+            <div style={{ fontWeight: 800, color: T.ink, marginBottom: 8 }}>Sin casos cerrados aún</div>
+            <div style={{ fontSize: '0.85rem', color: T.muted }}>Los casos recuperados y no recuperados aparecerán aquí.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+              {[
+                { label: 'Recuperados', count: historyRows.filter(f => f.recovery_status === 'resolved' || f.coupon_redeemed).length, color: T.teal },
+                { label: 'No recuperados', count: historyRows.filter(f => f.recovery_status === 'lost' && !f.coupon_redeemed).length, color: T.muted },
+                { label: 'Tasa de éxito', count: historyRows.length > 0 ? Math.round(historyRows.filter(f => f.recovery_status === 'resolved' || f.coupon_redeemed).length / historyRows.length * 100) + '%' : '—', color: T.purple },
+              ].map(s => (
+                <div key={s.label} style={{ background: T.card, border: `1.5px solid ${T.border}`, borderRadius: 14, padding: '14px 18px' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 800, color: s.color }}>{s.count}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {historyRows.map(fb => (
+                <HistoryCard key={fb.id} fb={fb}
+                  locationName={locations.find(l => l.id === fb.location_id)?.name}
+                  qrLabel={qrLabels[fb.qr_id] || null}
+                />
+              ))}
+            </div>
+          </>
+        )
       )}
 
       <style>{`

@@ -283,7 +283,10 @@ const TIPO_LABELS = { stars:'⭐ Estrellas', si_no:'👍 Sí / No', nps:'📊 NP
 // ─── SEPOMEX CP lookup (same API as QRStudio) ────────────────────────────────
 const lookupCP = async (cp) => {
   try {
-    const res = await fetch(`https://sepomex.icalialabs.com/api/v1/zip_codes?zip_code=${cp}`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(`https://sepomex.icalialabs.com/api/v1/zip_codes?zip_code=${cp}`, { signal: controller.signal });
+    clearTimeout(timeout);
     const data = await res.json();
     const zips = data.zip_codes || [];
     if (!zips.length) return null;
@@ -448,26 +451,35 @@ const OnboardingWizard = ({
     if (clean.length !== 5) { setCpStatus('idle'); setColoniaOptions([]); return; }
     setCpStatus('loading');
     setColoniaOptions([]);
-    const result = await lookupCP(clean);
-    if (result) {
-      setColoniaOptions(result.colonias);
-      setMunicipio(result.municipio);
-      setEstado(result.estado);
-      setColonia(result.colonias.length === 1 ? result.colonias[0] : '');
-      setCpStatus('found');
-      // Geocode for map using municipio + estado + CP
-      setGeoLoading(true);
-      try {
-        const q = `${result.municipio}, ${result.estado}, México`;
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.length) setMapCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
-      } catch (_) {}
-      setGeoLoading(false);
-    } else {
+    try {
+      const result = await lookupCP(clean);
+      if (result) {
+        setColoniaOptions(result.colonias);
+        setMunicipio(result.municipio);
+        setEstado(result.estado);
+        setColonia(result.colonias.length === 1 ? result.colonias[0] : '');
+        setCpStatus('found');
+        // Geocode for map using municipio + estado
+        setGeoLoading(true);
+        try {
+          const q = `${result.municipio}, ${result.estado}, México`;
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`;
+          const geoController = new AbortController();
+          const geoTimeout = setTimeout(() => geoController.abort(), 6000);
+          const res = await fetch(url, { signal: geoController.signal });
+          clearTimeout(geoTimeout);
+          const data = await res.json();
+          if (data.length) setMapCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        } catch (_) {}
+        setGeoLoading(false);
+      } else {
+        setCpStatus('error');
+        setError('CP no encontrado. Verifica el número.');
+      }
+    } catch (_) {
+      // Network timeout or API error — let user proceed anyway
       setCpStatus('error');
-      setError('CP no encontrado. Verifica el número.');
+      setError('No se pudo verificar el CP. Puedes continuar sin colonia.');
     }
   };
 
@@ -747,7 +759,7 @@ const OnboardingWizard = ({
 
   const canProceed = (() => {
     if (step === 0) return !!orgName.trim();
-    if (step === 1) return !!storeName.trim() && cp.length === 5;
+    if (step === 1) return !!storeName.trim() && (cp.length === 0 || cp.length === 5) && cpStatus !== 'loading';
     if (step === 2) return areaPreset !== null && (!isOtroPreset || !!areaCustom.trim());
     if (step === 3) return !!questionText.trim();
     return true;

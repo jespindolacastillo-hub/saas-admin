@@ -87,10 +87,185 @@ function UrgencyPanel({ hot, warm, cold, activeFilter, onFilter }) {
   );
 }
 
-// ─── Table row ────────────────────────────────────────────────────────────────
+// ─── WhatsApp compose modal ────────────────────────────────────────────────────
+function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
+  const name = locationName || 'nuestro negocio';
+  const couponCode = fb.coupon_code || null;
+
+  const buildVariant = (style) => {
+    const couponBlock = couponCode
+      ? (style === 'oferta'
+          ? `\n\n🎟 *Cupón: ${couponCode}*${assignedCfg?.offer_description ? `\n📌 ${assignedCfg.offer_description}` : ''}${assignedCfg?.validity_days ? `\n📅 Válido ${assignedCfg.validity_days} días` : ''}`
+          : ` Te queremos compensar con este cupón exclusivo: *${couponCode}*${assignedCfg?.offer_description ? ` (${assignedCfg.offer_description})` : ''}${assignedCfg?.validity_days ? `, válido ${assignedCfg.validity_days} días` : ''}. 🎟`)
+      : '';
+    const issue = fb.followup_answer
+      ? fb.followup_answer.toLowerCase()
+      : fb.comment ? 'lo que mencionaste' : 'tu experiencia';
+    const comment = fb.comment ? `"${fb.comment.slice(0,80)}${fb.comment.length > 80 ? '…' : ''}"` : null;
+
+    if (style === 'empatico') return comment
+      ? `Hola, somos ${name}. Vimos que tu visita de hoy no fue lo que mereces: ${comment} 😔\n\nNos importa mucho tu opinión y queremos hacerlo bien.${couponBlock}\n\n¿Tienes un momento para que lo resolvamos juntos?`
+      : `Hola, somos ${name}. Notamos que tuviste un problema con ${issue} en tu visita de hoy y eso nos preocupa 😔\n\nQueremos que tu próxima visita sea perfecta.${couponBlock}\n\n¿Tienes un momento?`;
+
+    if (style === 'directo') return comment
+      ? `Hola, somos ${name}. Notamos: ${comment} de hoy.${couponBlock} ¿Podemos compensarte?`
+      : `Hola, somos ${name}. Notamos el problema con ${issue} de hoy.${couponBlock} ¿Podemos compensarte?`;
+
+    if (style === 'oferta') return couponCode
+      ? `Hola, somos ${name} 👋\n\nSabemos que tu visita de hoy no fue perfecta. Por eso, te tenemos un regalo:${couponBlock}\n\n¿Lo aceptas?`
+      : `Hola, somos ${name}. Notamos que tu visita de hoy no fue perfecta 😔 Queremos compensarte con algo especial. ¿Tienes un momento?`;
+
+    if (style === 'formal') return `Estimado cliente, le saluda ${name}.\n\nNos informamos de que su experiencia durante su visita de hoy no fue completamente satisfactoria${fb.followup_answer ? ` respecto a ${fb.followup_answer.toLowerCase()}` : ''}.${couponBlock}\n\nNos ponemos a su disposición para atender su caso. ¿Cuándo podría atenderle?`;
+
+    return buildMessage(fb, locationName, couponCode, assignedCfg?.offer_description, assignedCfg?.validity_days);
+  };
+
+  const VARIANTS = [
+    { key: 'empatico', label: '🤝 Empático'   },
+    { key: 'directo',  label: '⚡ Directo'     },
+    { key: 'oferta',   label: '🎁 Con oferta'  },
+    { key: 'formal',   label: '🏢 Formal'      },
+  ];
+
+  const [activeVariant, setActiveVariant] = useState('empatico');
+  const [text, setText] = useState(() => buildVariant('empatico'));
+
+  const applyVariant = (key) => {
+    setActiveVariant(key);
+    setText(buildVariant(key));
+  };
+
+  const formatPreview = (msg) =>
+    msg.replace(/\*([^*]+)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>');
+
+  const timeStr = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: T.card, borderRadius: 20, width: '100%', maxWidth: 860, maxHeight: '92vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.22)', fontFamily: font }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 24px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: T.ink }}>Redactar mensaje de WhatsApp</div>
+            <div style={{ fontSize: '0.75rem', color: T.muted, marginTop: 2 }}>📱 {fb.contact_phone} · {locationName}</div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: T.bg, borderRadius: 8, padding: '7px 11px', cursor: 'pointer', color: T.muted, fontSize: '0.9rem', fontFamily: font }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+          {/* Left: editor */}
+          <div style={{ flex: 1, padding: 24, overflowY: 'auto', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Tone chips */}
+            <div>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Tono del mensaje</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {VARIANTS.map(v => (
+                  <button key={v.key} onClick={() => applyVariant(v.key)} style={{
+                    padding: '6px 14px', borderRadius: 99,
+                    border: `1.5px solid ${activeVariant === v.key ? '#25D366' : T.border}`,
+                    background: activeVariant === v.key ? '#F0FDF4' : T.bg,
+                    color: activeVariant === v.key ? '#15803D' : T.ink,
+                    fontFamily: font, fontSize: '0.78rem', fontWeight: activeVariant === v.key ? 700 : 500, cursor: 'pointer', transition: 'all .12s',
+                  }}>{v.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Textarea */}
+            <div>
+              <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>Editar mensaje</div>
+              <textarea
+                value={text}
+                onChange={e => { setText(e.target.value); setActiveVariant(null); }}
+                style={{
+                  width: '100%', minHeight: 180, padding: '12px 14px', borderRadius: 12,
+                  border: `1.5px solid ${T.border}`, fontFamily: font, fontSize: '0.88rem',
+                  color: T.ink, lineHeight: 1.65, resize: 'vertical', outline: 'none',
+                  background: T.bg, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ fontSize: '0.7rem', color: text.length > 1000 ? T.red : T.muted, textAlign: 'right', marginTop: 4 }}>
+                {text.length} caracteres
+              </div>
+            </div>
+
+            {/* Tip */}
+            <div style={{ padding: '10px 14px', background: '#FFFBEB', borderRadius: 10, border: '1px solid #FDE68A', fontSize: '0.75rem', color: '#92400E', lineHeight: 1.5 }}>
+              💡 Usa <strong>*asteriscos*</strong> para <strong>negrita</strong> en WhatsApp. Saltos de línea se verán tal cual en el chat.
+            </div>
+          </div>
+
+          {/* Right: phone preview */}
+          <div style={{ width: 280, padding: '24px 20px', background: '#ECE5DD', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flexShrink: 0, overflowY: 'auto' }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '.08em' }}>Vista previa</div>
+
+            {/* Phone frame */}
+            <div style={{ width: 222, background: '#ECE5DD', borderRadius: 28, boxShadow: '0 8px 40px rgba(0,0,0,0.22)', overflow: 'hidden', border: '7px solid #111' }}>
+              {/* Notch */}
+              <div style={{ background: '#111', height: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 50, height: 5, background: '#333', borderRadius: 99 }} />
+              </div>
+              {/* WA status bar */}
+              <div style={{ background: '#075E54', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#128C7E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0 }}>🏪</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '0.72rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{locationName || 'Tu negocio'}</div>
+                  <div style={{ color: '#B2DFDB', fontSize: '0.58rem' }}>en línea</div>
+                </div>
+              </div>
+              {/* Chat */}
+              <div style={{ minHeight: 180, padding: '10px 8px', background: '#ECE5DD', backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8b89a' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }}>
+                {/* Date bubble */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+                  <span style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 99, padding: '2px 8px', fontSize: '0.58rem', color: '#6B6B6B' }}>Hoy</span>
+                </div>
+                {/* Message bubble */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ background: '#DCF8C6', borderRadius: '10px 0 10px 10px', padding: '6px 8px', maxWidth: '88%', boxShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                    <div style={{ fontSize: '0.65rem', color: '#303030', lineHeight: 1.5, wordBreak: 'break-word' }}
+                      dangerouslySetInnerHTML={{ __html: formatPreview(text) }} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, marginTop: 3 }}>
+                      <span style={{ fontSize: '0.55rem', color: '#7B8B6F' }}>{timeStr}</span>
+                      <span style={{ fontSize: '0.6rem', color: '#53BDEB' }}>✓✓</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Input bar */}
+              <div style={{ background: '#F0F2F5', padding: '6px 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>😊</div>
+                <div style={{ flex: 1, background: '#fff', borderRadius: 99, padding: '4px 10px', fontSize: '0.6rem', color: '#999' }}>Mensaje</div>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#25D366', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>🎤</div>
+              </div>
+              {/* Home bar */}
+              <div style={{ background: '#111', height: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 40, height: 3, background: '#444', borderRadius: 99 }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${T.border}`, display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0 }}>
+          <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.bg, fontFamily: font, fontSize: '0.85rem', cursor: 'pointer', color: T.muted, fontWeight: 600 }}>Cancelar</button>
+          <button onClick={() => onSend(text)} style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: '#25D366', color: '#fff', fontFamily: font, fontSize: '0.88rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 3px 10px rgba(37,211,102,0.35)' }}>
+            <MessageSquare size={15} /> Abrir en WhatsApp →
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Queue card ────────────────────────────────────────────────────────────────
 function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUpdate, isEscalated }) {
   const [saving, setSaving]         = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
+  const [showWAModal, setShowWAModal] = useState(false);
 
   const contacted  = fb.recovery_status === 'contacted' || fb.recovery_status === 'resolved';
   const resolved   = fb.recovery_status === 'resolved' || fb.coupon_redeemed;
@@ -100,14 +275,10 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
 
   const assignedCfg = fb.coupon_config_id ? coupons.find(c => c.id === fb.coupon_config_id) : null;
 
-  const handleWhatsApp = async () => {
-    const msg = encodeURIComponent(buildMessage(
-      fb, locationName,
-      fb.coupon_code || null,
-      assignedCfg?.offer_description || null,
-      assignedCfg?.validity_days || null,
-    ));
-    window.open(`https://wa.me/52${fb.contact_phone.replace(/\D/g, '')}?text=${msg}`, '_blank');
+  const handleWhatsApp = async (customText) => {
+    const text = customText || buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null);
+    window.open(`https://wa.me/52${fb.contact_phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`, '_blank');
+    setShowWAModal(false);
     if (contacted) return;
     setSaving(true);
     const now = new Date().toISOString();
@@ -206,9 +377,10 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
 
       {/* WA message preview */}
       {fb.contact_phone && !resolved && (
-        <div style={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.5, marginBottom: 12, padding: '8px 12px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0' }}>
+        <div onClick={() => setShowWAModal(true)} style={{ fontSize: '0.75rem', color: T.muted, lineHeight: 1.5, marginBottom: 12, padding: '8px 12px', background: '#F0FDF4', borderRadius: 8, border: '1px solid #BBF7D0', cursor: 'pointer' }}>
           <span style={{ fontWeight: 700, color: '#16A34A', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '.06em' }}>Mensaje sugerido · </span>
-          {buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null)}
+          <span style={{ color: '#15803D' }}>{buildMessage(fb, locationName, fb.coupon_code || null, assignedCfg?.offer_description || null, assignedCfg?.validity_days || null)}</span>
+          <span style={{ marginLeft: 6, fontSize: '0.65rem', color: T.muted }}>✏️ editar</span>
         </div>
       )}
 
@@ -279,7 +451,7 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
 
           {/* WhatsApp — primary CTA */}
           {fb.contact_phone && !resolved && (
-            <button onClick={handleWhatsApp} disabled={saving} style={{
+            <button onClick={() => setShowWAModal(true)} disabled={saving} style={{
               padding: '9px 18px', borderRadius: 9, border: 'none',
               background: contacted ? '#F0FDF4' : '#25D366',
               color: contacted ? '#16A34A' : '#fff',
@@ -296,6 +468,16 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
           )}
         </div>
       </div>
+
+      {showWAModal && (
+        <WAComposeModal
+          fb={fb}
+          locationName={locationName}
+          assignedCfg={assignedCfg}
+          onClose={() => setShowWAModal(false)}
+          onSend={handleWhatsApp}
+        />
+      )}
     </div>
   );
 }

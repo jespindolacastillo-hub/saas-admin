@@ -1070,7 +1070,7 @@ export default function IssueManagement() {
 
           {/* Urgency panel */}
           <UrgencyPanel
-            hot={hot.length} warm={warm.length} cold={cold.length}
+            hot={hot.length} warm={warm.length} cold={expired.length}
             activeFilter={filter} onFilter={setFilter}
           />
         </>

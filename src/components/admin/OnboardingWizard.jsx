@@ -562,7 +562,20 @@ const OnboardingWizard = ({
         } catch (_) { /* logo is non-critical */ }
       }
 
-      // Create store (idempotent by name)
+      // ── Wipe any previous onboarding data for this tenant ──────────────────
+      // Guarantees a clean slate even if the reset button failed (e.g. RLS blocked it)
+      await supabase.from('qr_codes').delete().eq('tenant_id', validTid);
+      await supabase.from('Area_Preguntas').delete().eq('tenant_id', validTid);
+      await supabase.from('Tienda_Areas').delete().eq('tenant_id', validTid);
+      await supabase.from('Areas_Catalogo').delete().eq('tenant_id', validTid);
+      await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', validTid);
+      await supabase.from('locations').delete().eq('tenant_id', validTid);
+      // Reset local state so nothing from a previous partial run carries over
+      setSavedStoreId(null);
+      setSavedLocationId(null);
+      setSavedAreaId(null);
+
+      // Create store
       let storeIdToUse = savedStoreId;
       if (!storeIdToUse) {
         const { data: existingStore } = await supabase.from('Tiendas_Catalogo').select('id').eq('nombre', storeName.trim()).eq('tenant_id', validTid).maybeSingle();

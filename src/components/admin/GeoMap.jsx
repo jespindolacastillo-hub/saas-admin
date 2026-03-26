@@ -11,6 +11,9 @@ const npsColor = (score) => {
   return '#ef4444';
 };
 
+// Normaliza satisfaccion (1–5) al mismo rango que score
+const normScore = (s) => (s === null || s === undefined ? null : s);
+
 const npsLabel = (score) => {
   if (score === null || score === undefined) return 'Sin datos';
   if (score >= 4) return 'Positivo';
@@ -200,7 +203,7 @@ export default function GeoMap() {
       // Get feedback aggregates per tienda_id
       const { data: fbData, error: fbErr } = await supabase
         .from('Feedback')
-        .select('tienda_id, score')
+        .select('tienda_id, satisfaccion')
         .in('tienda_id', tiendaIds);
 
       if (fbErr) throw fbErr;
@@ -211,8 +214,9 @@ export default function GeoMap() {
         if (!fb.tienda_id) return;
         if (!agg[fb.tienda_id]) agg[fb.tienda_id] = { count: 0, sum: 0, bad: 0 };
         agg[fb.tienda_id].count++;
-        if (fb.score != null) agg[fb.tienda_id].sum += fb.score;
-        if (fb.score != null && fb.score <= 2) agg[fb.tienda_id].bad++;
+        const s = normScore(fb.satisfaccion);
+        if (s != null) agg[fb.tienda_id].sum += s;
+        if (s != null && s <= 2) agg[fb.tienda_id].bad++;
       });
 
       const enriched = storeData.map((s) => {

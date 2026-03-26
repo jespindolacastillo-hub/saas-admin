@@ -150,13 +150,11 @@ export default function GeoMap() {
     setLoading(true);
     setError(null);
     try {
-      // Query Tiendas_Catalogo — sus IDs coinciden con Feedback.tienda_id
+      // Query ALL stores for this tenant (with or without coords)
       const { data: locData, error: locErr } = await supabase
         .from('Tiendas_Catalogo')
-        .select('id, nombre, lat, lng')
-        .eq('tenant_id', tenant.id)
-        .not('lat', 'is', null)
-        .not('lng', 'is', null);
+        .select('id, nombre, lat, lng, direccion')
+        .eq('tenant_id', tenant.id);
 
       if (locErr) throw locErr;
 
@@ -166,8 +164,37 @@ export default function GeoMap() {
         return;
       }
 
+      // Auto-geocode stores missing lat/lng using Nominatim (OSM)
+      const geocoded = await Promise.all(locData.map(async (store) => {
+        if (store.lat && store.lng) return store;
+        try {
+          const q = [store.nombre, store.direccion, 'México'].filter(Boolean).join(', ');
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
+            { headers: { 'Accept-Language': 'es' } }
+          );
+          const data = await res.json();
+          if (data.length) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            // Update DB in background so next load is instant
+            supabase.from('Tiendas_Catalogo').update({ lat, lng }).eq('id', store.id).then(() => {});
+            return { ...store, lat, lng };
+          }
+        } catch (_) {}
+        return store;
+      }));
+
+      // Only keep stores that have coords (after geocoding attempt)
+      const withCoords = geocoded.filter(s => s.lat && s.lng);
+      if (withCoords.length === 0) {
+        setStores([]);
+        setLoading(false);
+        return;
+      }
+
       // Tiendas_Catalogo ya tiene `nombre` directamente
-      const storeData = locData;
+      const storeData = withCoords;
       const tiendaIds = storeData.map(s => s.id);
 
       // Get feedback aggregates per tienda_id

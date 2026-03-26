@@ -595,6 +595,7 @@ const OnboardingWizard = ({
         } else {
           const { data: newStore, error: storeErr } = await supabase.from('Tiendas_Catalogo').insert([{
             nombre: storeName.trim(), tenant_id: validTid,
+            ...(mapCoords && { lat: mapCoords.lat, lng: mapCoords.lng }),
           }]).select('id').single();
           if (storeErr) throw storeErr;
           storeIdToUse = newStore.id;

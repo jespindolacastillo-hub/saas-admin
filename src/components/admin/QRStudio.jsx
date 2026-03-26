@@ -449,6 +449,24 @@ export default function QRStudio() {
       google_review_url: locForm.google_review_url || null,
       whatsapp_number:   locForm.whatsapp_number   || null,
     };
+
+    // Auto-geocoding con Nominatim (OSM)
+    const geocodeQuery = [locForm.calle, locForm.colonia, locForm.municipio, locForm.estado, 'México']
+      .filter(Boolean).join(', ');
+    if (geocodeQuery.replace(/,\s*/g, '').trim()) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(geocodeQuery)}&format=json&limit=1`,
+          { headers: { 'Accept-Language': 'es' } }
+        );
+        const geoData = await res.json();
+        if (geoData.length) {
+          payload.lat = parseFloat(geoData[0].lat);
+          payload.lng = parseFloat(geoData[0].lon);
+        }
+      } catch (_) {}
+    }
+
     if (editingLoc) {
       await supabase.from('locations').update(payload).eq('id', editingLoc.id);
     } else {

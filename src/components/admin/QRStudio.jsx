@@ -414,18 +414,18 @@ export default function QRStudio() {
     setCpStatus('loading');
     setColoniaOptions([]);
     try {
-      const res = await fetch(`https://sepomex.icalialabs.com/api/v1/zip_codes?zip_code=${cp}`);
-      const data = await res.json();
-      const zips = data.zip_codes || [];
-      if (zips.length > 0) {
-        const colonias = [...new Set(zips.map(z => z.d_asenta))].sort();
-        const first = zips[0];
-        setColoniaOptions(colonias);
+      const { data, error } = await supabase
+        .from('codigos_postales')
+        .select('colonias, municipio, estado')
+        .eq('cp', cp)
+        .maybeSingle();
+      if (!error && data) {
+        setColoniaOptions(data.colonias || []);
         setLocForm(f => ({
           ...f,
-          municipio: first.D_mnpio || first.d_ciudad || '',
-          estado: first.d_estado || '',
-          colonia: colonias.length === 1 ? colonias[0] : '',
+          municipio: data.municipio,
+          estado: data.estado,
+          colonia: data.colonias?.length === 1 ? data.colonias[0] : '',
         }));
         setCpStatus('found');
       } else {

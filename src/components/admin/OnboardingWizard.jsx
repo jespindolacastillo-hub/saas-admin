@@ -280,8 +280,21 @@ const getSmartSuggestions = (bizType, areaLabel) => {
 };
 const TIPO_LABELS = { stars:'⭐ Estrellas', si_no:'👍 Sí / No', nps:'📊 NPS', emoji:'😊 Emojis' };
 
-// ─── SEPOMEX CP lookup (same API as QRStudio) ────────────────────────────────
+// ─── CP lookup — Supabase local table (fast, no external API) ────────────────
 const lookupCP = async (cp) => {
+  try {
+    const { data, error } = await supabase
+      .from('codigos_postales')
+      .select('colonias, municipio, estado')
+      .eq('cp', cp)
+      .maybeSingle();
+    if (error || !data) return null;
+    return { colonias: data.colonias || [], municipio: data.municipio, estado: data.estado };
+  } catch { return null; }
+};
+
+// Keep legacy shape so callers don't need to change
+const lookupCP_legacy = async (cp) => {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);

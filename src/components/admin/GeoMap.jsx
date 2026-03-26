@@ -150,10 +150,10 @@ export default function GeoMap() {
     setLoading(true);
     setError(null);
     try {
-      // Query locations directly by tenant_id — each location has its own UUID
+      // Query Tiendas_Catalogo — sus IDs coinciden con Feedback.tienda_id
       const { data: locData, error: locErr } = await supabase
-        .from('locations')
-        .select('id, name, lat, lng')
+        .from('Tiendas_Catalogo')
+        .select('id, nombre, lat, lng')
         .eq('tenant_id', tenant.id)
         .not('lat', 'is', null)
         .not('lng', 'is', null);
@@ -166,26 +166,26 @@ export default function GeoMap() {
         return;
       }
 
-      // Normalize: use `nombre` key for compatibility with the rest of the component
-      const storeData = locData.map(l => ({ ...l, nombre: l.name }));
-      const locationIds = storeData.map(s => s.id);
+      // Tiendas_Catalogo ya tiene `nombre` directamente
+      const storeData = locData;
+      const tiendaIds = storeData.map(s => s.id);
 
-      // Get feedback aggregates per location
+      // Get feedback aggregates per tienda_id
       const { data: fbData, error: fbErr } = await supabase
         .from('Feedback')
-        .select('location_id, score')
-        .in('location_id', locationIds);
+        .select('tienda_id, score')
+        .in('tienda_id', tiendaIds);
 
       if (fbErr) throw fbErr;
 
-      // Aggregate by location_id
+      // Aggregate by tienda_id
       const agg = {};
       (fbData || []).forEach((fb) => {
-        if (!fb.location_id) return;
-        if (!agg[fb.location_id]) agg[fb.location_id] = { count: 0, sum: 0, bad: 0 };
-        agg[fb.location_id].count++;
-        if (fb.score != null) agg[fb.location_id].sum += fb.score;
-        if (fb.score != null && fb.score <= 2) agg[fb.location_id].bad++;
+        if (!fb.tienda_id) return;
+        if (!agg[fb.tienda_id]) agg[fb.tienda_id] = { count: 0, sum: 0, bad: 0 };
+        agg[fb.tienda_id].count++;
+        if (fb.score != null) agg[fb.tienda_id].sum += fb.score;
+        if (fb.score != null && fb.score <= 2) agg[fb.tienda_id].bad++;
       });
 
       const enriched = storeData.map((s) => {

@@ -43,6 +43,7 @@ import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
 import GeoMap from './components/admin/GeoMap';
 import AffiliatesManager from './components/admin/AffiliatesManager';
+import DistributorsManager from './components/admin/DistributorsManager';
 import CouponValidation from './components/admin/CouponValidation';
 import CouponManagement from './components/admin/CouponManagement';
 import { useTenant } from './hooks/useTenant';
@@ -2892,7 +2893,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'questions' && <QuestionManager />}
           {activeTab === 'audit' && <AuditTrail />}
           {activeTab === 'geomap' && <GeoMap />}
-          {activeTab === 'affiliates' && <AffiliatesManager />}
+          {activeTab === 'affiliates' && <DistributorsManager />}
         </main>
       </div >
       </div>

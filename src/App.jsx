@@ -1987,7 +1987,9 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
   const activeTab = pathMap[pathname] || 'dash';
 
   const [session, setSession] = useState(null);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(
+    window.location.hash.includes('type=recovery')
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);

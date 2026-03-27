@@ -44,6 +44,8 @@ import OnboardingWizard from './components/admin/OnboardingWizard';
 import GeoMap from './components/admin/GeoMap';
 import AffiliatesManager from './components/admin/AffiliatesManager';
 import DistributorsManager from './components/admin/DistributorsManager';
+import DistributorPortal from './components/admin/DistributorPortal';
+import DistributorApplication from './components/DistributorApplication';
 import CouponValidation from './components/admin/CouponValidation';
 import CouponManagement from './components/admin/CouponManagement';
 import { useTenant } from './hooks/useTenant';
@@ -1946,7 +1948,7 @@ const AuditTrail = () => {
 };
 
 const ROLE_PERMS = {
-  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','distributors','backup','audit'],
+  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','distributors','dist-portal','backup','audit'],
   gerente: ['dash','issues','validar','leaderboard','kpi','geomap'],
   caja:    ['validar'],
 };
@@ -1974,6 +1976,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
     '/mapa': 'geomap',
     '/distribuidores': 'affiliates',
     '/distribuidores-qr': 'distributors',
+    '/mi-portal': 'dist-portal',
     '/': 'dash'
   };
 
@@ -2597,6 +2600,11 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
                   <QrCode size={16} /> Distribuidores QR
                 </button>
               </li>}
+              {allowedTabs.includes('dist-portal') && <li>
+                <button className={`nav-item ${activeTab === 'dist-portal' ? 'active' : ''}`} onClick={() => { navigate('/mi-portal'); setIsSidebarOpen(false); }}>
+                  <Share2 size={16} /> Mi Portal
+                </button>
+              </li>}
             </>}
 
             {/* Sistema */}
@@ -2771,7 +2779,8 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
                activeTab === 'geomap'     ? 'Mapa'           :
                activeTab === 'audit'      ? 'Auditoría'      :
                activeTab === 'affiliates'    ? 'Afiliados'        :
-               activeTab === 'distributors' ? 'Distribuidores QR' : 'Dashboard'}
+               activeTab === 'distributors' ? 'Distribuidores QR' :
+               activeTab === 'dist-portal'  ? 'Mi Portal'         : 'Dashboard'}
             </h2>
           </div>
 
@@ -2902,6 +2911,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'geomap' && <GeoMap />}
           {activeTab === 'affiliates' && <AffiliatesManager />}
           {activeTab === 'distributors' && <DistributorsManager />}
+          {activeTab === 'dist-portal' && <DistributorPortal userEmail={session?.user?.email} />}
         </main>
       </div >
       </div>
@@ -2916,6 +2926,7 @@ export default function App() {
     <Routes>
       <Route path="/f/:qrId" element={<FeedbackPublic />} />
       <Route path="/feedback" element={<Feedback />} />
+      <Route path="/quiero-ser-distribuidor" element={<DistributorApplication />} />
       <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
     </Routes>
   );

@@ -1946,7 +1946,7 @@ const AuditTrail = () => {
 };
 
 const ROLE_PERMS = {
-  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','backup','audit'],
+  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','distributors','backup','audit'],
   gerente: ['dash','issues','validar','leaderboard','kpi','geomap'],
   caja:    ['validar'],
 };
@@ -1973,6 +1973,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
     '/auditoria': 'audit',
     '/mapa': 'geomap',
     '/distribuidores': 'affiliates',
+    '/distribuidores-qr': 'distributors',
     '/': 'dash'
   };
 
@@ -2582,15 +2583,20 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
             </li>}
 
             {/* Negocio */}
-            {allowedTabs.includes('affiliates') && <>
+            {(allowedTabs.includes('affiliates') || allowedTabs.includes('distributors')) && <>
               <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
                 <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Negocio</span>
               </li>
-              <li>
+              {allowedTabs.includes('affiliates') && <li>
                 <button className={`nav-item ${activeTab === 'affiliates' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores'); setIsSidebarOpen(false); }}>
-                  <Share2 size={16} /> Distribuidores
+                  <Share2 size={16} /> Afiliados
                 </button>
-              </li>
+              </li>}
+              {allowedTabs.includes('distributors') && <li>
+                <button className={`nav-item ${activeTab === 'distributors' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores-qr'); setIsSidebarOpen(false); }}>
+                  <QrCode size={16} /> Distribuidores QR
+                </button>
+              </li>}
             </>}
 
             {/* Sistema */}
@@ -2764,7 +2770,8 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
                activeTab === 'backup'     ? 'Respaldos'      :
                activeTab === 'geomap'     ? 'Mapa'           :
                activeTab === 'audit'      ? 'Auditoría'      :
-               activeTab === 'affiliates' ? 'Distribuidores'  : 'Dashboard'}
+               activeTab === 'affiliates'    ? 'Afiliados'        :
+               activeTab === 'distributors' ? 'Distribuidores QR' : 'Dashboard'}
             </h2>
           </div>
 
@@ -2893,7 +2900,8 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'questions' && <QuestionManager />}
           {activeTab === 'audit' && <AuditTrail />}
           {activeTab === 'geomap' && <GeoMap />}
-          {activeTab === 'affiliates' && <DistributorsManager />}
+          {activeTab === 'affiliates' && <AffiliatesManager />}
+          {activeTab === 'distributors' && <DistributorsManager />}
         </main>
       </div >
       </div>

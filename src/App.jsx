@@ -1988,7 +1988,8 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
 
   const [session, setSession] = useState(null);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(
-    window.location.hash.includes('type=recovery')
+    window.location.hash.includes('type=recovery') ||
+    new URLSearchParams(window.location.search).has('code')
   );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);

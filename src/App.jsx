@@ -45,6 +45,7 @@ import GeoMap from './components/admin/GeoMap';
 import AffiliatesManager from './components/admin/AffiliatesManager';
 import DistributorsManager from './components/admin/DistributorsManager';
 import DistributorPortal from './components/admin/DistributorPortal';
+import DevValuationPanel from './components/admin/DevValuationPanel';
 import DistributorApplication from './components/DistributorApplication';
 import CouponValidation from './components/admin/CouponValidation';
 import CouponManagement from './components/admin/CouponManagement';
@@ -1948,7 +1949,7 @@ const AuditTrail = () => {
 };
 
 const ROLE_PERMS = {
-  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','distributors','dist-portal','backup','audit'],
+  admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','distributors','dist-portal','dev-val','backup','audit'],
   gerente: ['dash','issues','validar','leaderboard','kpi','geomap'],
   caja:    ['validar'],
 };
@@ -1977,6 +1978,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
     '/distribuidores': 'affiliates',
     '/distribuidores-qr': 'distributors',
     '/mi-portal': 'dist-portal',
+    '/dev-valuation': 'dev-val',
     '/': 'dash'
   };
 
@@ -2618,6 +2620,11 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
                 <RotateCcw size={16} /> Respaldos
               </button>
             </li>}
+            {allowedTabs.includes('dev-val') && <li>
+              <button className={`nav-item ${activeTab === 'dev-val' ? 'active' : ''}`} onClick={() => { navigate('/dev-valuation'); setIsSidebarOpen(false); }}>
+                <TrendingUp size={16} /> Valoración SW
+              </button>
+            </li>}
             {allowedTabs.includes('audit') && <li>
               <button className={`nav-item ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { navigate('/auditoria'); setIsSidebarOpen(false); }}>
                 <ShieldCheck size={16} /> Auditoría
@@ -2912,6 +2919,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'affiliates' && <AffiliatesManager />}
           {activeTab === 'distributors' && <DistributorsManager />}
           {activeTab === 'dist-portal' && <DistributorPortal userEmail={session?.user?.email} />}
+          {activeTab === 'dev-val' && <DevValuationPanel />}
         </main>
       </div >
       </div>

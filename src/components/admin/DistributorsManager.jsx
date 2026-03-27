@@ -465,7 +465,7 @@ export default function DistributorsManager() {
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 const labelStyle  = { fontSize: 12, fontWeight: 700, color: T.muted, display: 'flex', flexDirection: 'column', gap: 4 };
-const inputStyle  = { display: 'block', width: '100%', marginTop: 2, padding: '8px 11px', borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 13, fontFamily: font, outline: 'none', boxSizing: 'border-box', background: '#F9FAFB' };
-const btnPrimary  = { background: T.coral, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: font };
-const btnGhost    = { background: 'transparent', color: T.muted, border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: font };
+const inputStyle  = { display: 'block', width: '100%', marginTop: 2, padding: '8px 11px', borderRadius: 8, border: '1px solid #E5E7EB', fontSize: 13, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", outline: 'none', boxSizing: 'border-box', background: '#F9FAFB' };
+const btnPrimary  = { background: T.coral, color: '#fff', border: 'none', borderRadius: 9, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" };
+const btnGhost    = { background: 'transparent', color: T.muted, border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" };
 const thStyle     = { padding: '8px 16px', textAlign: 'left', fontWeight: 700, color: T.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' };

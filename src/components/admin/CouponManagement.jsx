@@ -36,7 +36,7 @@ function Toggle({ on, onChange }) {
 }
 
 const labelSt = { display: 'block', fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 };
-const inputSt = { width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontFamily: font, fontSize: '0.88rem', color: T.ink, outline: 'none', boxSizing: 'border-box' };
+const inputSt = { width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", fontSize: '0.88rem', color: T.ink, outline: 'none', boxSizing: 'border-box' };
 
 // ─── Auto card (recovery or loyalty) ─────────────────────────────────────────
 function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }) {

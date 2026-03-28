@@ -50,6 +50,7 @@ import DistributorApplication from './components/DistributorApplication';
 import CouponValidation from './components/admin/CouponValidation';
 import CouponManagement from './components/admin/CouponManagement';
 import { useTenant } from './hooks/useTenant';
+import PartnerLanding from './components/PartnerLanding';
 
 // Helper: Cálculo de NPS (Net Promoter Score)
 const calculateNPS = (data) => {
@@ -2938,6 +2939,7 @@ export default function App() {
       <Route path="/f/:qrId" element={<FeedbackPublic />} />
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/quiero-ser-distribuidor" element={<DistributorApplication />} />
+      <Route path="/partners/:codigo" element={<PartnerLanding />} />
       <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
     </Routes>
   );

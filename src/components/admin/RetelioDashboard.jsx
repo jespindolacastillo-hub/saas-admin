@@ -296,8 +296,8 @@ function LocationBreakdown({ feedbacks, locations, loading }) {
         }}>{sorted.length} sucursales</span>
       </div>
 
-      <div style={{ maxHeight: 480, overflowY: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
+      <div style={{ maxHeight: 480, overflowY: 'auto', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', minWidth: 500, borderCollapse: 'collapse', fontSize: '0.83rem' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
             <tr style={{ background: '#FAFAFA' }}>
               {COL_DEFS.map(col => (
@@ -1366,16 +1366,16 @@ export default function RetelioDashboard() {
       )}
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 style={{ fontSize: 'clamp(1.2rem, 4vw, 1.5rem)', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>
             Dashboard
           </h1>
           <p style={{ fontSize: '0.85rem', color: T.muted, fontWeight: 500 }}>
             {demoMode ? 'Datos de ejemplo' : (tenant?.name || 'Tu negocio')} · últimos {range} días
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {!demoMode && (
             <button onClick={toggleDemo} style={{
               background: 'white', color: T.muted, border: `1px solid ${T.border}`,
@@ -1506,7 +1506,7 @@ export default function RetelioDashboard() {
       <LocationBreakdown feedbacks={filteredFeedbacks} locations={filteredLocations.length ? filteredLocations : locations} loading={loading} />
 
       {/* ── Charts ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
 
         {/* Trend */}
         <div style={{

@@ -590,23 +590,23 @@ const Dashboard = ({
 
       <div style={{ marginBottom: '1.5rem' }} className="animate-slide-up">
         {/* Title and Action Buttons Row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+        <div className="dashboard-header">
           <div>
-            <h1 style={{ fontFamily: 'Outfit', fontSize: '2.2rem', fontWeight: '800', letterSpacing: '-0.03em', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
+            <h1 className="dashboard-title">
               {t('dashboard.title')} <span style={{ color: 'var(--primary)' }}>Pro</span>
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', fontWeight: '500' }}>{t('dashboard.subtitle')}</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button className={`btn ${isSnapshotMode ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setIsSnapshotMode(!isSnapshotMode)}>
-              <Eye size={18} /> {isSnapshotMode ? t('common.normal_view') : t('common.snapshot_mode')}
+          <div className="dashboard-actions">
+            <button className={`btn btn-sm ${isSnapshotMode ? 'btn-primary' : 'btn-secondary'} dashboard-btn-snapshot`} onClick={() => setIsSnapshotMode(!isSnapshotMode)}>
+              <Eye size={16} /> <span className="btn-label">{isSnapshotMode ? t('common.normal_view') : t('common.snapshot_mode')}</span>
             </button>
-            <button className="btn btn-secondary" onClick={refreshData}>
-              <History size={18} /> {t('common.sync')}
+            <button className="btn btn-sm btn-secondary" onClick={refreshData}>
+              <History size={16} /> <span className="btn-label">{t('common.sync')}</span>
             </button>
-            <button className="btn btn-primary" onClick={() => exportToCSV(finalFilteredData, 'feedback_export.csv')}>
-              <Download size={18} /> {t('common.export')}
+            <button className="btn btn-sm btn-primary" onClick={() => exportToCSV(finalFilteredData, 'feedback_export.csv')}>
+              <Download size={16} /> <span className="btn-label">{t('common.export')}</span>
             </button>
           </div>
         </div>

@@ -164,7 +164,7 @@ function ProjectCard({ project, model, expanded, onToggle }) {
           </div>
 
           {/* Valuation per rate */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(130px, 100%), 1fr))', gap: 8 }}>
             {RATES.map(r => (
               <div key={r.key} style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 10, color: T.muted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: 4 }}>{r.label}</div>
@@ -354,7 +354,7 @@ export default function DevValuationPanel() {
       </div>
 
       {/* ── Valuation highlight ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 10, marginTop: 12 }}>
         {valuations.map((r, i) => (
           <div key={r.key} style={{ borderRadius: 14, padding: '16px 18px', background: i === 1 ? T.ink : T.card, border: i === 1 ? 'none' : `1px solid ${T.border}` }}>
             <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em', color: i === 1 ? 'rgba(255,255,255,.45)' : T.muted, marginBottom: 6 }}>

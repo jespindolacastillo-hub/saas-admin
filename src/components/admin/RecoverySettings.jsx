@@ -95,7 +95,7 @@ function CouponCard({ title, emoji, subtitle, accentColor, fields, config, onCha
         </div>
 
         {/* Prefix + validity */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12 }}>
           <div>
             <label style={labelStyle}>Prefijo del código</label>
             <input
@@ -246,7 +246,7 @@ function Stats({ tenantId }) {
         <TrendingUp size={15} color={T.coral} />
         <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>Estadísticas (últimos 30 días)</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 10 }}>
         {items.map(({ label, value, color }) => (
           <div key={label} style={{ background: color + '08', borderRadius: 12, padding: '14px 16px', border: `1px solid ${color}20` }}>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color, marginBottom: 4 }}>{value}</div>
@@ -343,7 +343,7 @@ export default function RecoverySettings() {
       )}
 
       {/* Two coupon cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 20, marginBottom: 20 }}>
         <CouponCard
           title="Recovery"
           emoji="😔"

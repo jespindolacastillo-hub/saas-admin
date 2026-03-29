@@ -1271,8 +1271,8 @@ const Dashboard = ({
             </span>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-main)', zIndex: 10 }}>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #f1f5f9' }}>
                   <th style={{ padding: '12px 1.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t('audit.timestamp')}</th>

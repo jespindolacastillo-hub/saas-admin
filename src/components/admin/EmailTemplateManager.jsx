@@ -188,7 +188,7 @@ const EmailTemplateManager = () => {
     return (
         <div className="animate-in fade-in duration-500">
             <header style={{ marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
                         <h1 style={{ fontFamily: 'Outfit', fontSize: '1.8rem', fontWeight: '800' }}>{t('email.title')}</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{t('email.subtitle')}</p>
@@ -237,7 +237,7 @@ const EmailTemplateManager = () => {
             </header>
 
             {mode === 'editor' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '2rem' }}>
                     {/* Sidebar: Config */}
                     <aside>
                         <div className="card shadow-sm" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>

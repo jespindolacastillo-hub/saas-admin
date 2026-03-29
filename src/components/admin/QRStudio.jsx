@@ -1091,7 +1091,7 @@ export default function QRStudio() {
             />
           </FieldRow>
           <FieldRow label="Tipo">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(90px, 100%), 1fr))', gap: 8 }}>
               {QR_TYPES.map(t => {
                 const active = editQRForm.type === t.value;
                 return (
@@ -1182,7 +1182,7 @@ export default function QRStudio() {
             </select>
           </FieldRow>
           <FieldRow label="Tipo">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(90px, 100%), 1fr))', gap: 8 }}>
               {QR_TYPES.map(t => {
                 const locked = t.value === 'employee' && !canAddEmployeeQR;
                 const active = qrForm.type === t.value;
@@ -1372,7 +1372,7 @@ export default function QRStudio() {
 
           {/* ── Auto-filled: Estado + Municipio ── */}
           {cpStatus === 'found' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12, marginBottom: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Estado</label>
                 <div style={{ ...inputSt, background: T.teal + '08', borderColor: T.teal + '40', color: T.ink, fontWeight: 600, cursor: 'default' }}>

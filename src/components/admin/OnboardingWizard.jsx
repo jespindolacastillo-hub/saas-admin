@@ -1087,7 +1087,7 @@ const OnboardingWizard = ({
                 <SectionHead title="¿Qué le preguntas a tus clientes?" sub="Personaliza el texto y ve cómo se verá en el formulario." />
 
                 <label style={LS}>Tipo de respuesta</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
                   {[
                     { v: 'stars', e: '⭐', t: 'Estrellas 1–5', s: 'Opinión escalada' },
                     { v: 'si_no', e: '👍', t: 'Sí / No', s: 'Respuesta binaria' },

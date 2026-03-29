@@ -603,7 +603,7 @@ function FeedbackDrawer({ feedback, locations, onClose, tenant, onUpdate }) {
       }} />
       {/* Panel */}
       <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 420,
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(420px, 100vw)',
         background: T.card, zIndex: 201, boxShadow: '-8px 0 40px rgba(0,0,0,0.12)',
         display: 'flex', flexDirection: 'column', fontFamily: font,
       }}>
@@ -1098,7 +1098,7 @@ function LocationFilter({ locations, selected, onChange }) {
         <div style={{
           position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100,
           background: T.card, borderRadius: 16, border: `1px solid ${T.border}`,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)', width: 260,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)', width: 'min(260px, 90vw)',
           overflow: 'hidden',
         }}>
           {/* Search */}

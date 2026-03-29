@@ -188,7 +188,7 @@ function CouponFormModal({ initial, onSave, onClose }) {
           <input type="text" value={form.offer_description} onChange={e => upd('offer_description', e.target.value)} placeholder="ej. 20% de descuento en tu próxima visita" style={inputSt} />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12 }}>
           <div>
             <label style={labelSt}>Prefijo</label>
             <input type="text" value={form.coupon_prefix} onChange={e => upd('coupon_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} placeholder="CUPON" style={{ ...inputSt, fontWeight: 700, letterSpacing: '0.05em' }} />
@@ -243,7 +243,7 @@ function Stats({ tenantId }) {
         <TrendingUp size={14} color={T.coral} />
         <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink }}>Estadísticas (últimos 30 días)</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))', gap: 10 }}>
         {items.map(({ label, value, color }) => (
           <div key={label} style={{ background: color+'08', borderRadius: 12, padding: '12px 14px', border: `1px solid ${color}20` }}>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, color, marginBottom: 3 }}>{value}</div>
@@ -383,7 +383,7 @@ export default function CouponManagement() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))', gap: 18 }}>
             <AutoCard title="Recovery" emoji="😔" subtitle="Se activa con mala calificación" accentColor={T.coral} fields={recoveryFields} cfg={autoCfg} onChange={updAuto} />
             <AutoCard title="Lealtad"  emoji="🌟" subtitle="Se activa con buena calificación" accentColor={T.teal}  fields={loyaltyFields}  cfg={autoCfg} onChange={updAuto} />
           </div>

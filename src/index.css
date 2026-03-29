@@ -1138,3 +1138,52 @@ body.is-snapshot-mode .snapshot-mode-overlay {
     grid-template-columns: 1fr;
   }
 }
+
+/* ========================================
+   CHART CARDS — altura responsiva
+   ======================================== */
+
+.card-chart {
+  height: 480px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .card-chart {
+    height: 360px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-chart {
+    height: 300px;
+  }
+}
+
+/* ========================================
+   TABLA RESPONSIVA — scroll horizontal en móvil
+   ======================================== */
+
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  min-width: 500px;
+}
+
+/* ========================================
+   HEADER — evitar overflow en pantallas pequeñas
+   ======================================== */
+
+@media (max-width: 480px) {
+  .top-header .header-actions {
+    gap: 4px;
+  }
+
+  .top-header .user-info {
+    display: none;
+  }
+}

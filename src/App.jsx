@@ -976,7 +976,7 @@ const Dashboard = ({
 
         {/* Right Column: Performance & Detail (Matrix & Categories) */}
         {/* Row 2: Analytical Widgets (Sentiment, Concepts, Categories) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', alignItems: 'stretch', marginBottom: '1.5rem' }}>
+        <div className="grid-cols-3" style={{ gap: '1.5rem', alignItems: 'stretch', marginBottom: '1.5rem' }}>
           {/* Sentiment Distribution Card - Donut Chart */}
           <div className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-sidebar)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
@@ -1161,12 +1161,11 @@ const Dashboard = ({
       {/* Trend & Table Grid - Fixed Height for Professional Alignment */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(400px, 100%), 1fr))',
         gap: '1.5rem',
-        alignItems: 'stretch',
-        maxHeight: '480px' // Constrain the height of this row
+        alignItems: 'stretch'
       }}>
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '480px' }}>
+        <div className="card card-chart">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem' }}>{t('dashboard.nps_evolution')}</h3>
@@ -1259,7 +1258,7 @@ const Dashboard = ({
           </div>
         </div>
 
-        <div className="card" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '480px', overflow: 'hidden', background: 'var(--bg-sidebar)' }}>
+        <div className="card card-chart" style={{ padding: '0', overflow: 'hidden', background: 'var(--bg-sidebar)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid #f1f5f9' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: 'var(--bg-main)', padding: '8px', borderRadius: '10px' }}>
@@ -1750,6 +1749,7 @@ const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {}, load
       </div>
 
       <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+        <div className="table-responsive">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ background: 'var(--bg-main)' }}>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
@@ -1794,6 +1794,7 @@ const Leaderboard = ({ rawData = [], stores = [], areas = [], filters = {}, load
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
@@ -1888,7 +1889,7 @@ const AuditTrail = () => {
           backdropFilter: 'blur(2px)'
         }} onClick={() => setSelectedLog(null)}>
           <div style={{
-            background: 'var(--bg-sidebar)', borderRadius: '12px', padding: '2rem', width: '90%', maxWidth: '800px',
+            background: 'var(--bg-sidebar)', borderRadius: '12px', padding: 'clamp(1rem, 3vw, 2rem)', width: '90%', maxWidth: '800px',
             maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>

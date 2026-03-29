@@ -1312,3 +1312,14 @@ body.is-snapshot-mode .snapshot-mode-overlay {
     font-size: 10px;
   }
 }
+
+/* ========================================
+   WHATSAPP COMPOSE MODAL
+   ======================================== */
+
+/* Ocultar vista previa del teléfono en pantallas pequeñas */
+@media (max-width: 768px) {
+  .wa-phone-preview {
+    display: none !important;
+  }
+}

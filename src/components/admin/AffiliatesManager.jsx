@@ -112,7 +112,7 @@ function AffiliateForm({ affiliate, affiliates, onSave, onClose }) {
               <input value={form.name} onChange={e => set('name', e.target.value)} style={inputStyle} placeholder="Nombre del distribuidor" required />
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: T.muted, display: 'block' }}>
                 Email
                 <input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inputStyle} placeholder="email@ejemplo.com" />
@@ -129,7 +129,7 @@ function AffiliateForm({ affiliate, affiliates, onSave, onClose }) {
               <span style={{ fontSize: 11, color: T.muted, fontWeight: 400 }}>Se autogenera si se deja vacío · Solo letras y números</span>
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 12 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: T.muted, display: 'block' }}>
                 Comisión L1 (%)
                 <input type="number" min={0} max={50} value={form.pct_l1} onChange={e => set('pct_l1', +e.target.value)} style={inputStyle} />
@@ -248,7 +248,7 @@ function AffiliateDetail({ affiliate, onBack }) {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard icon={<Users size={18} />} label="Clientes activos" value={tenants.length} color={T.teal} />
         <StatCard icon={<TrendingUp size={18} />} label="MRR referido" value={`$${mrr.toLocaleString()}`} color={T.coral} />
         <StatCard icon={<DollarSign size={18} />} label="Comisión pendiente" value={`$${totalPending.toLocaleString()}`} sub={`Pagado total: $${totalPaid.toLocaleString()}`} color={T.amber} />
@@ -268,7 +268,8 @@ function AffiliateDetail({ affiliate, onBack }) {
         {tenants.length === 0 ? (
           <div style={{ padding: '28px 18px', color: T.muted, fontSize: 13, textAlign: 'center' }}>Sin clientes referidos aún</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: T.bg }}>
                 {['Empresa', 'Plan', 'Estado', 'MRR', 'Desde'].map(h => (
@@ -288,6 +289,7 @@ function AffiliateDetail({ affiliate, onBack }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -420,7 +422,7 @@ export default function AffiliatesManager() {
       )}
 
       {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: 12, marginBottom: 24 }}>
         <StatCard icon={<Share2 size={18} />} label="Distribuidores activos" value={activeCount} color={T.purple} />
         <StatCard icon={<Users size={18} />} label="Total distribuidores" value={affiliates.length} color={T.teal} />
         <StatCard icon={<DollarSign size={18} />} label="Comisiones pendientes" value={`$${totalPending.toLocaleString()}`} color={T.amber} />

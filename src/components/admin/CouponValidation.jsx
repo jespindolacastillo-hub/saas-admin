@@ -75,7 +75,7 @@ export default function CouponValidation({ userEmail }) {
   const scoreColor = result?.score <= 1 ? T.red : result?.score <= 2 ? T.coral : T.teal;
 
   return (
-    <div style={{ fontFamily: font, padding: '28px 32px', maxWidth: 560, margin: '0 auto' }}>
+    <div style={{ fontFamily: font, padding: 'clamp(16px, 4vw, 32px)', maxWidth: 560, margin: '0 auto' }}>
 
       <div style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: T.ink, marginBottom: 4 }}>Validar Cupón</h2>

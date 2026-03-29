@@ -431,7 +431,7 @@ export default function CampaignManager() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 14, marginBottom: 24 }}>
           {[
             { label: 'Campañas enviadas', value: campaigns.filter(c => c.status === 'sent').length, color: T.ink, Icon: Send },
             { label: 'Mensajes enviados',  value: totalSent,      color: T.teal,  Icon: MessageSquare },
@@ -533,7 +533,7 @@ export default function CampaignManager() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))', gap: 12, marginBottom: 16 }}>
             {[
               { label: 'Audiencia',   value: selected.total_count   || 0, color: T.ink  },
               { label: 'Enviados',    value: selected.sent_count    || 0, color: T.teal },
@@ -606,7 +606,7 @@ export default function CampaignManager() {
           {/* Campaign type */}
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Tipo de campaña</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 12 }}>
               {CAMPAIGN_TYPES.map(type => {
                 const active = camType === type.value;
                 return (

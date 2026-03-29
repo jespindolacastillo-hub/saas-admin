@@ -158,7 +158,7 @@ function QRDrawer({ qr, location, onClose, onToggle, testMode, couponConfigs = [
         zIndex: 200, backdropFilter: 'blur(2px)',
       }} />
       <div style={{
-        position: 'fixed', top: 0, right: 0, bottom: 0, width: 380,
+        position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 100vw)',
         background: T.card, zIndex: 201,
         boxShadow: '-8px 0 40px rgba(0,0,0,0.12)',
         display: 'flex', flexDirection: 'column', fontFamily: font,

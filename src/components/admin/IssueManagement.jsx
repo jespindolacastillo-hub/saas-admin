@@ -59,7 +59,7 @@ function UrgencyPanel({ hot, warm, cold, activeFilter, onFilter }) {
     { key: 'cold', label: 'Tarde',        window: '> 24 horas',   pct: 15, color: T.muted, dot: '⚪', count: cold },
   ];
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 12, marginBottom: 20 }}>
       {stages.map(s => {
         const active = activeFilter === s.key;
         return (
@@ -191,7 +191,7 @@ function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
         </div>
 
         {/* Body */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
 
           {/* Left: editor */}
           <div style={{ flex: 1, padding: 24, overflowY: 'auto', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -266,8 +266,8 @@ function WAComposeModal({ fb, locationName, assignedCfg, onClose, onSend }) {
             </div>
           </div>
 
-          {/* Right: phone preview */}
-          <div style={{ width: 280, padding: '24px 20px', background: '#ECE5DD', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flexShrink: 0, overflowY: 'auto' }}>
+          {/* Right: phone preview — hidden on mobile via CSS */}
+          <div className="wa-phone-preview" style={{ width: 280, padding: '24px 20px', background: '#ECE5DD', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flexShrink: 0, overflowY: 'auto' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '.08em' }}>Vista previa</div>
 
             {/* Phone frame */}

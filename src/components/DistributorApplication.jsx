@@ -109,7 +109,7 @@ function Step1({ form, set }) {
       <h2 style={{ fontSize: 22, fontWeight: 900, color: T.ink, marginBottom: 6, letterSpacing: '-0.03em' }}>Cuéntanos sobre ti</h2>
       <p style={{ fontSize: 13, color: T.muted, marginBottom: 24, lineHeight: 1.5 }}>Esta información nos ayuda a darte el mejor soporte desde el primer día.</p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 12 }}>
         <div style={{ gridColumn: '1 / -1' }}>
           <Field label="Nombre completo *">
             <TextInput value={form.name} onChange={v => set('name', v)} placeholder="Ej. Carlos Martínez" required />
@@ -184,7 +184,7 @@ function Step3({ form, set }) {
       <p style={{ fontSize: 13, color: T.muted, marginBottom: 24, lineHeight: 1.5 }}>¿A qué tipo de negocios quieres llegar? Selecciona todos los que apliquen.</p>
 
       <Field label="Giros que quieres atacar *">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: 8 }}>
           {SEGMENTS.map(s => {
             const sel = form.target_segments.includes(s.key);
             return (
@@ -230,14 +230,14 @@ function Step4({ form, set }) {
       <p style={{ fontSize: 13, color: T.muted, marginBottom: 20, lineHeight: 1.5 }}>Ganas comisión recurrente cada mes por cada cliente activo que traigas. Entre más clientes, más % de su MRR.</p>
 
       {/* Commission table */}
-      <div style={{ border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', background: T.bg, padding: '8px 14px' }}>
+      <div style={{ border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 20, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', background: T.bg, padding: '8px 14px', minWidth: 380 }}>
           {['Nivel', 'Clientes activos', 'Comisión MRR', 'Bono por alta'].map(h => (
             <div key={h} style={{ fontSize: 10, fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
           ))}
         </div>
         {commissionTable.map((row, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', padding: '12px 14px', borderTop: `1px solid ${T.border}`, background: i === 1 ? T.coral + '05' : '#fff' }}>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', padding: '12px 14px', borderTop: `1px solid ${T.border}`, background: i === 1 ? T.coral + '05' : '#fff', minWidth: 380 }}>
             <div style={{ fontWeight: 800, fontSize: 13, color: T.ink }}>{row.tier}</div>
             <div style={{ fontSize: 13, color: T.muted }}>{row.clients}</div>
             <div style={{ fontSize: 14, fontWeight: 900, color: T.coral }}>{row.pct}</div>

@@ -62,7 +62,7 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
           <label style={labelSt}>Descripción de la oferta</label>
           <input type="text" value={cfg[fields.offer_description]} onChange={e => onChange(fields.offer_description, e.target.value)} placeholder="ej. 20% de descuento en tu próxima visita" style={inputSt} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 12 }}>
           <div>
             <label style={labelSt}>Prefijo del código</label>
             <input type="text" value={cfg[fields.coupon_prefix]} onChange={e => onChange(fields.coupon_prefix, e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} style={{ ...inputSt, fontWeight: 700, letterSpacing: '0.05em' }} />

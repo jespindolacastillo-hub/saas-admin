@@ -178,7 +178,7 @@ const KpiManager = () => {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 20 }}>
           {filtered.map(loc => {
             const npsVal = getGoalValue(loc.id, 'target_nps');
             const volVal = getGoalValue(loc.id, 'target_volumen');

@@ -173,7 +173,7 @@ const BackupManager = () => {
             {/* Modal de Creación */}
             {showCreateModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content animate-in zoom-in" style={{ width: '400px' }}>
+                    <div className="modal-content animate-in zoom-in" style={{ width: 'min(400px, 90vw)' }}>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1.5rem' }}>{t('backups.modals.create_title')}</h2>
 
                         <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -210,7 +210,7 @@ const BackupManager = () => {
             {/* Modal de Confirmación de Restauración */}
             {restoreConfirmation && (
                 <div className="modal-overlay">
-                    <div className="modal-content animate-in zoom-in" style={{ width: '450px', border: '2px solid #ef4444' }}>
+                    <div className="modal-content animate-in zoom-in" style={{ width: 'min(450px, 90vw)', border: '2px solid #ef4444' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                             <div style={{ width: '60px', height: '60px', borderRadius: '30px', background: '#fee2e2', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#ef4444', marginBottom: '1.5rem' }}>
                                 <AlertTriangle size={32} />

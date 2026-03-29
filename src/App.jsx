@@ -664,7 +664,7 @@ const Dashboard = ({
         <TrendingUp size={20} color="var(--primary)" /> Métricas Estratégicas
       </h3>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
+      <div className="grid-cols-2" style={{ gap: '1.5rem', marginBottom: '2.5rem' }}>
         <div className="card tier1-card" style={{ borderTop: '4px solid var(--primary)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -732,7 +732,7 @@ const Dashboard = ({
       </div>
 
       <h3 style={{ fontFamily: 'Outfit', fontSize: '1rem', fontWeight: '800', marginBottom: '1rem', color: 'var(--text-main)' }}>Desempeño Operativo</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem', marginBottom: '1.5rem' }}>
+      <div className="grid-cols-3" style={{ gap: '1.25rem', marginBottom: '1.5rem' }}>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span className="stat-label">Sentimiento IA</span>
@@ -839,7 +839,7 @@ const Dashboard = ({
 
         {/* Left Column: Intelligence (AI & Sentiment) */}
         {/* Row 1: Intelligence vs Matrix */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'stretch' }}>
+        <div className="grid-cols-2" style={{ gap: '1.5rem', alignItems: 'stretch' }}>
           {/* AI Insights Card - Redesigned as Executive Summary */}
           <div className="card" style={{ background: 'var(--bg-surface)', borderLeft: '4px solid #f59e0b' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -1549,7 +1549,7 @@ const QRGenerator = () => {
       </div>
 
       {!batchMode ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+        <div className="grid-cols-2" style={{ gap: '2rem' }}>
           <div className="card">
             <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1.5rem' }}>{t('qr.config')}</h3>
 
@@ -1921,7 +1921,7 @@ const AuditTrail = () => {
             <h3 style={{ fontSize: '1.1rem', fontWeight: '800', marginBottom: '1rem' }}>{t('audit.changes_analysis')}</h3>
 
             {selectedLog.detalles?.changes ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="grid-cols-2" style={{ gap: '1rem' }}>
                 <div style={{ border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
                   <div style={{ background: '#fee2e2', color: '#991b1b', padding: '0.75rem', fontWeight: '800', fontSize: '0.85rem' }}>{t('audit.previous_state')}</div>
                   <pre style={{ padding: '1rem', margin: 0, fontSize: '0.8rem', overflowX: 'auto', background: '#fff' }}>

@@ -353,7 +353,7 @@ const Feedback = () => {
               {/* NPS 0-10 */}
               {tipoRespuesta === 'nps' && (
                 <div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(11, 1fr)', gap: '4px', marginBottom: '6px' }}>
+                  <div className="nps-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(11, 1fr)', gap: '2px', marginBottom: '6px' }}>
                     {Array.from({ length: 11 }, (_, i) => (
                       <button key={i} type="button" onClick={() => setRating(i)} style={{
                         aspectRatio: '1', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '800',

@@ -1317,9 +1317,34 @@ body.is-snapshot-mode .snapshot-mode-overlay {
    WHATSAPP COMPOSE MODAL
    ======================================== */
 
-/* Ocultar vista previa del teléfono en pantallas pequeñas */
 @media (max-width: 768px) {
   .wa-phone-preview {
     display: none !important;
+  }
+}
+
+/* ========================================
+   QUESTION MANAGER — layout responsive
+   ======================================== */
+
+@media (max-width: 768px) {
+  .qm-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .qm-preview {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   FEEDBACK — NPS buttons touch target
+   ======================================== */
+
+@media (max-width: 480px) {
+  /* Ensure NPS 0-10 buttons are at least 32px tall */
+  .nps-grid button {
+    min-height: 32px;
+    font-size: 0.65rem !important;
   }
 }

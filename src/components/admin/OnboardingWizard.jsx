@@ -889,7 +889,7 @@ const OnboardingWizard = ({
         </div>
 
         {/* Form content */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 2.5rem' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(1.25rem, 4vw, 3rem) clamp(1rem, 3vw, 2.5rem)' }}>
           <div style={{
             width: '100%', maxWidth: '520px',
             opacity: visible ? 1 : 0,
@@ -909,7 +909,7 @@ const OnboardingWizard = ({
                   style={IS(!!orgName)} />
 
                 <label style={{ ...LS, marginTop: '1.5rem' }}>Tipo de negocio</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.6rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(72px, 100%), 1fr))', gap: '0.6rem', marginBottom: '1.5rem' }}>
                   {BIZ_TYPES.map(bt => (
                     <button key={bt.id} type="button" onClick={() => setBizType(bt.id)}
                       style={{
@@ -982,7 +982,7 @@ const OnboardingWizard = ({
 
                   {/* Municipio / Estado — auto-llenados */}
                   {cpStatus === 'found' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '0.75rem' }}>
                       <div>
                         <label style={LS}>Municipio / Alcaldía</label>
                         <input type="text" value={municipio} onChange={e => setMunicipio(e.target.value)}
@@ -1036,7 +1036,7 @@ const OnboardingWizard = ({
               <div>
                 <SectionHead title="¿Dónde quieres colocar el primer QR?" sub="Selecciona el área que quieres evaluar." />
                 <label style={LS}>Área de evaluación *</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(90px, 100%), 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
                   {currentAreaPresets.map((p, i) => (
                     <button key={i} type="button" onClick={() => { setAreaPreset(i); setAreaCustom(''); }}
                       style={{

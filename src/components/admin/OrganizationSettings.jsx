@@ -281,7 +281,7 @@ export default function OrganizationSettings() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: 16, marginBottom: 24 }}>
         {planKeys.map(key => {
           const plan = PLAN_LIMITS[key];
           const isCurrent = currentPlan === key;

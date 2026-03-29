@@ -376,7 +376,7 @@ export default function GeoMap() {
       </div>
 
       {/* Map */}
-      <div style={{ height: '520px', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', background: isDark ? '#1a1a2e' : '#f8fafc' }}>
+      <div style={{ height: 'clamp(320px, 60vh, 520px)', borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', background: isDark ? '#1a1a2e' : '#f8fafc' }}>
         <LeafletMap stores={filtered} />
       </div>
 

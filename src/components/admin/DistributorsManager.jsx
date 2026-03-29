@@ -193,7 +193,7 @@ function DistributorForm({ distributor, tenantId, onSave, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: T.card, borderRadius: 16, padding: 28, width: '100%', maxWidth: 480, fontFamily: font, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ background: T.card, borderRadius: 16, padding: 'clamp(16px, 4vw, 28px)', width: '100%', maxWidth: 480, fontFamily: font, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.ink }}>
             {form.id ? 'Editar distribuidor' : 'Nuevo distribuidor'}
@@ -219,7 +219,7 @@ function DistributorForm({ distributor, tenantId, onSave, onClose }) {
               <input value={form.company} onChange={e => set('company', e.target.value)} style={inputStyle} placeholder="García Consultores" />
             </label>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 12 }}>
               <label style={labelStyle}>
                 WhatsApp
                 <input value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)} style={inputStyle} placeholder="+52 55 1234 5678" />
@@ -270,7 +270,7 @@ function QRPreview({ distributor, onClose, onPrint }) {
   const refUrl = `${REFERRAL_BASE}?ref=${distributor.code}`;
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: T.card, borderRadius: 16, padding: 32, width: '100%', maxWidth: 340, fontFamily: font, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
+      <div style={{ background: T.card, borderRadius: 16, padding: 'clamp(16px, 5vw, 32px)', width: '100%', maxWidth: 340, fontFamily: font, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', textAlign: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.muted }}><X size={18} /></button>
         </div>
@@ -354,7 +354,7 @@ export default function DistributorsManager() {
       )}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))', gap: 12, marginBottom: 24 }}>
         {[
           { icon: <Share2 size={18} />, label: 'Distribuidores activos', value: activeCount, color: T.teal },
           { icon: <Users size={18} />, label: 'Total', value: distributors.length, color: T.purple },
@@ -385,7 +385,8 @@ export default function DistributorsManager() {
             </button>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: T.bg }}>
                 {['Distribuidor', 'Código', 'Link de referido', 'Contacto', 'Estado', ''].map(h => (
@@ -440,6 +441,7 @@ export default function DistributorsManager() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

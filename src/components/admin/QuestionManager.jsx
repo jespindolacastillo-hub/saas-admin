@@ -201,7 +201,7 @@ export default function QuestionManager() {
         <p style={{ fontSize: '0.85rem', color: T.muted }}>Cada tipo de QR puede tener su propia pregunta, estilo de calificación y seguimiento</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr auto', gap: 20 }}>
+      <div className="qm-layout" style={{ display: 'grid', gridTemplateColumns: '220px 1fr auto', gap: 20 }}>
 
         {/* Left: type list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -364,7 +364,7 @@ export default function QuestionManager() {
         )}
 
         {/* Right: preview */}
-        <div style={{ width: 260 }}>
+        <div className="qm-preview" style={{ width: 260 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <span style={{ fontSize: '0.78rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Preview</span>
             <button onClick={() => setPreview(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.muted }}>

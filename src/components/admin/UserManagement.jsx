@@ -166,7 +166,8 @@ export default function UserManagement({ session }) {
             <div style={{ fontSize: '0.9rem', color: T.muted, fontWeight: 500 }}>Aún no hay usuarios en el equipo.</div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: 500, borderCollapse: 'collapse', fontSize: '0.88rem' }}>
             <thead>
               <tr style={{ background: '#FAFAFA', borderBottom: `1px solid ${T.border}` }}>
                 {['Usuario', 'Email', 'Rol', 'Estado', 'Acciones'].map(h => (
@@ -220,13 +221,14 @@ export default function UserManagement({ session }) {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* Modal */}
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
-          <div style={{ background: T.card, borderRadius: 20, padding: 28, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: T.card, borderRadius: 20, padding: 'clamp(16px, 4vw, 28px)', width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: T.ink, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <ShieldCheck size={20} color={T.coral} />
@@ -235,7 +237,7 @@ export default function UserManagement({ session }) {
               <button onClick={() => setModal(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: T.muted }}><X size={20} /></button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: 14 }}>
               {[
                 { label: 'Nombre *', field: 'nombre', type: 'text', colSpan: 1 },
                 { label: 'Apellido', field: 'apellido', type: 'text', colSpan: 1 },

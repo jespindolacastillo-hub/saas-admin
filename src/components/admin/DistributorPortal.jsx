@@ -563,7 +563,7 @@ export default function DistributorPortal({ userEmail }) {
       </div>
 
       {/* ── Funnel + Tier ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: 16, marginBottom: 20 }}>
         <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, padding: '18px 20px' }}>
           <div style={{ fontSize: 13, fontWeight: 800, color: T.ink, marginBottom: 14 }}>Funnel de conversión</div>
           <Funnel
@@ -614,8 +614,8 @@ export default function DistributorPortal({ userEmail }) {
 
         {/* Tabla de comisiones */}
         {commissions.length > 0 && (
-          <div style={{ marginTop: 16, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div style={{ marginTop: 16, borderTop: `1px solid ${T.border}`, paddingTop: 16, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', minWidth: 420, borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
                   {['Período', 'Clientes', 'MRR base', 'Comisión', 'Estado'].map(h => (
@@ -659,7 +659,8 @@ export default function DistributorPortal({ userEmail }) {
             </div>
           </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: 400, borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: T.bg }}>
                 {['Negocio', 'Plan', 'MRR', 'Estado', 'Desde'].map(h => (
@@ -681,6 +682,7 @@ export default function DistributorPortal({ userEmail }) {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

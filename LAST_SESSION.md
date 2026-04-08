@@ -11,27 +11,27 @@
 - **QuestionManager.jsx**: Implementación de `TYPE_DEFAULTS` que pre-carga preguntas y opciones lógicas dependiendo del tipo de QR seleccionado (Empleado, Área, Producto, Evento, etc.).
 - **Mejora en UX**: Facilita la creación de nuevos QR al no tener que escribir todas las opciones manualmente.
 
-### 3. Otros Ajustes
-- **Parsing de JSON**: Se añadió manejo robusto para las opciones de seguimiento almacenadas como JSON en la base de datos.
-- **Control de Contacto**: El paso de captura de WhatsApp ahora es opcional y depende del toggle `request_contact` en el config.
+### 3. Corrección Crítica: Envío de Feedback
+- **Fix ReferenceErrors**: Se corrigió un error donde `isHappy` e `isUnhappy` no estaban definidos, lo que causaba que el formulario se quedara en "Enviando...".
+- **Manejo de NPS**: Se aseguró que la lógica de "Felicidad" y "Negatividad" funcione correctamente para NPS (ej. 9-10 es positivo).
 
 ---
 
 ## Commits (main → Netlify auto-deploy)
 
 ```bash
+# fix: resolve ReferenceErrors (isHappy/isUnhappy) blocking feedback submission
 # feat: dynamic feedback configurations & type-specific defaults
-# fix: handle stringified JSON in followup_options
 ```
 
 ---
 
 ## Estado Actual
 
-- **Feedback Virtual**: Totalmente adaptativo al tipo de QR.
+- **Feedback Virtual**: Totalmente funcional y adaptativo.
 - **Configurador**: Ofrece sugerencias inteligentes por categoría.
 
 ## Pendientes
 
-- [ ] Migrar el componente `Feedback.jsx` (legacy) para que use la misma lógica dinámica que `FeedbackPublic.jsx` o redirigir todo el tráfico a este último.
-- [ ] Validar el flujo de cupones con los nuevos tipos de calificación.
+- [ ] Validar el flujo de cupones con los nuevos tipos de calificación en un entorno real.
+- [ ] Migrar el resto de las vistas de administración para usar los mismos estilos de calificación si es necesario.

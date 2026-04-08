@@ -719,7 +719,7 @@ export default function FeedbackPublic() {
     const loyaltyPrefix = qrCouponCfg?.trigger_type === 'loyalty'
       ? (qrCouponCfg.coupon_prefix || 'LOYAL')
       : (loyalty?.loyalty_coupon_prefix || 'LOYAL');
-    const loyaltyCode = isHappy(s) && (qrCouponCfg?.trigger_type === 'loyalty' || loyalty?.loyalty_enabled)
+    const loyaltyCode = getIsHappy(s, questionConfig?.rating_style) && (qrCouponCfg?.trigger_type === 'loyalty' || loyalty?.loyalty_enabled)
       ? genCode(loyaltyPrefix) : null;
     if (loyaltyCode) setLoyaltyCouponCode(loyaltyCode);
 
@@ -753,14 +753,15 @@ export default function FeedbackPublic() {
       if (!testMode) localStorage.setItem(`rf_sent_${qrId}`, Date.now().toString());
 
       // WhatsApp alert (non-blocking, only if location has a whatsapp_number configured)
-      if (isUnhappy(s) && qr.tenant_id && location?.whatsapp_number) {
+      const threshold = questionConfig?.negative_threshold ?? 2;
+      if (getIsUnhappy(s, threshold) && qr.tenant_id && location?.whatsapp_number) {
         supabase.functions.invoke('send-whatsapp-alert', {
           body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, coupon_code: code },
         }).catch(() => {});
       }
 
-      if (isHappy(s))    setScreen('done-happy');
-      else if (isUnhappy(s)) setScreen('done-bad');
+      if (getIsHappy(s, questionConfig?.rating_style))    setScreen('done-happy');
+      else if (getIsUnhappy(s, threshold)) setScreen('done-bad');
       else               setScreen('done-neutral');
 
     } catch (err) {

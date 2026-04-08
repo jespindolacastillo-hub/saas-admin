@@ -3,8 +3,11 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 // ─── Sentiment thresholds ─────────────────────────────────────────────────────
-const isHappy   = (s) => s >= 4;
-const isUnhappy = (s) => s <= 2;
+const getIsUnhappy = (s, threshold = 2) => s > 0 && s <= threshold;
+const getIsHappy   = (s, style = 'emoji') => {
+  if (style === 'nps') return s >= 9;
+  return s >= 4;
+};
 
 // ─── Device fingerprint for cooldown ─────────────────────────────────────────
 const getDeviceHash = () => {
@@ -207,8 +210,13 @@ function Progress({ total, current }) {
 }
 
 // ─── Step 1: Score ────────────────────────────────────────────────────────────
-function StepScore({ locationName, qrLabel, testMode, onSecretTap, onSelect }) {
+function StepScore({ locationName, qrLabel, testMode, onSecretTap, onSelect, config }) {
   const label = [locationName, qrLabel].filter(Boolean).join(' · ');
+  const style = config?.rating_style || 'emoji';
+  const mainQuestion = config?.main_question || '¿Cómo fue tu experiencia hoy?';
+
+  const [localScore, setLocalScore] = useState(0);
+
   return (
     <div className="rf-card">
       <Logo onSecretTap={onSecretTap} />
@@ -218,29 +226,72 @@ function StepScore({ locationName, qrLabel, testMode, onSecretTap, onSelect }) {
         </div>
       )}
       {label && <div style={{ fontSize: '0.72rem', fontWeight: 600, color: S.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>{label}</div>}
-      <h1 className="rf-step-title">¿Cómo fue tu experiencia hoy?</h1>
-      <div className="rf-emojis">
-        {EMOJIS.map(({ value, emoji, label: lbl }) => (
-          <button key={value} className="rf-emoji-btn" onClick={() => onSelect(value)}>
-            <span className="rf-emoji">{emoji}</span>
-            <span className="rf-emoji-label">{lbl}</span>
-          </button>
-        ))}
-      </div>
+      <h1 className="rf-step-title">{mainQuestion}</h1>
+
+      {style === 'emoji' && (
+        <div className="rf-emojis">
+          {EMOJIS.map(({ value, emoji, label: lbl }) => (
+            <button key={value} className="rf-emoji-btn" onClick={() => onSelect(value)}>
+              <span className="rf-emoji">{emoji}</span>
+              <span className="rf-emoji-label">{lbl}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {style === 'stars' && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '28px' }}>
+          {[1, 2, 3, 4, 5].map(n => (
+            <button key={n} onClick={() => onSelect(n)} onMouseEnter={() => setLocalScore(n)} onMouseLeave={() => setLocalScore(0)} style={{ background: 'none', border: 'none', cursor: 'pointer', outline: 'none', transition: 'transform 0.1s' }}>
+              <span style={{ fontSize: '2.8rem', color: (localScore || 0) >= n ? '#F59E0B' : '#E5E7EB', textShadow: (localScore || 0) >= n ? '0 0 10px rgba(245, 158, 11, 0.3)' : 'none' }}>⭐</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {style === 'nps' && (
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', marginBottom: '6px' }}>
+            {[0, 1, 2, 3, 4, 5].map(n => (
+              <button key={n} onClick={() => onSelect(n)} style={{ height: '44px', borderRadius: '10px', border: `2.5px solid ${S.border}`, background: '#fff', fontWeight: 800, fontSize: '1rem', color: S.ink, cursor: 'pointer' }}>{n}</button>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px', marginBottom: '12px' }}>
+            {[6, 7, 8, 9, 10].map(n => (
+              <button key={n} onClick={() => onSelect(n)} style={{ height: '44px', borderRadius: '10px', border: `2.5px solid ${S.border}`, background: '#fff', fontWeight: 800, fontSize: '1rem', color: S.ink, cursor: 'pointer' }}>{n}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', fontWeight: 700, color: S.muted, textTransform: 'uppercase' }}>
+            <span>Nada probable</span>
+            <span>Muy probable</span>
+          </div>
+        </div>
+      )}
+
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
   );
 }
 
 // ─── Step 2: Reason (bad scores only) ─────────────────────────────────────────
-function StepReason({ options, onNext, onSkip }) {
+function StepReason({ config, onNext, onSkip }) {
   const [selected, setSelected] = useState('');
   const [comment, setComment]   = useState('');
+
+  const type = config?.followup_type || 'multiple_choice';
+  const options = config?.followup_options || DEFAULT_OPTIONS;
+  const title = config?.followup_question || '¿Qué podríamos mejorar?';
 
   const handleChip = (opt) => {
     setSelected(opt);
     // Auto-advance after a brief pause so the selection is visible
-    setTimeout(() => onNext({ category: opt, comment: comment.trim() || null }), 250);
+    if (opt !== 'Otro') {
+      setTimeout(() => onNext({ category: opt, comment: comment.trim() || null }), 250);
+    }
+  };
+
+  const handleNextAction = () => {
+    onNext({ category: selected || 'Comentario', comment: comment.trim() || null });
   };
 
   return (
@@ -248,24 +299,49 @@ function StepReason({ options, onNext, onSkip }) {
       <Logo />
       <Progress total={3} current={0} />
       <p className="rf-step-label">Paso 1 de 2</p>
-      <h2 className="rf-step-title">¿Qué podríamos mejorar?</h2>
-      <div className="rf-chips">
-        {options.map(opt => (
-          <button key={opt} className={`rf-chip${selected === opt ? ' active' : ''}`} onClick={() => handleChip(opt)}>
-            {opt}
+      <h2 className="rf-step-title">{title}</h2>
+
+      {type === 'multiple_choice' ? (
+        <>
+          <div className="rf-chips">
+            {options.map(opt => (
+              <button key={opt} className={`rf-chip${selected === opt ? ' active' : ''}`} onClick={() => handleChip(opt)}>
+                {opt}
+              </button>
+            ))}
+          </div>
+          {selected === 'Otro' && (
+            <>
+              <textarea
+                className="rf-textarea"
+                rows={3}
+                placeholder="Cuéntanos más…"
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                autoFocus
+              />
+              <button className="rf-btn rf-btn-primary" onClick={handleNextAction} style={{ marginBottom: 12 }}>
+                Continuar
+              </button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <textarea
+            className="rf-textarea"
+            rows={5}
+            placeholder="Escribe tu comentario aquí…"
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            autoFocus
+          />
+          <button className="rf-btn rf-btn-primary" disabled={!comment.trim()} onClick={handleNextAction} style={{ marginBottom: 12 }}>
+            Siguiente
           </button>
-        ))}
-      </div>
-      {selected === 'Otro' && (
-        <textarea
-          className="rf-textarea"
-          rows={3}
-          placeholder="Cuéntanos más…"
-          value={comment}
-          onChange={e => setComment(e.target.value)}
-          autoFocus
-        />
+        </>
       )}
+
       <button className="rf-btn rf-btn-ghost" onClick={() => onSkip()}>
         Omitir
       </button>
@@ -540,7 +616,13 @@ export default function FeedbackPublic() {
         .eq('tenant_id', qrData.tenant_id)
         .eq('qr_type', qrData.type)
         .maybeSingle();
-      if (qcData) setQuestionConfig(qcData);
+      if (qcData) {
+        // Parse options if stringified
+        if (typeof qcData.followup_options === 'string') {
+          try { qcData.followup_options = JSON.parse(qcData.followup_options); } catch { qcData.followup_options = []; }
+        }
+        setQuestionConfig(qcData);
+      }
     }
 
     const { data: rcData } = await supabase
@@ -564,12 +646,20 @@ export default function FeedbackPublic() {
 
   const handleScoreSelect = (s) => {
     setScore(s);
-    if (isHappy(s)) {
+    const threshold = questionConfig?.negative_threshold ?? 2;
+    const style     = questionConfig?.rating_style || 'emoji';
+
+    if (getIsHappy(s, style)) {
       // Happy: submit immediately, skip reason/contact
       submitFeedback({ score: s, category: null, comment: null, phone: null });
-    } else if (isUnhappy(s)) {
-      // Bad: go to reason step
-      setScreen('reason');
+    } else if (getIsUnhappy(s, threshold)) {
+      // Bad: go to reason step if enabled
+      if (questionConfig?.followup_enabled === false) {
+        if (questionConfig?.request_contact) setScreen('contact');
+        else submitFeedback({ score: s, category: null, comment: null, phone: null });
+      } else {
+        setScreen('reason');
+      }
     } else {
       // Neutral: submit immediately
       submitFeedback({ score: s, category: null, comment: null, phone: null });
@@ -579,13 +669,21 @@ export default function FeedbackPublic() {
   const handleReasonNext = ({ category: cat, comment: cmt }) => {
     setCategory(cat);
     setComment(cmt);
-    setScreen('contact');
+    if (questionConfig?.request_contact === false) {
+      submitFeedback({ score, category: cat, comment: cmt, phone: null });
+    } else {
+      setScreen('contact');
+    }
   };
 
   const handleReasonSkip = () => {
     setCategory(null);
     setComment(null);
-    setScreen('contact');
+    if (questionConfig?.request_contact === false) {
+      submitFeedback({ score, category: null, comment: null, phone: null });
+    } else {
+      setScreen('contact');
+    }
   };
 
   const handleContactSubmit = (phone) => {
@@ -641,7 +739,7 @@ export default function FeedbackPublic() {
         score:            s,
         comment:          cmt || null,
         followup_answer:  cat || null,
-        routed_to_google: isHappy(s),
+        routed_to_google: getIsHappy(s, questionConfig?.rating_style),
         recovery_sent:    needsRecovery || !!loyaltyCode,
         coupon_code:      code || loyaltyCode || null,
         coupon_config_id: qrCouponCfg?.id || null,
@@ -694,10 +792,10 @@ export default function FeedbackPublic() {
   if (cooldown) return wrap(<CooldownScreen onSecretTap={secretTap} />);
 
   if (screen === 'score')
-    return wrap(<StepScore locationName={location?.name} qrLabel={qr?.label} testMode={testMode} onSecretTap={secretTap} onSelect={handleScoreSelect} />);
+    return wrap(<StepScore locationName={location?.name} qrLabel={qr?.label} testMode={testMode} onSecretTap={secretTap} onSelect={handleScoreSelect} config={questionConfig} />);
 
   if (screen === 'reason')
-    return wrap(<StepReason options={followupOptions} onNext={handleReasonNext} onSkip={handleReasonSkip} />);
+    return wrap(<StepReason config={questionConfig} onNext={handleReasonNext} onSkip={handleReasonSkip} />);
 
   if (screen === 'contact')
     return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} />);

@@ -34,6 +34,33 @@ const DEFAULT_CONFIG = {
   request_contact: true,
 };
 
+const TYPE_DEFAULTS = {
+  area: {
+    main_question: '¿Cómo fue tu experiencia en esta área?',
+    followup_options: ['Tiempo de espera', 'Trato del personal', 'Calidad', 'Limpieza', 'Ambiente', 'Otro']
+  },
+  employee: {
+    main_question: '¿Cómo calificas la atención que recibiste?',
+    followup_options: ['Amabilidad', 'Rapidez', 'Atención', 'Presentación', 'Conocimiento del menú', 'Otro']
+  },
+  shift: {
+    main_question: '¿Cómo calificas el servicio en este turno?',
+    followup_options: ['Limpieza', 'Servicio', 'Disponibilidad de productos', 'Rapidez', 'Otro']
+  },
+  product: {
+    main_question: '¿Qué te pareció nuestro producto?',
+    followup_options: ['Sabor', 'Calidad', 'Precio', 'Presentación', 'Temperatura', 'Otro']
+  },
+  event: {
+    main_question: '¿Qué te pareció nuestro evento?',
+    followup_options: ['Organización', 'Ambiente', 'Contenido', 'Atención del personal', 'Lugar', 'Otro']
+  },
+  channel: {
+    main_question: '¿Cómo fue tu experiencia en este canal?',
+    followup_options: ['Tiempo de entrega', 'Estado del pedido', 'Facilidad de pedido', 'Atención telefónica', 'Otro']
+  }
+};
+
 const RATING_STYLES = [
   { value: 'emoji',  label: 'Emojis 😤😕😐😊🤩',  desc: 'Caras expresivas 1-5' },
   { value: 'stars',  label: 'Estrellas ⭐⭐⭐⭐⭐', desc: 'Clásico 1-5 estrellas' },
@@ -159,9 +186,11 @@ export default function QuestionManager() {
   const selectType = (type, map = configs) => {
     setSelected(type);
     const existing = map[type];
+    const typeDefault = TYPE_DEFAULTS[type] || {};
+    
     setForm(existing
-      ? { ...DEFAULT_CONFIG, ...existing, followup_options: existing.followup_options || DEFAULT_CONFIG.followup_options }
-      : { ...DEFAULT_CONFIG });
+      ? { ...DEFAULT_CONFIG, ...typeDefault, ...existing, followup_options: existing.followup_options || typeDefault.followup_options || DEFAULT_CONFIG.followup_options }
+      : { ...DEFAULT_CONFIG, ...typeDefault });
   };
 
   const save = async () => {

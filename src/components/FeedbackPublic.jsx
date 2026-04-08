@@ -29,6 +29,27 @@ const genCode = (prefix = 'RECOVERY') => {
   return `${prefix}-${code}`;
 };
 
+// ─── Defaults ─────────────────────────────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  main_question: '¿Cómo fue tu experiencia hoy?',
+  rating_style: 'emoji',
+  negative_threshold: 2,
+  followup_enabled: true,
+  followup_type: 'multiple_choice',
+  followup_question: '¿Qué podríamos mejorar?',
+  followup_options: ['Tiempo de espera', 'Trato del personal', 'Calidad', 'Limpieza', 'Precio', 'Otro'],
+  request_contact: true,
+};
+
+const TYPE_DEFAULTS = {
+  area: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Tiempo de espera', 'Trato del personal', 'Calidad', 'Limpieza', 'Ambiente', 'Otro'] },
+  employee: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Amabilidad', 'Rapidez', 'Atención', 'Presentación', 'Conocimiento del menú', 'Otro'] },
+  shift: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Limpieza', 'Servicio', 'Disponibilidad de productos', 'Rapidez', 'Otro'] },
+  product: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Sabor', 'Calidad', 'Precio', 'Presentación', 'Temperatura', 'Otro'] },
+  event: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Organización', 'Ambiente', 'Contenido', 'Atención del personal', 'Lugar', 'Otro'] },
+  channel: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Tiempo de entrega', 'Estado del pedido', 'Facilidad de pedido', 'Atención telefónica', 'Otro'] }
+};
+
 // ─── Test mode helpers ────────────────────────────────────────────────────────
 const TEST_MODE_KEY = 'rf_test_mode';
 const isTestMode   = () => localStorage.getItem(TEST_MODE_KEY) === 'on';
@@ -620,12 +641,16 @@ export default function FeedbackPublic() {
         .eq('tenant_id', qrData.tenant_id)
         .eq('qr_type', qrData.type)
         .maybeSingle();
+      const baseDefault = { ...DEFAULT_CONFIG, ...(TYPE_DEFAULTS[qrData.type] || {}) };
+
       if (qcData) {
         // Parse options if stringified
         if (typeof qcData.followup_options === 'string') {
-          try { qcData.followup_options = JSON.parse(qcData.followup_options); } catch { qcData.followup_options = []; }
+          try { qcData.followup_options = JSON.parse(qcData.followup_options); } catch { qcData.followup_options = baseDefault.followup_options; }
         }
-        setQuestionConfig(qcData);
+        setQuestionConfig({ ...baseDefault, ...qcData });
+      } else {
+        setQuestionConfig(baseDefault);
       }
     }
 

@@ -189,7 +189,14 @@ export default function QuestionManager() {
     const typeDefault = TYPE_DEFAULTS[type] || {};
     
     setForm(existing
-      ? { ...DEFAULT_CONFIG, ...typeDefault, ...existing, followup_options: existing.followup_options || typeDefault.followup_options || DEFAULT_CONFIG.followup_options }
+      ? { 
+          ...DEFAULT_CONFIG, 
+          ...typeDefault, 
+          ...existing, 
+          followup_options: (existing.followup_options && existing.followup_options.length > 0) 
+            ? existing.followup_options 
+            : (typeDefault.followup_options || DEFAULT_CONFIG.followup_options) 
+        }
       : { ...DEFAULT_CONFIG, ...typeDefault });
   };
 

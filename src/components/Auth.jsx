@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { LogIn, UserPlus, Mail, Lock, ShieldCheck, AlertCircle, Eye, EyeOff, User, ArrowLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,15 @@ const strengthLabels = ['', 'Débil', 'Regular', 'Buena', 'Fuerte'];
 const Auth = ({ onLogin, passwordRecovery = false, onPasswordReset }) => {
   const { t } = useTranslation();
   const params = new URLSearchParams(window.location.search);
-  const [isSignUp, setIsSignUp] = useState(!!params.get('email'));
+  const [isSignUp, setIsSignUp] = useState(!!params.get('email') || !!params.get('ref'));
+  
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      localStorage.setItem('partner_ref', refCode);
+    }
+  }, []);
   const [email, setEmail] = useState(params.get('email') || '');
   const [password, setPassword] = useState('');
   const [nombre, setNombre] = useState('');
@@ -58,9 +66,10 @@ const Auth = ({ onLogin, passwordRecovery = false, onPasswordReset }) => {
     try {
       if (isSignUp) {
         if (password.length < 8) throw new Error(t('auth.alerts.password_too_short'));
+        const storedRef = localStorage.getItem('partner_ref');
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { data: { nombre } },
+          options: { data: { nombre, referred_by: storedRef || null } },
         });
         if (error) throw error;
         setMessage(t('auth.alerts.signup_success'));

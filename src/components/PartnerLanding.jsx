@@ -118,7 +118,7 @@ export default function PartnerLanding() {
   const clientesNuevos = Math.round(resenas * 0.50);
   const revenueTotal = clientesNuevos * ticket;
 
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://retelio.com.mx';
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.retelio.app';
   const waMessage = `¡Hola ${partner.name.split(' ')[0]}! Vi la plataforma de Retelio para mi negocio y quiero iniciar la prueba gratuita de 14 días usando tu enlace de referido.`;
   const waLink = partner.whatsapp ? `https://wa.me/52${partner.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}` : '#';
 

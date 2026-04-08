@@ -732,7 +732,7 @@ export default function FeedbackPublic() {
     }
 
     try {
-      const { data: inserted } = await supabase.from('feedbacks').insert({
+      const { data: inserted, error: insertError } = await supabase.from('feedbacks').insert({
         qr_id:            qrId,
         tenant_id:        qr.tenant_id,
         location_id:      qr.location_id,
@@ -745,9 +745,16 @@ export default function FeedbackPublic() {
         coupon_config_id: qrCouponCfg?.id || null,
         area_id:          qr.area_id || null,
         ip_hash:          getDeviceHash(),
-        is_test:          testMode || false,
+        is_test:          testMode || qr.tenant?.test_mode || false,
         contact_phone:    phone || null,
       }).select('id').single();
+
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        alert('Error al guardar: ' + insertError.message);
+        setSubmitting(false);
+        return;
+      }
       if (inserted?.id) setFeedbackId(inserted.id);
 
       if (!testMode) localStorage.setItem(`rf_sent_${qrId}`, Date.now().toString());

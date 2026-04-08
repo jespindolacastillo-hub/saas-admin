@@ -52,12 +52,41 @@ import CouponManagement from './components/admin/CouponManagement';
 import { useTenant } from './hooks/useTenant';
 import PartnerLanding from './components/PartnerLanding';
 
-// Helper: Cálculo de NPS (Net Promoter Score)
+// Helper: Cálculo de NPS (Net Promoter Score) adaptativo (1-5 ó 0-10)
 const calculateNPS = (data) => {
   if (!data || data.length === 0) return 0;
-  const promoters = data.filter(f => f.score >= 4).length;
-  const detractors = data.filter(f => f.score <= 2).length;
-  return Math.round(((promoters - detractors) / data.length) * 100);
+  let promoters = 0;
+  let detractors = 0;
+
+  data.forEach(f => {
+    const s = f.score ?? f.satisfaccion ?? 0;
+    // Si la calificación es > 5, asumimos escala 0-10 (NPS estándar)
+    // Buscamos si hay algún valor > 5 en el set para decidir la escala, o lo hacemos por registro
+    // Nota: Un 5 en escala 0-10 es detractor. Un 5 en escala 1-5 es promotor.
+    // Para simplificar, si el valor es 9-10 es promotor. Si es 5 y no hay valores > 5 en el data, es promotor.
+    
+    // Implementación más robusta:
+    if (s >= 9) promoters++;
+    else if (s >= 0 && s <= 6) detractors++;
+    else if (s === 5) {
+      // Caso especial: Si es exactamente 5, podría ser promotor en escala 1-5
+      // Pero si estamos mezclando escalas, es ambiguo. 
+      // Si la mayoría de los datos son 1-5, tratamos 5 como promotor.
+      promoters++; 
+    }
+  });
+
+  // Re-evaluación: Si el máximo detectado es <= 5, usamos lógica 1-5
+  const maxScore = Math.max(...data.map(f => f.score ?? f.satisfaccion ?? 0));
+  if (maxScore <= 5) {
+    const p = data.filter(f => (f.score ?? f.satisfaccion) === 5).length;
+    const d = data.filter(f => (f.score ?? f.satisfaccion) <= 2).length;
+    return Math.round(((p - d) / data.length) * 100);
+  }
+
+  const p = data.filter(f => (f.score ?? f.satisfaccion) >= 9).length;
+  const d = data.filter(f => (f.score ?? f.satisfaccion) <= 6).length;
+  return Math.round(((p - d) / data.length) * 100);
 };
 
 // Helper: Exportar a CSV
@@ -171,7 +200,8 @@ const Dashboard = ({
   const finalFilteredData = useMemo(() => {
     if (filters.sentiment === 'Todos') return areaFilteredData;
     return areaFilteredData.filter(f => {
-      const s = f.sentimiento || (f.score >= 4 ? 'Positivo' : f.score <= 2 ? 'Negativo' : 'Neutral');
+      const score = f.score ?? f.satisfaccion ?? 0;
+      const s = f.sentimiento || (score >= 4 ? 'Positivo' : score <= 2 ? 'Negativo' : 'Neutral');
       return s === filters.sentiment;
     });
   }, [areaFilteredData, filters.sentiment]);
@@ -266,7 +296,7 @@ const Dashboard = ({
 
   const stats = useMemo(() => {
     const total = (finalFilteredData || []).length;
-    const avg = total > 0 ? (finalFilteredData.reduce((acc, curr) => acc + (curr?.satisfaccion || 0), 0) / total).toFixed(1) : 0;
+    const avg = total > 0 ? (finalFilteredData.reduce((acc, curr) => acc + (curr?.score ?? curr?.satisfaccion ?? 0), 0) / total).toFixed(1) : 0;
 
     // Phase 3: Previous NPS Calculation
     const previousNPS = previousPeriodData.length > 0 ? calculateNPS(previousPeriodData) : null;

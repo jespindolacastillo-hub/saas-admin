@@ -256,7 +256,7 @@ function LocationBreakdown({ feedbacks, locations, loading }) {
     const reviews = fbs.filter(f => f.routed_to_google).length;
     const unhappy = fbs.filter(f => f.score <= 2).length;
     const recovered = fbs.filter(f => f.recovery_sent).length;
-    const avgNum  = fbs.length ? fbs.reduce((s, f) => s + f.score, 0) / fbs.length : null;
+    const avgNum  = fbs.length ? fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / fbs.length : null;
     const recRate = unhappy > 0 ? Math.round((recovered / unhappy) * 100) : null;
     return { ...loc, total: fbs.length, reviews, unhappy, recovered, avgNum, recRate };
   });
@@ -1276,13 +1276,24 @@ export default function RetelioDashboard() {
     const unhappy   = filteredFeedbacks.filter(f => f.score <= 2).length;
     const recovered = filteredFeedbacks.filter(f => f.recovery_sent).length;
     const avgScore  = total
-      ? (filteredFeedbacks.reduce((s, f) => s + f.score, 0) / total).toFixed(1)
+      ? (filteredFeedbacks.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / total).toFixed(1)
       : '—';
     const recRate = unhappy ? Math.round((recovered / unhappy) * 100) : 0;
-    // NPS: 5=Promotor, 3-4=Pasivo, 1-2=Detractor
-    const promoters  = filteredFeedbacks.filter(f => f.score === 5).length;
-    const detractors = filteredFeedbacks.filter(f => f.score <= 2).length;
-    const passives   = total - promoters - detractors;
+    // NPS adaptativo (1-5 ó 0-10)
+    const maxScoreDetected = Math.max(...filteredFeedbacks.map(f => f.score ?? 0));
+    const isNPSStandard    = maxScoreDetected > 5;
+
+    const promoters = filteredFeedbacks.filter(f => {
+      const s = f.score ?? 0;
+      return isNPSStandard ? s >= 9 : s === 5;
+    }).length;
+
+    const detractors = filteredFeedbacks.filter(f => {
+      const s = f.score ?? 0;
+      return isNPSStandard ? s <= 6 : s <= 2;
+    }).length;
+
+    const passives = total - promoters - detractors;
     const nps = total
       ? Math.round((promoters / total - detractors / total) * 100)
       : null;

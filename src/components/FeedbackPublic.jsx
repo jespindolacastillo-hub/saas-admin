@@ -3,7 +3,11 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
 // ─── Sentiment thresholds ─────────────────────────────────────────────────────
-const getIsUnhappy = (s, threshold = 2) => s > 0 && s <= threshold;
+const getIsUnhappy = (s, style = 'emoji', threshold = 2) => {
+  if (style === 'nps') return s <= 6;
+  return s <= threshold;
+};
+
 const getIsHappy   = (s, style = 'emoji') => {
   if (style === 'nps') return s >= 9;
   return s >= 4;
@@ -652,7 +656,7 @@ export default function FeedbackPublic() {
     if (getIsHappy(s, style)) {
       // Happy: submit immediately, skip reason/contact
       submitFeedback({ score: s, category: null, comment: null, phone: null });
-    } else if (getIsUnhappy(s, threshold)) {
+    } else if (getIsUnhappy(s, style, threshold)) {
       // Bad: go to reason step if enabled
       if (questionConfig?.followup_enabled === false) {
         if (questionConfig?.request_contact) setScreen('contact');
@@ -709,7 +713,8 @@ export default function FeedbackPublic() {
     const qrCouponCfg = qr.qr_coupon || qr.area?.area_coupon || null;
 
     const triggerScore  = recovery?.trigger_score ?? 2;
-    const needsRecovery = (qrCouponCfg?.trigger_type === 'recovery' || recovery?.enabled) && s <= triggerScore;
+    const isRecoveryTriggered = questionConfig?.rating_style === 'nps' ? s <= 6 : s <= triggerScore;
+    const needsRecovery = (qrCouponCfg?.trigger_type === 'recovery' || recovery?.enabled) && isRecoveryTriggered;
     const recoveryPrefix = qrCouponCfg?.trigger_type === 'recovery'
       ? (qrCouponCfg.coupon_prefix || 'RECOVERY')
       : (recovery?.coupon_prefix || 'RECOVERY');
@@ -761,14 +766,14 @@ export default function FeedbackPublic() {
 
       // WhatsApp alert (non-blocking, only if location has a whatsapp_number configured)
       const threshold = questionConfig?.negative_threshold ?? 2;
-      if (getIsUnhappy(s, threshold) && qr.tenant_id && location?.whatsapp_number) {
+      if (getIsUnhappy(s, questionConfig?.rating_style, threshold) && qr.tenant_id && location?.whatsapp_number) {
         supabase.functions.invoke('send-whatsapp-alert', {
           body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, coupon_code: code },
         }).catch(() => {});
       }
 
       if (getIsHappy(s, questionConfig?.rating_style))    setScreen('done-happy');
-      else if (getIsUnhappy(s, threshold)) setScreen('done-bad');
+      else if (getIsUnhappy(s, questionConfig?.rating_style, threshold)) setScreen('done-bad');
       else               setScreen('done-neutral');
 
     } catch (err) {

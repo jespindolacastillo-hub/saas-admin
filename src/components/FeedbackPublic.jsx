@@ -494,10 +494,16 @@ function DoneNeutral({ onSuggest }) {
 }
 
 // ─── Done: happy ──────────────────────────────────────────────────────────────
-function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty }) {
+function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick }) {
   const [showPhone, setShowPhone] = useState(false);
   const [phone, setPhone]         = useState('');
+  const [googleClicked, setGoogleClicked] = useState(false);
   const [loyaltyDone, setLoyaltyDone] = useState(false);
+
+  const handleGoogleClick = () => {
+    setGoogleClicked(true);
+    if (onGoogleClick) onGoogleClick();
+  };
 
   const handleLoyalty = () => {
     if (!phone.trim()) return;
@@ -515,22 +521,43 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty }) {
       </p>
 
       {googleUrl && (
-        <a href={googleUrl} target="_blank" rel="noreferrer"
+        <a href={googleUrl} target="_blank" rel="noreferrer" onClick={handleGoogleClick}
           style={{ display: 'block', padding: '16px', background: S.teal, color: '#fff', borderRadius: 14, fontFamily: fontStack, fontWeight: 700, fontSize: '1rem', textDecoration: 'none', textAlign: 'center', marginBottom: 16 }}>
           ⭐ Escribir reseña en Google
         </a>
       )}
 
-      {/* Loyalty coupon — shown automatically if configured */}
+      {/* Loyalty coupon — shown if configured AND (no google URL or google was clicked) */}
       {loyaltyCouponCode && loyaltyConfig && (
-        <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16 }}>
-          <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
-          <p className="rf-coupon-code">{loyaltyCouponCode}</p>
-          <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
-          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
-            Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar
-          </p>
-        </div>
+        (!googleUrl || googleClicked) ? (
+          <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
+            <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
+            <p className="rf-coupon-code">{loyaltyCouponCode}</p>
+            <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
+            <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
+              Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar
+            </p>
+          </div>
+        ) : (
+          <div style={{ 
+            padding: '20px', 
+            borderRadius: 14, 
+            background: 'rgba(255,255,255,0.03)', 
+            border: `1px dashed ${S.border}`, 
+            textAlign: 'center', 
+            marginBottom: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 10
+          }}>
+            <div style={{ fontSize: '1.5rem', opacity: 0.5 }}>🔒</div>
+            <p style={{ fontSize: '0.85rem', color: S.muted, margin: 0 }}>
+              Calculando tu recompensa... <br/>
+              <span style={{ fontWeight: 600, color: S.ink }}>Deja una reseña para desbloquear</span>
+            </p>
+          </div>
+        )
       )}
 
       {/* Loyalty phone capture — only if no coupon configured */}
@@ -845,7 +872,13 @@ export default function FeedbackPublic() {
     return wrap(<DoneNeutral onSuggest={(cmt) => updateFeedback({ comment: cmt })} />);
 
   if (screen === 'done-happy')
-    return wrap(<DoneHappy googleUrl={location?.google_review_url} loyaltyCouponCode={loyaltyCouponCode} loyaltyConfig={loyalty} onLoyalty={(ph) => updateFeedback({ contact_phone: ph })} />);
+    return wrap(<DoneHappy 
+      googleUrl={location?.google_review_url} 
+      loyaltyCouponCode={loyaltyCouponCode} 
+      loyaltyConfig={loyalty} 
+      onLoyalty={(ph) => updateFeedback({ contact_phone: ph })} 
+      onGoogleClick={() => updateFeedback({ google_click_at: new Date().toISOString() })}
+    />);
 
   return null;
 }

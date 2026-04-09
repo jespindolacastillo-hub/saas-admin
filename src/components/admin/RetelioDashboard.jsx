@@ -232,9 +232,9 @@ const COL_DEFS = [
   { key: 'name',    label: 'Sucursal',   sortable: true,  align: 'left'  },
   { key: 'total',   label: 'Feedbacks',  sortable: true,  align: 'right' },
   { key: 'avgNum',  label: 'Promedio',   sortable: true,  align: 'right' },
-  { key: 'reviews', label: 'Google',     sortable: true,  align: 'right' },
-  { key: 'recRate', label: 'Recovery',   sortable: true,  align: 'right' },
-  { key: 'unhappy', label: 'Críticos',   sortable: true,  align: 'right' },
+  { key: 'reviews', label: 'Clicks Google', sortable: true,  align: 'right' },
+  { key: 'recRate', label: 'Canjes',       sortable: true,  align: 'right' },
+  { key: 'unhappy', label: 'Análisis',     sortable: true,  align: 'right' },
 ];
 
 function scoreColor(avg) {
@@ -253,12 +253,13 @@ function LocationBreakdown({ feedbacks, locations, loading }) {
 
   const rows = locations.map(loc => {
     const fbs     = feedbacks.filter(f => f.location_id === loc.id);
-    const reviews = fbs.filter(f => f.routed_to_google).length;
+    const reviews = fbs.filter(f => f.google_click_at || f.routed_to_google).length;
     const unhappy = fbs.filter(f => f.score <= 2).length;
-    const recovered = fbs.filter(f => f.recovery_sent).length;
+    const sent      = fbs.filter(f => f.recovery_sent).length;
+    const redeemed  = fbs.filter(f => f.coupon_redeemed).length;
     const avgNum  = fbs.length ? fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / fbs.length : null;
-    const recRate = unhappy > 0 ? Math.round((recovered / unhappy) * 100) : null;
-    return { ...loc, total: fbs.length, reviews, unhappy, recovered, avgNum, recRate };
+    const recRate = sent > 0 ? Math.round((redeemed / sent) * 100) : null;
+    return { ...loc, total: fbs.length, reviews, unhappy, sent, redeemed, avgNum, recRate };
   });
 
   const sorted = [...rows].sort((a, b) => {

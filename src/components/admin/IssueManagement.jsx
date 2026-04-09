@@ -745,7 +745,14 @@ function Hero({ feedbacks, avgTicket, onEditTicket }) {
   const recoveredThisMonth = badThisMonth.filter(f => f.recovery_status === 'resolved' || f.coupon_redeemed);
   const withPhone = badThisMonth.filter(f => f.contact_phone);
   const rate    = withPhone.length > 0 ? Math.round(recoveredThisMonth.length / withPhone.length * 100) : 0;
-  const revenue = recoveredThisMonth.length * avgTicket;
+
+  // Use real redeemed_amount when available (matches main dashboard), else fall back to estimate
+  const realRevenue = recoveredThisMonth.reduce((acc, f) => {
+    const amt = parseFloat(f.redeemed_amount);
+    return acc + (isNaN(amt) ? 0 : amt);
+  }, 0);
+  const hasRealData = realRevenue > 0;
+  const revenue = hasRealData ? realRevenue : recoveredThisMonth.length * avgTicket;
 
   return (
     <div style={{ background: T.card, borderRadius: 18, padding: '20px 24px', border: `1px solid ${T.border}`, marginBottom: 20 }}>
@@ -753,7 +760,10 @@ function Hero({ feedbacks, avgTicket, onEditTicket }) {
         <div>
           <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 4 }}>💰 Revenue recuperado este mes</div>
           <div style={{ fontSize: '2rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em' }}>${revenue.toLocaleString('es-MX')}</div>
-          <div style={{ fontSize: '0.78rem', color: T.muted, marginTop: 2 }}>{recoveredThisMonth.length} de {withPhone.length} clientes con teléfono</div>
+          <div style={{ fontSize: '0.78rem', color: T.muted, marginTop: 2 }}>
+            {recoveredThisMonth.length} de {withPhone.length} clientes con teléfono
+            {!hasRealData && <span style={{ color: T.amber, marginLeft: 6 }}>· estimado</span>}
+          </div>
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -768,12 +778,14 @@ function Hero({ feedbacks, avgTicket, onEditTicket }) {
             <span style={{ fontSize: '0.72rem', color: T.muted }}><strong style={{ color: T.amber }}>{withPhone.length - recoveredThisMonth.length}</strong> pendientes</span>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: '0.72rem', color: T.muted }}>Ticket promedio:</span>
-          <button onClick={onEditTicket} style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontFamily: font, fontSize: '0.78rem', fontWeight: 700, color: T.ink, display: 'flex', alignItems: 'center', gap: 4 }}>
-            ${avgTicket} <Edit2 size={11} color={T.muted} />
-          </button>
-        </div>
+        {!hasRealData && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.72rem', color: T.muted }}>Ticket promedio:</span>
+            <button onClick={onEditTicket} style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontFamily: font, fontSize: '0.78rem', fontWeight: 700, color: T.ink, display: 'flex', alignItems: 'center', gap: 4 }}>
+              ${avgTicket} <Edit2 size={11} color={T.muted} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

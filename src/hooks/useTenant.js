@@ -37,26 +37,11 @@ export const useTenant = () => {
       if (userData?.tenant_id && uuidRegex.test(userData.tenant_id)) {
         cleanTid = userData.tenant_id;
       } else {
-        // FALLBACK: If Usuarios table is empty or user not found, 
-        // try to autodiscover a valid tenant record (especially for 'price' environment)
-        console.warn('User identity not found in Usuarios table. Attempting autodiscovery...');
-        const { data: discovered } = await supabase
-          .from('tenants')
-          .select('id')
-          .neq('id', '00000000-0000-0000-0000-000000000000')
-          .order('name', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (discovered?.id) {
-          console.log('💎 [Tenant] Autodiscovered ID:', discovered.id);
-          cleanTid = discovered.id;
-        } else {
-          // Final fallback to cache
-          const cachedId = getTenantId();
-          console.log('💎 [Tenant] Falling back to cached ID:', cachedId);
-          if (cachedId && uuidRegex.test(cachedId)) cleanTid = cachedId;
-        }
+        // RESET MODE: If no user record found, force zero UUID to trigger onboarding
+        console.warn('User identity not found in Usuarios. Triggering clean onboarding.');
+        cleanTid = '00000000-0000-0000-0000-000000000000';
+        localStorage.removeItem('onboarding_complete');
+        localStorage.removeItem('saas_tenant_config');
       }
 
       console.log('🚀 [Identity] Resolved Final Tenant ID:', cleanTid);

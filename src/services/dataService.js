@@ -2,43 +2,30 @@ import { supabase } from '../lib/supabase';
 
 /**
  * dataService.js
- * Centralized service to handle hybrid data fetching (Legacy vs Modern)
- * Normalizes all records to a modern JSON schema.
+ * Centralized service — queries only modern tables (feedbacks, locations).
+ * Demo mode (makeDemoFeedbacks) is handled at the component level and is
+ * purely for visualization; it is NOT handled here.
  */
-
-const normalizeFeedback = (f, table) => ({
-  ...f,
-  _table: table,
-  location_id: f.location_id || f.tienda_id,
-  score: f.score ?? f.satisfaccion ?? 0,
-  comment: f.comment || f.comentario || '',
-  created_at: f.created_at
-});
 
 export const dataService = {
   /**
-   * Fetches and normalizes feedbacks from both modern and legacy tables.
+   * Fetches feedbacks from the modern `feedbacks` table only.
    */
   async fetchFeedbacks(tenantId, isTest = false) {
     if (!tenantId) return [];
 
     try {
-      const [modernRes, legacyRes] = await Promise.all([
-        supabase.from('feedbacks')
-          .select('id, location_id, qr_id, score, comment, followup_answer, contact_phone, created_at, recovery_status, recovery_at, recovery_actor, recovery_resolved_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, recovery_sent, is_test, redeemed_amount, applied_discount_pct, coupon_config_id, routed_to_google, google_click_at')
-          .eq('tenant_id', tenantId)
-          .eq('is_test', isTest),
-        supabase.from('Feedback')
-          .select('id, tienda_id, satisfaccion, comentario, created_at')
-          .eq('tenant_id', tenantId)
-      ]);
+      const { data, error } = await supabase
+        .from('feedbacks')
+        .select('id, location_id, qr_id, score, comment, followup_answer, contact_phone, created_at, recovery_status, recovery_at, recovery_actor, recovery_resolved_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, recovery_sent, is_test, redeemed_amount, applied_discount_pct, coupon_config_id, routed_to_google, google_click_at')
+        .eq('tenant_id', tenantId)
+        .eq('is_test', isTest)
+        .order('created_at', { ascending: false });
 
-      const modern = (modernRes.data || []).map(f => normalizeFeedback(f, 'feedbacks'));
-      const legacy = (legacyRes.data || []).map(f => ({ ...normalizeFeedback(f, 'Feedback'), is_test: false }));
+      if (error) throw error;
 
-      console.log(`📊 [Data] Feedbacks: Modern=${modern.length}, Legacy=${legacy.length}`);
-
-      return [...modern, ...legacy].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      console.log(`📊 [Data] Feedbacks: ${(data || []).length}`);
+      return data || [];
     } catch (error) {
       console.error('dataService.fetchFeedbacks error:', error);
       return [];
@@ -46,55 +33,22 @@ export const dataService = {
   },
 
   /**
-   * Fetches and normalizes stores/locations from both modern and legacy tables.
+   * Fetches locations from the modern `locations` table only.
    */
   async fetchStores(tenantId) {
     if (!tenantId) return [];
 
     try {
-      const [modernRes, legacyRes] = await Promise.all([
-        supabase.from('locations')
-          .select('id, name, address, lat, lng, google_review_url, whatsapp_number')
-          .eq('tenant_id', tenantId),
-        supabase.from('Tiendas_Catalogo')
-          .select('id, nombre, lat, lng, direccion, ciudad')
-          .eq('tenant_id', tenantId)
-      ]);
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id, name, address, lat, lng, google_review_url, whatsapp_number')
+        .eq('tenant_id', tenantId);
 
-      const modern = (modernRes.data || []).map(s => ({
-        ...s,
-        source: 'modern',
-        nombre: s.name // compatibility
-      }));
+      if (error) throw error;
 
-      const legacy = (legacyRes.data || []).map(s => ({
-        ...s,
-        name: s.nombre,
-        address: s.direccion || s.ciudad,
-        source: 'legacy',
-        nombre: s.nombre
-      }));
-
-      // Step 1: Deduplicate by ID (modern wins over legacy if same ID)
-      const storesMap = new Map();
-      legacy.forEach(s => storesMap.set(s.id, s));
-      modern.forEach(s => storesMap.set(s.id, s));
-
-      // Step 2: Deduplicate by name — same branch in both tables with different IDs
-      // Modern source always wins over legacy when names match
-      const byName = new Map();
-      Array.from(storesMap.values()).forEach(s => {
-        const key = (s.name || s.nombre || '').toLowerCase().trim();
-        const existing = byName.get(key);
-        if (!existing || s.source === 'modern') {
-          byName.set(key, s);
-        }
-      });
-
-      const finalStores = Array.from(byName.values());
-      console.log(`📊 [Data] Stores resolved: ${finalStores.length} (after name dedup)`);
-      return finalStores;
-
+      const stores = (data || []).map(s => ({ ...s, nombre: s.name }));
+      console.log(`📊 [Data] Stores: ${stores.length}`);
+      return stores;
     } catch (error) {
       console.error('dataService.fetchStores error:', error);
       return [];
@@ -102,7 +56,7 @@ export const dataService = {
   },
 
   /**
-   * Fetches catalog areas/categories.
+   * Fetches areas from the modern `areas` table (or Areas_Catalogo if still in use).
    */
   async fetchAreas(tenantId) {
     if (!tenantId) return [];

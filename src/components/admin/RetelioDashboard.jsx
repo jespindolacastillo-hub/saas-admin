@@ -34,14 +34,15 @@ const calcRevenue = ({ reviewsGen = 0, recovered = 0, ticket = 350, realAmountsS
   // 1. Projected SEO impact from Google Reviews (Long term value)
   const seoImpact = (Number(reviewsGen) || 0) * 2.8 * (Number(ticket) || 350);
   // 2. Immediate Cash Impact (Recovery)
-  // If we have real amounts, use them. Otherwise, estimate 2.5x the ticket for non-tracked coupons.
+  const hasRealData = (Number(realAmountsSum) || 0) > 0;
   const estimatedRecovered = (Number(recovered) || 0) > 0 ? (Number(recovered) * (Number(ticket) || 350) * 2.5) : 0;
-  const recoveryValue = (Number(realAmountsSum) || 0) > 0 ? Number(realAmountsSum) : estimatedRecovered;
+  const recoveryValue = hasRealData ? Number(realAmountsSum) : estimatedRecovered;
   
   return {
     seo: Math.round(seoImpact),
     recovery: Math.round(recoveryValue),
-    total: Math.round(seoImpact + recoveryValue)
+    total: Math.round(seoImpact + recoveryValue),
+    isEstimate: !hasRealData && (Number(recovered) > 0)
   };
 };
 
@@ -138,7 +139,7 @@ function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
       ) : (
         <div style={{
           fontSize: '2.2rem', fontWeight: 800, color: color || T.ink,
-          fontFamily: font, lineHeight: 1, letterSpacing: '-0.02em',
+          fontFamily: T.font, lineHeight: 1, letterSpacing: '-0.02em',
         }}>{value}</div>
       )}
       {sub && (
@@ -149,99 +150,159 @@ function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
   );
 }
 
+// ─── TOOLTIP EXPLANATIONS ─────────────────────────────────────────────────────
+// ─── TOOLTIP EXPLANATIONS ─────────────────────────────────────────────────────
+const REASONS = {
+  seo: "VALOR ESTRATÉGICO: Valor proyectado a largo plazo por cada reseña de 5 estrellas en Google Business. Calculado mediante un factor de visibilidad del 2.8x sobre el ticket promedio (tráfico orgánico incremental).",
+  recovery: "VALOR TRANSACCIONAL: Ingresos reales capturados en el punto de venta (POS) de clientes que regresaron físicamente a validar su incentivo de lealtad.",
+  incentives: "INVERSIÓN EN LEALTAD: Monto total de descuentos otorgados a clientes para asegurar su retorno. Se calcula sobre el porcentaje real capturado en caja (o estimado del 25% en datos históricos).",
+  subscription: "COSTO OPERATIVO: Inversión mensual fija en la tecnología Retelio para la gestión automatizada de reputación y lealtad."
+};
+
 // ─── Revenue Card ─────────────────────────────────────────────────────────────
 function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenue = 0, totalCost = 0 }) {
   const locked = !isTrial && (plan === 'free' || plan === 'starter');
   const revenue = calcRevenue({ reviewsGen, recovered, realAmountsSum: realRevenue });
-  const netImpact = revenue.total - totalCost;
-  const roi = totalCost > 0 ? Math.round((netImpact / totalCost) * 100) : 100;
+  
+  // Calculate Retelio Cost based on plan and status
+  const retelioPrice = isTrial ? 0 : (plan === 'growth' ? 899 : 499);
+  const totalExpenses = totalCost + retelioPrice;
+  const netImpact = revenue.total - totalExpenses;
+  const roi = totalExpenses > 0 ? Math.round((netImpact / totalExpenses) * 100) : 100;
 
   return (
     <div style={{
-      borderRadius: 20, overflow: 'hidden',
-      border: `1px solid ${locked ? T.border : T.coral + '20'}`,
+      borderRadius: 24, overflow: 'hidden',
+      border: `1px solid ${locked ? T.border : T.coral + '25'}`,
       background: locked ? T.card : '#fff',
-      boxShadow: locked ? 'none' : '0 4px 20px rgba(0,0,0,0.03)',
+      boxShadow: locked ? 'none' : '0 10px 30px rgba(0,0,0,0.04)',
     }}>
-      <div style={{ padding: '24px 28px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ padding: '28px 32px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
           <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: T.muted,
-              textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>
-              Impacto Financiero Retelio
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: T.muted,
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
+              Estado de Resultados Retelio
             </div>
             {!locked && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ padding: '2px 8px', background: T.teal + '15', borderRadius: 4, fontSize: '0.68rem', fontWeight: 800, color: T.teal }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ padding: '3px 10px', background: T.teal + '15', borderRadius: 6, fontSize: '0.7rem', fontWeight: 800, color: T.teal }}>
                   ROI {roi}%
                 </div>
-                <div style={{ fontSize: '0.75rem', color: T.muted, fontWeight: 500 }}>
-                  Análisis de Retorno CEO
+                <div style={{ fontSize: '0.8rem', color: T.muted, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <TrendingUp size={14} /> Rendimiento de Inversión
                 </div>
               </div>
             )}
           </div>
           <div style={{
-            width: 44, height: 44, borderRadius: 14,
+            width: 48, height: 48, borderRadius: 16,
             background: locked ? '#F1F5F9' : T.coral + '10',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <DollarSign size={20} color={locked ? T.muted : T.coral} />
+            <DollarSign size={22} color={locked ? T.muted : T.coral} />
           </div>
         </div>
 
         {loading ? (
-          <div style={{ height: 60, background: '#F1F5F9', borderRadius: 10, animation: 'pulse 1.5s infinite' }} />
+          <div style={{ height: 120, background: '#F1F5F9', borderRadius: 10, animation: 'pulse 1.5s infinite' }} />
         ) : locked ? (
-          <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#E2E8F0', filter: 'blur(10px)' }}>$99,999</div>
-            <p style={{ color: T.muted, fontSize: '0.85rem', marginTop: 8 }}>Desbloquea el análisis de ROI en el plan Growth</p>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '2.4rem', fontWeight: 900, color: '#E2E8F0', filter: 'blur(10px)' }}>$99,999</div>
+            <p style={{ color: T.muted, fontSize: '0.9rem', marginTop: 12, maxWidth: 200, margin: '12px auto' }}>Desbloquea el análisis de rentabilidad CEO en el plan Growth</p>
             <button style={{ 
-              marginTop: 12, background: T.ink, color: '#fff', border: 'none', 
-              padding: '8px 20px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' 
+              marginTop: 18, background: T.ink, color: '#fff', border: 'none', 
+              padding: '10px 24px', borderRadius: 12, fontWeight: 700, cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}>Mejorar mi plan</button>
           </div>
         ) : (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 40 }}>
               
-              {/* Pillar 1: Total Net */}
+              {/* Pillar 1: Total Net Impact */}
               <div>
-                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>Impacto Neto (Ganancia)</div>
-                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: T.ink, letterSpacing: '-0.03em' }}>
-                  ${netImpact.toLocaleString('es-MX')} <span style={{ fontSize: '0.9rem', color: T.muted }}>MXN</span>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, marginBottom: 6 }}>Utilidad Generada (Neto)</div>
+                <div style={{ fontSize: '2.6rem', fontWeight: 900, color: T.ink, letterSpacing: '-0.04em', lineHeight: 1 }}>
+                  ${netImpact.toLocaleString('es-MX')} <span style={{ fontSize: '1rem', color: T.muted, fontWeight: 600 }}>MXN</span>
                 </div>
-                <div style={{ fontSize: '0.75rem', color: T.muted, marginTop: 4 }}>Resultado final después de costos</div>
+                <div style={{ fontSize: '0.82rem', color: T.muted, marginTop: 10, lineHeight: 1.4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Ganancia real neta.
+                  {revenue.isEstimate && (
+                    <span style={{ 
+                      fontSize: '0.65rem', padding: '2px 6px', background: T.amber + '15', 
+                      color: T.amber, borderRadius: 4, fontWeight: 700, border: `1px solid ${T.amber}30`
+                    }}>
+                      Cifra Proyectada
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Breakdown */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: T.teal }} />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>Impacto Futuro (Google)</span>
+              {/* Precise Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderLeft: `1px solid ${T.border}`, paddingLeft: 32 }}>
+                
+                {/* SEO Impact */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink }}>Impacto Futuro</span>
+                      <div title={REASONS.seo} style={{ cursor: 'help' }}>
+                        <Info size={12} color={T.muted} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: T.muted }}>Proyección por Reviews</div>
                   </div>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>+${revenue.seo.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: T.teal }}>+${revenue.seo.toLocaleString()}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: T.coral }} />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>Recuperación Real (POS)</span>
+
+                {/* Real Recovery */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink }}>Recuperación Real</span>
+                      <div title={REASONS.recovery} style={{ cursor: 'help' }}>
+                        <Info size={12} color={T.muted} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: T.muted }}>Ventas confirmadas POS</div>
                   </div>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>+${revenue.recovery.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: T.coral }}>+${revenue.recovery.toLocaleString()}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: T.ink }} />
-                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>Costo de Incentivos</span>
+
+                {/* Incentives Cost */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.muted }}>Costo Incentivos</span>
+                      <div title={REASONS.incentives} style={{ cursor: 'help' }}>
+                        <Info size={12} color={T.muted} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: T.muted }}>Descuento otorgado</div>
                   </div>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.red }}>-${totalCost.toLocaleString()}</span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: T.red }}>-${totalCost.toLocaleString()}</span>
                 </div>
+
+                {/* Retelio Cost */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.muted }}>Costo Retelio</span>
+                      <div title={REASONS.subscription} style={{ cursor: 'help' }}>
+                        <Info size={12} color={T.muted} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: T.muted }}>Suscripción {plan}</div>
+                  </div>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: T.red }}>
+                    -${retelioPrice.toLocaleString()} {isTrial && <span style={{ fontSize: '0.65rem', color: T.teal }}>(Trial)</span>}
+                  </span>
+                </div>
+
               </div>
 
             </div>
-
-            {/* Financial breakdown is now clean and professional */}
           </div>
         )}
       </div>
@@ -1339,12 +1400,15 @@ export default function RetelioDashboard() {
       }, 0);
     
     const totalCost = filteredFeedbacks
-      .filter(f => f.coupon_redeemed && f.redeemed_amount)
+      .filter(f => f.coupon_redeemed)
       .reduce((acc, f) => {
-        const amt = parseFloat(f.redeemed_amount);
-        const pct = parseFloat(f.applied_discount_pct);
-        const safeAmt = isNaN(amt) ? 0 : amt;
-        const safePct = isNaN(pct) ? 0 : pct;
+        const amt = parseFloat(f.redeemed_amount) || 350; // Fallback to 350 if amount not entered
+        // If applied_discount_pct is missing, we use 25% as historical estimate as requested
+        const pctString = f.applied_discount_pct;
+        const pct = (pctString === undefined || pctString === null) ? 25 : parseFloat(pctString);
+        
+        const safeAmt = isNaN(amt) ? 350 : amt;
+        const safePct = isNaN(pct) ? 25 : pct;
         return acc + (safeAmt * (safePct / 100));
       }, 0);
 

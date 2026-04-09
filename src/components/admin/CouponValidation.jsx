@@ -23,6 +23,7 @@ export default function CouponValidation({ userEmail }) {
   // Financial inputs for redemption
   const [ticketAmount, setTicketAmount] = useState('');
   const [ticketId, setTicketId]         = useState('');
+  const [discountPct, setDiscountPct]   = useState('');
   const [errorMsg, setErrorMsg]         = useState(null);
 
   // List management
@@ -113,6 +114,7 @@ export default function CouponValidation({ userEmail }) {
         recovery_resolved_at: now,
         redeemed_amount: ticketAmount ? parseFloat(ticketAmount) : null,
         redeemed_ticket_id: ticketId || null,
+        applied_discount_pct: discountPct ? parseFloat(discountPct) : 0,
       };
 
       const { error: updateError } = await supabase
@@ -169,6 +171,7 @@ export default function CouponValidation({ userEmail }) {
     setStatus(null); 
     setTicketAmount('');
     setTicketId('');
+    setDiscountPct('');
     setErrorMsg(null);
   };
 
@@ -323,6 +326,19 @@ export default function CouponValidation({ userEmail }) {
                       placeholder="# POS"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.95rem', fontWeight: 600, color: T.ink }}
                     />
+                  </div>
+                  <div style={{ flex: '1 1 100px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>% Descuento</div>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: T.muted }}>%</span>
+                      <input 
+                        type="number" 
+                        value={discountPct}
+                        onChange={e => setDiscountPct(e.target.value)}
+                        placeholder="0"
+                        style={{ width: '100%', padding: '10px 24px 10px 10px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.95rem', fontWeight: 800, color: T.ink }}
+                      />
+                    </div>
                   </div>
                 </div>
                 <p style={{ fontSize: '0.65rem', color: T.muted, margin: 0 }}>Esto alimentará automáticamente tus métricas de ROI en el Dashboard.</p>

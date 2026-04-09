@@ -27,17 +27,37 @@ export default function CouponValidation({ userEmail }) {
     setResult(null);
     setStatus(null);
 
-    const { data, error } = await supabase
+    const { data: fb, error: fbError } = await supabase
       .from('feedbacks')
-      .select('id, score, comment, followup_answer, contact_phone, created_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, location_id, recovery_status, coupon_config_id, coupon_configs(name, offer_description, validity_days)')
+      .select('id, score, comment, followup_answer, contact_phone, created_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, location_id, recovery_status, coupon_config_id')
       .eq('tenant_id', tenant.id)
       .eq('coupon_code', trimmed)
       .maybeSingle();
 
+    if (fbError || !fb) { 
+      setSearching(false);
+      setStatus('not_found'); 
+      return; 
+    }
+
+    // Attempt to fetch specific config if exists
+    let cfg = null;
+    if (fb.coupon_config_id) {
+      const { data: c } = await supabase.from('coupon_configs').select('name, offer_description, validity_days').eq('id', fb.coupon_config_id).maybeSingle();
+      cfg = c;
+    } else if (fb.recovery_sent) {
+      // Fallback: fetch global recovery config
+      const { data: r } = await supabase.from('recovery_config').select('offer_description, validity_days').eq('tenant_id', tenant.id).maybeSingle();
+      if (r) cfg = { name: 'Recuperación', ...r };
+    } else if (fb.coupon_code && fb.coupon_code.startsWith('LOYAL')) {
+      // Fallback: fetch global loyalty config from recovery_config table (which holds both)
+      const { data: r } = await supabase.from('recovery_config').select('loyalty_offer_description, loyalty_validity_days').eq('tenant_id', tenant.id).maybeSingle();
+      if (r) cfg = { name: 'Lealtad', offer_description: r.loyalty_offer_description, validity_days: r.loyalty_validity_days };
+    }
+
     setSearching(false);
-    if (error || !data) { setStatus('not_found'); return; }
-    setResult(data);
-    if (data.coupon_redeemed) setStatus('already');
+    setResult({ ...fb, coupon_configs: cfg });
+    if (fb.coupon_redeemed) setStatus('already');
     else setStatus('found');
   };
 

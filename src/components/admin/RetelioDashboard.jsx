@@ -30,8 +30,20 @@ const T = {
 };
 const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
-const calcRevenue = ({ reviewsGen, recovered, ticket = 350 }) =>
-  Math.round(reviewsGen * 2.8 * ticket + recovered * ticket * 2.5);
+const calcRevenue = ({ reviewsGen = 0, recovered = 0, ticket = 350, realAmountsSum = 0 }) => {
+  // 1. Projected SEO impact from Google Reviews (Long term value)
+  const seoImpact = (Number(reviewsGen) || 0) * 2.8 * (Number(ticket) || 350);
+  // 2. Immediate Cash Impact (Recovery)
+  // If we have real amounts, use them. Otherwise, estimate 2.5x the ticket for non-tracked coupons.
+  const estimatedRecovered = (Number(recovered) || 0) > 0 ? (Number(recovered) * (Number(ticket) || 350) * 2.5) : 0;
+  const recoveryValue = (Number(realAmountsSum) || 0) > 0 ? Number(realAmountsSum) : estimatedRecovered;
+  
+  return {
+    seo: Math.round(seoImpact),
+    recovery: Math.round(recoveryValue),
+    total: Math.round(seoImpact + recoveryValue)
+  };
+};
 
 // ─── NPS Card ─────────────────────────────────────────────────────────────────
 function NPSCard({ nps, breakdown, loading, range }) {
@@ -138,87 +150,106 @@ function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
 }
 
 // ─── Revenue Card ─────────────────────────────────────────────────────────────
-function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading }) {
+function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenue = 0, totalCost = 0 }) {
   const locked = !isTrial && (plan === 'free' || plan === 'starter');
-  const revenue = calcRevenue({ reviewsGen, recovered });
+  const revenue = calcRevenue({ reviewsGen, recovered, realAmountsSum: realRevenue });
+  const netImpact = revenue.total - totalCost;
+  const roi = totalCost > 0 ? Math.round((netImpact / totalCost) * 100) : 100;
 
   return (
     <div style={{
       borderRadius: 20, overflow: 'hidden',
-      border: `1px solid ${locked ? T.border : T.coral + '30'}`,
-      background: locked
-        ? T.card
-        : `linear-gradient(135deg, ${T.coral}08 0%, ${T.teal}08 100%)`,
-      boxShadow: locked ? 'none' : `0 4px 24px ${T.coral}10`,
+      border: `1px solid ${locked ? T.border : T.coral + '20'}`,
+      background: locked ? T.card : '#fff',
+      boxShadow: locked ? 'none' : '0 4px 20px rgba(0,0,0,0.03)',
     }}>
       <div style={{ padding: '24px 28px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted,
+            <div style={{ fontSize: '0.72rem', fontWeight: 800, color: T.muted,
               textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>
-              Impacto en ingresos
+              Impacto Financiero Retelio
             </div>
             {!locked && (
-              <div style={{ fontSize: '0.78rem', color: T.muted }}>
-                estimado este mes
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ padding: '2px 8px', background: T.teal + '15', borderRadius: 4, fontSize: '0.68rem', fontWeight: 800, color: T.teal }}>
+                  ROI {roi}%
+                </div>
+                <div style={{ fontSize: '0.75rem', color: T.muted, fontWeight: 500 }}>
+                  Análisis de Retorno CEO
+                </div>
               </div>
             )}
           </div>
           <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: locked ? '#F1F5F9' : T.coral + '15',
+            width: 44, height: 44, borderRadius: 14,
+            background: locked ? '#F1F5F9' : T.coral + '10',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            {locked
-              ? <Lock size={18} color={T.muted} />
-              : <DollarSign size={18} color={T.coral} />}
+            <DollarSign size={20} color={locked ? T.muted : T.coral} />
           </div>
         </div>
 
         {loading ? (
-          <div style={{ height: 44, background: '#F1F5F9', borderRadius: 10 }} />
+          <div style={{ height: 60, background: '#F1F5F9', borderRadius: 10, animation: 'pulse 1.5s infinite' }} />
         ) : locked ? (
-          <div>
-            <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#CBD5E1',
-              filter: 'blur(8px)', userSelect: 'none', letterSpacing: '-0.02em' }}>
-              $99,999 MXN
-            </div>
-            <div style={{ fontSize: '0.82rem', color: T.muted, marginTop: 6 }}>
-              Disponible desde el plan Growth
-            </div>
-            <button style={{
-              marginTop: 14, background: T.coral, color: '#fff', border: 'none',
-              borderRadius: 10, padding: '8px 18px', fontFamily: font,
-              fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              <Zap size={14} fill="white" /> Mejorar plan
-            </button>
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ fontSize: '2.4rem', fontWeight: 800, color: '#E2E8F0', filter: 'blur(10px)' }}>$99,999</div>
+            <p style={{ color: T.muted, fontSize: '0.85rem', marginTop: 8 }}>Desbloquea el análisis de ROI en el plan Growth</p>
+            <button style={{ 
+              marginTop: 12, background: T.ink, color: '#fff', border: 'none', 
+              padding: '8px 20px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' 
+            }}>Mejorar mi plan</button>
           </div>
         ) : (
           <div>
-            <div style={{
-              fontSize: '2.4rem', fontWeight: 800, color: T.coral,
-              fontFamily: font, letterSpacing: '-0.02em', lineHeight: 1,
-            }}>
-              ${revenue.toLocaleString('es-MX')} <span style={{ fontSize: '1rem', fontWeight: 600, color: T.muted }}>MXN</span>
-            </div>
-            <div style={{ marginTop: 12, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.teal }} />
-                <span style={{ fontSize: '0.78rem', color: T.muted }}>
-                  {reviewsGen} reseñas × $2.8 ticket promedio
-                </span>
-              </div>
-              {recovered > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: T.coral }} />
-                  <span style={{ fontSize: '0.78rem', color: T.muted }}>
-                    {recovered} recuperados × 2.5×
-                  </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24 }}>
+              
+              {/* Pillar 1: Total Net */}
+              <div>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>Impacto Neto (Ganancia)</div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 900, color: T.ink, letterSpacing: '-0.03em' }}>
+                  ${netImpact.toLocaleString('es-MX')} <span style={{ fontSize: '0.9rem', color: T.muted }}>MXN</span>
                 </div>
-              )}
+                <div style={{ fontSize: '0.75rem', color: T.muted, marginTop: 4 }}>Resultado final después de costos</div>
+              </div>
+
+              {/* Breakdown */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderLeft: `1px solid ${T.border}`, paddingLeft: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: T.teal }} />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>Impacto Futuro (Google)</span>
+                  </div>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>+${revenue.seo.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: T.coral }} />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>Recuperación Real (POS)</span>
+                  </div>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>+${revenue.recovery.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: T.ink }} />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: T.muted }}>Costo de Incentivos</span>
+                  </div>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.red }}>-${totalCost.toLocaleString()}</span>
+                </div>
+              </div>
+
             </div>
+
+            {/* Diagnostic Footer (Only in Test Mode) */}
+            {plan === 'growth' && (
+              <div style={{ marginTop: 20, padding: '10px 14px', background: '#F8FAFC', borderRadius: 8, border: '1px dashed #CBD5E1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.65rem', color: T.muted, fontFamily: 'monospace' }}>
+                  DEBUG MOD: Data Pool: {reviewsGen} rev / {recovered} canjes / ${realRevenue} POS
+                </div>
+                <div style={{ fontSize: '0.65rem', color: T.teal, fontWeight: 700 }}>VERIFICACIÓN ACTIVA</div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1308,8 +1339,39 @@ export default function RetelioDashboard() {
       passivesPct:   Math.round((passives   / total) * 100),
       detractorsPct: Math.round((detractors / total) * 100),
     } : null;
-    return { total, reviews, unhappy, sent, redeemed, avgScore, recRate, nps, npsBreakdown };
-  }, [filteredFeedbacks]);
+    const realRevenue = filteredFeedbacks
+      .filter(f => f.coupon_redeemed && f.redeemed_amount)
+      .reduce((acc, f) => {
+        const val = parseFloat(f.redeemed_amount);
+        return acc + (isNaN(val) ? 0 : val);
+      }, 0);
+    
+    const totalCost = filteredFeedbacks
+      .filter(f => f.coupon_redeemed && f.redeemed_amount)
+      .reduce((acc, f) => {
+        const amt = parseFloat(f.redeemed_amount);
+        const pct = parseFloat(f.applied_discount_pct);
+        const safeAmt = isNaN(amt) ? 0 : amt;
+        const safePct = isNaN(pct) ? 0 : pct;
+        return acc + (safeAmt * (safePct / 100));
+      }, 0);
+
+    // DEBUG LOGS (Temporary for diagnosis)
+    if (tenant?.test_mode) {
+      console.log('--- DASHBOARD DIAGNOSTIC ---');
+      console.log('Total feedbacks fetched:', filteredFeedbacks.length);
+      console.log('Redeemed coupons (boolean true):', redeemed);
+      console.log('Redeemed amount sum:', realRevenue);
+      console.log('Data sample (first 2):', filteredFeedbacks.slice(0, 2).map(f => ({
+        id: f.id, 
+        redeemed: f.coupon_redeemed, 
+        amount: f.redeemed_amount,
+        is_test: f.is_test
+      })));
+    }
+
+    return { total, reviews, unhappy, sent, redeemed, recovered: redeemed, avgScore, recRate, nps, npsBreakdown, realRevenue, totalCost };
+  }, [filteredFeedbacks, tenant?.test_mode]);
 
   const chartData = useMemo(() => {
     const days = eachDayOfInterval({ start: subDays(new Date(), range - 1), end: new Date() });
@@ -1513,6 +1575,8 @@ export default function RetelioDashboard() {
         <RevenueCard
           reviewsGen={metrics.reviews}
           recovered={metrics.recovered}
+          realRevenue={metrics.realRevenue}
+          totalCost={metrics.totalCost}
           plan={plan}
           isTrial={isTrial}
           loading={loading}

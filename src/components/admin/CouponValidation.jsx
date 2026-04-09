@@ -24,6 +24,7 @@ export default function CouponValidation({ userEmail }) {
   const [ticketAmount, setTicketAmount] = useState('');
   const [ticketId, setTicketId]         = useState('');
   const [discountPct, setDiscountPct]   = useState('');
+  const [isAutoDiscount, setIsAutoDiscount] = useState(false);
   const [errorMsg, setErrorMsg]         = useState(null);
 
   // List management
@@ -50,6 +51,12 @@ export default function CouponValidation({ userEmail }) {
     fetchCoupons();
   }, [fetchCoupons]);
 
+  const parseDiscount = (desc) => {
+    if (!desc) return '';
+    const match = desc.match(/(\d+)\s*%/);
+    return match ? match[1] : '';
+  };
+
   const search = async (overrideCode) => {
     const targetCode = overrideCode || code;
     const trimmed = targetCode.trim().toUpperCase();
@@ -59,6 +66,7 @@ export default function CouponValidation({ userEmail }) {
     if (!overrideCode) setCode(trimmed);
     setResult(null);
     setStatus(null);
+    setIsAutoDiscount(false);
 
     const { data: fb, error: fbError } = await supabase
       .from('feedbacks')
@@ -75,21 +83,55 @@ export default function CouponValidation({ userEmail }) {
 
     // Attempt to fetch specific config if exists
     let cfg = null;
+    let autoDiscount = '';
+
+    // Step 1: Check specific coupon config
     if (fb.coupon_config_id) {
-      const { data: c } = await supabase.from('coupon_configs').select('name, offer_description, validity_days').eq('id', fb.coupon_config_id).maybeSingle();
-      cfg = c;
-    } else if (fb.recovery_sent) {
-      // Fallback: fetch global recovery config
-      const { data: r } = await supabase.from('recovery_config').select('offer_description, validity_days').eq('tenant_id', tenant.id).maybeSingle();
-      if (r) cfg = { name: 'Recuperación', ...r };
-    } else if (fb.coupon_code && fb.coupon_code.startsWith('LOYAL')) {
-      // Fallback: fetch global loyalty config from recovery_config table (which holds both)
-      const { data: r } = await supabase.from('recovery_config').select('loyalty_offer_description, loyalty_validity_days').eq('tenant_id', tenant.id).maybeSingle();
-      if (r) cfg = { name: 'Lealtad', offer_description: r.loyalty_offer_description, validity_days: r.loyalty_validity_days };
+      const { data: c } = await supabase.from('coupon_configs').select('name, offer_description, validity_days, offer_value').eq('id', fb.coupon_config_id).maybeSingle();
+      if (c) {
+        cfg = c;
+        autoDiscount = c.offer_value || parseDiscount(c.offer_description);
+      }
+    }
+
+    // Step 2: If no specific config or no discount found, check global recovery/loyalty config
+    if (!cfg || !autoDiscount) {
+      const { data: r } = await supabase.from('recovery_config').select('*').eq('tenant_id', tenant.id).maybeSingle();
+      if (r) {
+        // Only override cfg if we don't have one from Step 1
+        if (!cfg) {
+          if (fb.recovery_sent) {
+            cfg = { name: 'Recuperación', offer_description: r.offer_description, validity_days: r.validity_days };
+          } else if (fb.coupon_code && fb.coupon_code.startsWith('LOYAL')) {
+            cfg = { name: 'Lealtad', offer_description: r.loyalty_offer_description, validity_days: r.loyalty_validity_days };
+          }
+        }
+        
+        // Grab values from global if available and appropriate
+        if (fb.recovery_sent) {
+          autoDiscount = autoDiscount || r.offer_value || parseDiscount(r.offer_description);
+        } else if (fb.coupon_code && fb.coupon_code.startsWith('LOYAL')) {
+          autoDiscount = autoDiscount || r.loyalty_offer_value || parseDiscount(r.loyalty_offer_description);
+        }
+
+        // Final safety check: ensure autoDiscount is never lost if we have a description showing it
+        if (!autoDiscount && cfg?.offer_description) {
+          const parsed = parseDiscount(cfg.offer_description);
+          if (parsed) autoDiscount = parsed;
+        }
+
+        // Final safety check: if we have a config description but no autoDiscount yet, parse it
+        if (!autoDiscount && cfg?.offer_description) {
+          autoDiscount = parseDiscount(cfg.offer_description);
+        }
+      }
     }
 
     setSearching(false);
     setResult({ ...fb, coupon_configs: cfg });
+    setDiscountPct(autoDiscount || '');
+    setIsAutoDiscount(!!autoDiscount);
+
     if (fb.coupon_redeemed) setStatus('already');
     else setStatus('found');
     
@@ -336,8 +378,26 @@ export default function CouponValidation({ userEmail }) {
                         value={discountPct}
                         onChange={e => setDiscountPct(e.target.value)}
                         placeholder="0"
-                        style={{ width: '100%', padding: '10px 24px 10px 10px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.95rem', fontWeight: 800, color: T.ink }}
+                        readOnly={isAutoDiscount}
+                        style={{ 
+                          width: '100%', 
+                          padding: '10px 24px 10px 10px', 
+                          borderRadius: 8, 
+                          border: `1px solid ${T.border}`, 
+                          fontFamily: font, 
+                          fontSize: '0.95rem', 
+                          fontWeight: 800, 
+                          color: isAutoDiscount ? T.muted : T.ink,
+                          background: isAutoDiscount ? '#F3F4F6' : '#fff',
+                          cursor: isAutoDiscount ? 'not-allowed' : 'text',
+                          transition: 'all 0.2s'
+                        }}
                       />
+                      {isAutoDiscount && (
+                        <div style={{ position: 'absolute', top: -16, right: 0, fontSize: '0.6rem', fontWeight: 800, color: T.teal, textTransform: 'uppercase' }}>
+                          ✓ Predefinido
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

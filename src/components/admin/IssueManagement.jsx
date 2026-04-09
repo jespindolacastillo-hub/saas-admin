@@ -912,8 +912,12 @@ export default function IssueManagement() {
       ]);
 
       setLocations(stores);
-      // Filter for negative ones only for this specific view (score <= 2)
-      setFeedbacks(feedbacks.filter(f => f.score <= 2));
+      // Adaptive thresholds: <= 6 for NPS (0-10), <= 2 for Emoji (1-5)
+      // Since dataService already handles normalization and test filtering, we just calculate the threshold.
+      const maxScore = Math.max(...feedbacks.map(f => f.score ?? 0), 0);
+      const unhappyThreshold = maxScore > 5 ? 6 : 2;
+      // Include BOTH unhappy customers AND anyone with a coupon (for validation/stats)
+      setFeedbacks(feedbacks.filter(f => f.score <= unhappyThreshold || f.coupon_code));
       setRecoveryConfig(recoveryConfigRes.data?.[0] || null);
       setQrLabels(Object.fromEntries((qrCodesRes.data || []).map(q => [q.id, q.label])));
 
@@ -964,7 +968,11 @@ export default function IssueManagement() {
   const now = new Date();
 
   // ── Pending (Sin atender) ──────────────────────────────────────────────────
-  const allPending = feedbacks.filter(f => !f.recovery_status || f.recovery_status === 'pending');
+  // IMPORTANT: For the ACTION queue, only show detractors (bad scores) that have no status yet
+  const allPending = feedbacks.filter(f => 
+    (!f.recovery_status || f.recovery_status === 'pending') && 
+    (f.score <= (Math.max(...feedbacks.map(x => x.score ?? 0), 0) > 5 ? 6 : 2))
+  );
   const hotAll     = allPending.filter(f => new Date(f.created_at) > subHours(now, 2));
   const warmAll    = allPending.filter(f => new Date(f.created_at) <= subHours(now, 2) && new Date(f.created_at) > subHours(now, 24));
   const expiredAll = allPending.filter(f => new Date(f.created_at) <= subHours(now, 24));
@@ -999,6 +1007,15 @@ export default function IssueManagement() {
 
   return (
     <div style={{ padding: '28px 32px', maxWidth: 900, margin: '0 auto', fontFamily: font }}>
+
+      {tenant?.test_mode && (
+        <div style={{ background: '#FEF3C7', border: '1.5px solid #FDE68A', borderRadius: 12, padding: '10px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.2rem' }}>🧪</span>
+          <div style={{ fontSize: '0.8rem', color: '#92400E', fontWeight: 600 }}>
+            MODO PRUEBA ACTIVO — Solo se muestran feedbacks de prueba. Desactívalo en ajustes para ver datos reales.
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>

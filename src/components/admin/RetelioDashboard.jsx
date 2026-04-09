@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
+import { dataService } from '../../services/dataService';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
@@ -340,7 +341,13 @@ function LocationBreakdown({ feedbacks, locations, loading }) {
     const unhappy = fbs.filter(f => (f.score ?? f.satisfaccion ?? 0) <= 2).length;
     const sent      = fbs.filter(f => f.recovery_sent).length;
     const redeemed  = fbs.filter(f => f.coupon_redeemed).length;
-    const avgNum  = fbs.length ? fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / fbs.length : null;
+    
+    // Normalize if any score > 5
+    const maxS = Math.max(...fbs.map(f => f.score ?? 0), 0);
+    const isNPS = maxS > 5;
+    const rawAvg = fbs.length ? fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / fbs.length : null;
+    const avgNum = (rawAvg !== null && isNPS) ? rawAvg / 2 : rawAvg;
+    
     const recRate = sent > 0 ? Math.round((redeemed / sent) * 100) : null;
     return { ...loc, total: fbs.length, reviews, unhappy, sent, redeemed, avgNum, recRate };
   });
@@ -502,7 +509,10 @@ function LocationBreakdown({ feedbacks, locations, loading }) {
 const SCORE_COLOR = { 1: T.red, 2: '#FB923C', 3: T.amber, 4: T.teal, 5: T.green };
 
 function ScoreBadge({ score }) {
-  const color = SCORE_COLOR[score] || T.muted;
+  const normalized = score > 5 ? score / 2 : score;
+  const displayScore = normalized.toFixed(score > 5 ? 1 : 0);
+  const color = SCORE_COLOR[Math.round(normalized)] || T.muted;
+  
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -510,7 +520,7 @@ function ScoreBadge({ score }) {
       padding: '4px 12px',
     }}>
       <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
-      <span style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{score}/5</span>
+      <span style={{ fontSize: '0.8rem', fontWeight: 700, color }}>{displayScore}/5</span>
     </div>
   );
 }
@@ -1300,31 +1310,30 @@ export default function RetelioDashboard() {
   const loadData = async (withDemo = false) => {
     if (!tenant?.id) return;
     setLoading(true);
-    const since = subDays(new Date(), range).toISOString();
-    const [fbRes, locRes] = await Promise.all([
-      supabase
-        .from('feedbacks')
-        .select('*, qr_codes(label, type)')
-        .eq('tenant_id', tenant.id)
-        .eq('is_test', tenant?.test_mode ? true : false)
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(500),
-      supabase
-        .from('locations')
-        .select('id, name')
-        .eq('tenant_id', tenant.id),
-    ]);
-    const realFeedbacks = fbRes.data || [];
-    const realLocations = locRes.data || [];
-    if (withDemo) {
-      setFeedbacks([...makeDemoFeedbacks(), ...realFeedbacks]);
-      setLocations([...DEMO_LOCATIONS, ...realLocations]);
-    } else {
-      setFeedbacks(realFeedbacks);
-      setLocations(realLocations);
+    try {
+      const isTest = tenant?.test_mode === true;
+      const since = subDays(new Date(), range).getTime();
+
+      const [allFbs, stores] = await Promise.all([
+        dataService.fetchFeedbacks(tenant.id, isTest),
+        dataService.fetchStores(tenant.id)
+      ]);
+
+      // Dashboard typically filters by range locally to allow fast switching
+      const filteredByRange = allFbs.filter(f => new Date(f.created_at).getTime() >= since);
+
+      if (withDemo) {
+        setFeedbacks([...makeDemoFeedbacks(), ...filteredByRange]);
+        setLocations([...DEMO_LOCATIONS, ...stores]);
+      } else {
+        setFeedbacks(filteredByRange);
+        setLocations(stores);
+      }
+    } catch (err) {
+      console.error('RetelioDashboard load error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -1364,13 +1373,18 @@ export default function RetelioDashboard() {
     const unhappy   = filteredFeedbacks.filter(f => f.score <= 2).length;
     const sent      = filteredFeedbacks.filter(f => f.recovery_sent).length;
     const redeemed  = filteredFeedbacks.filter(f => f.coupon_redeemed).length;
+    // NPS adaptativo (1-5 ó 0-10)
+    const maxScoreDetected = Math.max(...filteredFeedbacks.map(f => f.score ?? 0), 0);
+    const isNPSStandard    = maxScoreDetected > 5;
+
     const avgScore  = total
-      ? (filteredFeedbacks.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / total).toFixed(1)
+      ? (filteredFeedbacks.reduce((s, f) => {
+          const val = f.score ?? f.satisfaccion ?? 0;
+          const normalized = val > 5 ? val / 2 : val;
+          return s + normalized;
+        }, 0) / total).toFixed(1)
       : '—';
     const recRate = sent ? Math.round((redeemed / sent) * 100) : 0;
-    // NPS adaptativo (1-5 ó 0-10)
-    const maxScoreDetected = Math.max(...filteredFeedbacks.map(f => f.score ?? 0));
-    const isNPSStandard    = maxScoreDetected > 5;
 
     const promoters = filteredFeedbacks.filter(f => {
       const s = f.score ?? 0;
@@ -1411,22 +1425,16 @@ export default function RetelioDashboard() {
         return acc + (safeAmt * (safePct / 100));
       }, 0);
 
-    // DEBUG LOGS (Temporary for diagnosis)
-    if (tenant?.test_mode) {
-      console.log('--- DASHBOARD DIAGNOSTIC ---');
-      console.log('Total feedbacks fetched:', filteredFeedbacks.length);
-      console.log('Redeemed coupons (boolean true):', redeemed);
-      console.log('Redeemed amount sum:', realRevenue);
-      console.log('Data sample (first 2):', filteredFeedbacks.slice(0, 2).map(f => ({
-        id: f.id, 
-        redeemed: f.coupon_redeemed, 
-        amount: f.redeemed_amount,
-        is_test: f.is_test
-      })));
-    }
+    // DEBUG LOGS — Always active to monitor data integrity
+    console.log('--- DASHBOARD DIAGNOSTIC ---');
+    console.log('All feedbacks loaded (feedbacks state):', feedbacks.length);
+    console.log('filteredFeedbacks (after loc/health filter):', filteredFeedbacks.length);
+    console.log('Redeemed coupons:', redeemed);
+    console.log('Redeemed amount sum:', realRevenue);
+    console.log('Score details:', filteredFeedbacks.map(f => ({ id: f.id, score: f.score, satisfaccion: f.satisfaccion })));
 
     return { total, reviews, unhappy, sent, redeemed, recovered: redeemed, avgScore, recRate, nps, npsBreakdown, realRevenue, totalCost };
-  }, [filteredFeedbacks, tenant?.test_mode]);
+  }, [filteredFeedbacks, feedbacks.length, tenant?.test_mode]);
 
   const chartData = useMemo(() => {
     const days = eachDayOfInterval({ start: subDays(new Date(), range - 1), end: new Date() });
@@ -1442,12 +1450,19 @@ export default function RetelioDashboard() {
     });
   }, [filteredFeedbacks, range]);
 
-  const scoreData = useMemo(() => (
-    [1, 2, 3, 4, 5].map(s => ({
+  const scoreData = useMemo(() => {
+    return [1, 2, 3, 4, 5].map(s => ({
       score: `${s}★`,
-      count: filteredFeedbacks.filter(f => f.score === s).length,
-    }))
-  ), [filteredFeedbacks]);
+      count: filteredFeedbacks.filter(f => {
+        const raw = f.score ?? f.satisfaccion ?? 0;
+        const val = isNaN(Number(raw)) ? 0 : Number(raw);
+        const normalized = val > 5 ? val / 2 : val;
+        // Clamp to [1, 5] so every record lands in exactly one bar
+        const binned = Math.min(5, Math.max(1, Math.round(normalized)));
+        return binned === s;
+      }).length,
+    }));
+  }, [filteredFeedbacks]);
 
   const SCORE_COLORS = [T.red, '#FB923C', T.amber, T.teal, T.green];
 

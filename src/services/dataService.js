@@ -25,16 +25,16 @@ export const dataService = {
     try {
       const [modernRes, legacyRes] = await Promise.all([
         supabase.from('feedbacks')
-          .select('id, location_id, qr_id, score, comment, followup_answer, contact_phone, created_at, recovery_status, recovery_at, recovery_actor, recovery_resolved_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, recovery_sent, is_test')
+          .select('id, location_id, qr_id, score, comment, followup_answer, contact_phone, created_at, recovery_status, recovery_at, recovery_actor, recovery_resolved_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, recovery_sent, is_test, redeemed_amount, applied_discount_pct, coupon_config_id, routed_to_google, google_click_at')
           .eq('tenant_id', tenantId)
           .eq('is_test', isTest),
         supabase.from('Feedback')
-          .select('id, tienda_id, qr_id, satisfaccion, comentario, created_at')
+          .select('id, tienda_id, satisfaccion, comentario, created_at')
           .eq('tenant_id', tenantId)
       ]);
 
       const modern = (modernRes.data || []).map(f => normalizeFeedback(f, 'feedbacks'));
-      const legacy = (legacyRes.data || []).map(f => normalizeFeedback(f, 'Feedback'));
+      const legacy = (legacyRes.data || []).map(f => ({ ...normalizeFeedback(f, 'Feedback'), is_test: false }));
 
       console.log(`📊 [Data] Feedbacks: Modern=${modern.length}, Legacy=${legacy.length}`);
 

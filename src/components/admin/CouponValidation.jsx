@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
-import { Search, CheckCircle2, XCircle, Loader, Tag } from 'lucide-react';
+import { Search, CheckCircle2, XCircle, Loader, Tag, History, Filter, ArrowRight } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -19,6 +19,30 @@ export default function CouponValidation({ userEmail }) {
   const [status, setStatus]     = useState(null); // 'found'|'not_found'|'already'|'redeemed'
   const [searching, setSearching] = useState(false);
   const [saving, setSaving]     = useState(false);
+  
+  // List management
+  const [coupons, setCoupons]       = useState([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [filter, setFilter]           = useState('all'); // all | active | redeemed
+
+  const fetchCoupons = useCallback(async () => {
+    if (!tenant?.id) return;
+    setLoadingList(true);
+    const { data, error } = await supabase
+      .from('feedbacks')
+      .select('id, coupon_code, coupon_redeemed, created_at, score, contact_phone, followup_answer')
+      .eq('tenant_id', tenant.id)
+      .not('coupon_code', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    
+    if (!error && data) setCoupons(data);
+    setLoadingList(false);
+  }, [tenant?.id]);
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [fetchCoupons]);
 
   const search = async () => {
     const trimmed = code.trim().toUpperCase();
@@ -59,6 +83,9 @@ export default function CouponValidation({ userEmail }) {
     setResult({ ...fb, coupon_configs: cfg });
     if (fb.coupon_redeemed) setStatus('already');
     else setStatus('found');
+    
+    // Refresh list if found
+    fetchCoupons();
   };
 
   const redeem = async () => {
@@ -75,8 +102,12 @@ export default function CouponValidation({ userEmail }) {
     };
     await supabase.from('feedbacks').update(update).eq('id', result.id).eq('tenant_id', tenant.id);
     setResult(prev => ({ ...prev, ...update }));
+    setCoupons(prev => prev.map(c => c.id === result.id ? { ...c, ...update } : c));
     setStatus('redeemed');
     setSaving(false);
+    
+    // Hard refresh list to be sure
+    fetchCoupons();
   };
 
   const markNotReturned = async () => {
@@ -248,7 +279,93 @@ export default function CouponValidation({ userEmail }) {
         </div>
       )}
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      {/* History Section */}
+      <div style={{ marginTop: 40, borderTop: `1px solid ${T.border}`, paddingTop: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <History size={18} color={T.muted} />
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: T.ink }}>Historial reciente</h3>
+          </div>
+          <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 10, padding: 3 }}>
+            {['all', 'active', 'redeemed'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: '5px 12px', border: 'none', borderRadius: 8,
+                  fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                  background: filter === f ? '#fff' : 'transparent',
+                  color: filter === f ? T.ink : T.muted,
+                  boxShadow: filter === f ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  fontFamily: font, transition: 'all 0.2s',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {f === 'all' ? 'Todos' : f === 'active' ? 'Pendientes' : 'Canjeados'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loadingList ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} style={{ height: 64, background: '#F1F5F9', borderRadius: 12, animation: 'pulse 1.5s infinite' }} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {coupons
+              .filter(c => filter === 'all' ? true : filter === 'active' ? !c.coupon_redeemed : c.coupon_redeemed)
+              .map(c => (
+                <div
+                  key={c.id}
+                  onClick={() => { setCode(c.coupon_code); setStatus(null); setResult(null); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '12px 16px', borderRadius: 14,
+                    background: T.card, border: `1px solid ${T.border}`,
+                    cursor: 'pointer', transition: 'all 0.2s',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = T.coral}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
+                >
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 8,
+                    background: c.coupon_redeemed ? T.green + '15' : T.teal + '15',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    {c.coupon_redeemed ? <CheckCircle2 size={16} color={T.green} /> : <Tag size={16} color={T.teal} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.9rem', color: T.ink }}>{c.coupon_code}</span>
+                      {c.coupon_redeemed && <span style={{ fontSize: '0.65rem', fontWeight: 800, color: T.green, textTransform: 'uppercase' }}>Canjeado</span>}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>
+                      {c.contact_phone || 'Sin teléfono'} · {formatDistanceToNow(new Date(c.created_at), { locale: es, addSuffix: true })}
+                    </div>
+                  </div>
+                  <ArrowRight size={14} color={T.muted} />
+                </div>
+              ))}
+            
+            {coupons.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: T.muted }}>
+                <History size={32} style={{ opacity: 0.2, marginBottom: 12 }} />
+                <div style={{ fontSize: '0.85rem' }}>No se han generado cupones recientemente</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+      `}</style>
     </div>
   );
 }

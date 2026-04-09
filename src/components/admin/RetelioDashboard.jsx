@@ -946,18 +946,22 @@ function generateInsights(feedbacks, locations) {
       insights.push({ type: 'warning', text: `${worst.name} promedia ${worst.avg.toFixed(1)}/5 · oportunidad de mejora inmediata` });
   }
 
-  // Recovery rate
-  const unhappy   = feedbacks.filter(f => f.score <= 2).length;
-  const recovered = feedbacks.filter(f => f.recovery_sent).length;
-  if (unhappy > 0) {
-    const rate = Math.round((recovered / unhappy) * 100);
-    if (rate >= 70)
-      insights.push({ type: 'success', text: `Recovery rate de ${rate}% · recuperaste ${recovered} de ${unhappy} clientes insatisfechos` });
-    else if (unhappy - recovered >= 3)
-      insights.push({ type: 'tip', text: `${unhappy - recovered} clientes insatisfechos aún sin mensaje de recovery · actívalos desde Issues` });
+  // Canjes rate
+  const sent      = feedbacks.filter(f => f.recovery_sent).length;
+  const redeemed  = feedbacks.filter(f => f.coupon_redeemed).length;
+  if (sent > 0) {
+    const rate = Math.round((redeemed / sent) * 100);
+    if (rate >= 40)
+      insights.push({ type: 'success', text: `Tasa de canjes del ${rate}% · tus cupones están trayendo gente de vuelta` });
+    else
+      insights.push({ type: 'tip', text: `Tasa de canjes del ${rate}% · intenta mejorar la oferta de recuperación para aumentar visitas` });
   }
 
   // Google conversion
+  const googleClicks = feedbacks.filter(f => f.google_click_at || f.routed_to_google).length;
+  if (googleClicks > 0) {
+    insights.push({ type: 'info', text: `${googleClicks} clientes han mostrado interés en calificarte en Google este período` });
+  }
   const googleRate = Math.round((feedbacks.filter(f => f.routed_to_google).length / total) * 100);
   if (googleRate >= 65)
     insights.push({ type: 'success', text: `${googleRate}% de tus clientes satisfechos dejan reseña en Google · muy por encima del promedio del sector` });
@@ -1273,13 +1277,14 @@ export default function RetelioDashboard() {
 
   const metrics = useMemo(() => {
     const total     = filteredFeedbacks.length;
-    const reviews   = filteredFeedbacks.filter(f => f.routed_to_google).length;
+    const reviews   = filteredFeedbacks.filter(f => f.google_click_at || f.routed_to_google).length;
     const unhappy   = filteredFeedbacks.filter(f => f.score <= 2).length;
-    const recovered = filteredFeedbacks.filter(f => f.recovery_sent).length;
+    const sent      = filteredFeedbacks.filter(f => f.recovery_sent).length;
+    const redeemed  = filteredFeedbacks.filter(f => f.coupon_redeemed).length;
     const avgScore  = total
       ? (filteredFeedbacks.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / total).toFixed(1)
       : '—';
-    const recRate = unhappy ? Math.round((recovered / unhappy) * 100) : 0;
+    const recRate = sent ? Math.round((redeemed / sent) * 100) : 0;
     // NPS adaptativo (1-5 ó 0-10)
     const maxScoreDetected = Math.max(...filteredFeedbacks.map(f => f.score ?? 0));
     const isNPSStandard    = maxScoreDetected > 5;
@@ -1303,7 +1308,7 @@ export default function RetelioDashboard() {
       passivesPct:   Math.round((passives   / total) * 100),
       detractorsPct: Math.round((detractors / total) * 100),
     } : null;
-    return { total, reviews, unhappy, recovered, avgScore, recRate, nps, npsBreakdown };
+    return { total, reviews, unhappy, sent, redeemed, avgScore, recRate, nps, npsBreakdown };
   }, [filteredFeedbacks]);
 
   const chartData = useMemo(() => {
@@ -1315,7 +1320,7 @@ export default function RetelioDashboard() {
       return {
         date:      label,
         Feedbacks: dayFbs.length,
-        Reseñas:   dayFbs.filter(f => f.routed_to_google).length,
+        'Clicks Google': dayFbs.filter(f => f.google_click_at || f.routed_to_google).length,
       };
     });
   }, [filteredFeedbacks, range]);
@@ -1478,18 +1483,18 @@ export default function RetelioDashboard() {
           loading={loading}
         />
         <MetricCard
-          label="Reseñas Google"
+          label="Clicks Google"
           value={loading ? '—' : metrics.reviews}
-          sub={`${metrics.reviews} este mes`}
+          sub="Intentos de reseña"
           color={T.teal}
           Icon={Star}
           loading={loading}
         />
         <MetricCard
-          label="Recovery rate"
+          label="Canjes %"
           value={loading ? '—' : `${metrics.recRate}%`}
-          sub={`${metrics.recovered} de ${metrics.unhappy} críticos`}
-          color={metrics.recRate > 50 ? T.green : metrics.recRate > 0 ? T.amber : T.coral}
+          sub={`${metrics.redeemed} de ${metrics.sent} cupones`}
+          color={metrics.recRate > 30 ? T.green : metrics.recRate > 0 ? T.amber : T.coral}
           Icon={Zap}
           loading={loading}
         />

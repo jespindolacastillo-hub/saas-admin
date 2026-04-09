@@ -241,18 +241,7 @@ function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenu
 
             </div>
 
-            {/* Diagnostic Footer (Visible for diagnosis) */}
-            <div style={{ marginTop: 20, padding: '10px 14px', background: '#F8FAFC', borderRadius: 8, border: '1px dashed #CBD5E1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '0.65rem', color: T.muted, fontFamily: 'monospace' }}>
-                DEBUG: V:2.1 / P:{plan} / T:{tenant?.test_mode ? 'On' : 'Off'} / Rec: {recovered} / ${realRevenue}
-              </div>
-              <button 
-                onClick={() => { localStorage.clear(); window.location.reload(); }}
-                style={{ fontSize: '0.65rem', background: T.teal, color: '#fff', border: 'none', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontWeight: 700 }}
-              >
-                SINC ELIMINAR CACHE
-              </button>
-            </div>
+            {/* Financial breakdown is now clean and professional */}
           </div>
         )}
       </div>

@@ -1300,6 +1300,8 @@ export default function RetelioDashboard() {
   const [selectedLocs,   setSelectedLocs]   = useState([]);
   const [healthFilter,   setHealthFilter]   = useState('all');
   const [demoMode,       setDemoMode]       = useState(() => localStorage.getItem('retelio_demo') === 'true');
+  const [lastUpdated,    setLastUpdated]    = useState(null);
+  const [refreshing,     setRefreshing]     = useState(false);
 
   const toggleDemo = () => {
     const next = !demoMode;
@@ -1307,9 +1309,9 @@ export default function RetelioDashboard() {
     localStorage.setItem('retelio_demo', next ? 'true' : 'false');
   };
 
-  const loadData = async (withDemo = false) => {
+  const loadData = async (withDemo = false, silent = false) => {
     if (!tenant?.id) return;
-    setLoading(true);
+    if (silent) setRefreshing(true); else setLoading(true);
     try {
       const isTest = tenant?.test_mode === true;
       const since = subDays(new Date(), range).getTime();
@@ -1319,7 +1321,6 @@ export default function RetelioDashboard() {
         dataService.fetchStores(tenant.id)
       ]);
 
-      // Dashboard typically filters by range locally to allow fast switching
       const filteredByRange = allFbs.filter(f => new Date(f.created_at).getTime() >= since);
 
       if (withDemo) {
@@ -1329,15 +1330,28 @@ export default function RetelioDashboard() {
         setFeedbacks(filteredByRange);
         setLocations(stores);
       }
+      setLastUpdated(new Date());
     } catch (err) {
       console.error('RetelioDashboard load error:', err);
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false); else setLoading(false);
     }
   };
 
+  // Initial load + reload when filters change
   useEffect(() => {
     if (tenant?.id) loadData(demoMode);
+  }, [tenant?.id, range, demoMode]);
+
+  // Auto-refresh every 5 minutes (silent background refresh, skips demo mode)
+  useEffect(() => {
+    if (!tenant?.id || demoMode) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadData(false, true);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+    return () => clearInterval(interval);
   }, [tenant?.id, range, demoMode]);
 
   // ── Filtered locations based on health filter ──
@@ -1520,8 +1534,23 @@ export default function RetelioDashboard() {
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>
             Dashboard
           </h1>
-          <p style={{ fontSize: '0.85rem', color: T.muted, fontWeight: 500 }}>
+          <p style={{ fontSize: '0.85rem', color: T.muted, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
             {demoMode ? 'Datos de ejemplo' : (tenant?.name || 'Tu negocio')} · últimos {range} días
+            {lastUpdated && !demoMode && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: '0.72rem', color: refreshing ? T.teal : T.muted,
+                transition: 'color 0.3s',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: refreshing ? T.teal : '#94a3b8',
+                  display: 'inline-block',
+                  animation: refreshing ? 'pulse 1s infinite' : 'none',
+                }} />
+                Actualizado {format(lastUpdated, 'HH:mm', { locale: es })}
+              </span>
+            )}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

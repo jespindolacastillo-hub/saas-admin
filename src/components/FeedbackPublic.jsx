@@ -213,12 +213,7 @@ function Logo({ onSecretTap }) {
   };
   return (
     <div className="rf-logo" onClick={handleTap}>
-      <div className="rf-logo-dots">
-        {[S.coral, S.teal, S.teal, S.coral].map((c, i) => (
-          <div key={i} className="rf-logo-dot" style={{ background: c }} />
-        ))}
-      </div>
-      <span className="rf-logo-word">retelio</span>
+      <img src="/retelio-final-logo-dark.svg?v=3" alt="Retelio" style={{ height: '24px', display: 'block' }} />
     </div>
   );
 }
@@ -643,6 +638,7 @@ export default function FeedbackPublic() {
   const [testMode, setTestMode] = useState(isTestMode() || urlTest);
 
   useEffect(() => {
+    document.title = 'Retelio Feedback';
     if (!qrId) { setError('QR ID faltante en la URL.'); setLoading(false); return; }
     loadQR();
   }, [qrId]);

@@ -2405,7 +2405,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
     return (
       <div style={{ minHeight: '100vh', background: '#F7F8FC', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: '#0D0D12', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontWeight: 800, fontSize: '1.1rem', color: '#fff', letterSpacing: '-0.02em' }}>retelio</span>
+          <img src="/retelio-final-logo-light.svg?v=3" alt="Retelio" style={{ height: '22px', display: 'block' }} />
           <button onClick={handleLogout} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: '0.82rem' }}>Salir</button>
         </div>
         <CouponValidation userEmail={session?.user?.email} />

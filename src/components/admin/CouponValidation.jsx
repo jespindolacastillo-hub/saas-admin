@@ -20,6 +20,10 @@ export default function CouponValidation({ userEmail }) {
   const [searching, setSearching] = useState(false);
   const [saving, setSaving]     = useState(false);
   
+  // Financial inputs for redemption
+  const [ticketAmount, setTicketAmount] = useState('');
+  const [ticketId, setTicketId]         = useState('');
+
   // List management
   const [coupons, setCoupons]       = useState([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -30,7 +34,7 @@ export default function CouponValidation({ userEmail }) {
     setLoadingList(true);
     const { data, error } = await supabase
       .from('feedbacks')
-      .select('id, coupon_code, coupon_redeemed, created_at, score, contact_phone, followup_answer, recovery_sent, coupon_config_id')
+      .select('id, coupon_code, coupon_redeemed, created_at, score, contact_phone, followup_answer, recovery_sent, coupon_config_id, redeemed_amount')
       .eq('tenant_id', tenant.id)
       .not('coupon_code', 'is', null)
       .order('created_at', { ascending: false })
@@ -102,6 +106,8 @@ export default function CouponValidation({ userEmail }) {
       coupon_redeemed_by: email,
       recovery_status: 'resolved',
       recovery_resolved_at: now,
+      redeemed_amount: ticketAmount ? parseFloat(ticketAmount) : null,
+      redeemed_ticket_id: ticketId || null,
     };
     await supabase.from('feedbacks').update(update).eq('id', result.id).eq('tenant_id', tenant.id);
     setResult(prev => ({ ...prev, ...update }));
@@ -124,7 +130,13 @@ export default function CouponValidation({ userEmail }) {
     setSaving(false);
   };
 
-  const reset = () => { setCode(''); setResult(null); setStatus(null); };
+  const reset = () => { 
+    setCode(''); 
+    setResult(null); 
+    setStatus(null); 
+    setTicketAmount('');
+    setTicketId('');
+  };
 
   const scoreColor = result?.score <= 1 ? T.red : result?.score <= 2 ? T.coral : T.teal;
 
@@ -233,6 +245,40 @@ export default function CouponValidation({ userEmail }) {
               <div style={{ background: T.amber + '10', border: `1px solid ${T.amber}30`, borderRadius: 10, padding: '10px 14px', fontSize: '0.78rem', color: '#92400E' }}>
                 Canjeado {formatDistanceToNow(new Date(result.coupon_redeemed_at), { locale: es, addSuffix: true })}
                 {result.coupon_redeemed_by && ` por ${result.coupon_redeemed_by}`}
+              </div>
+            )}
+
+            {/* Financial tracking inputs */}
+            {status === 'found' && (
+              <div style={{ background: '#F8F9FC', borderRadius: 12, padding: '16px', border: `1.5px dashed ${T.border}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  📊 Datos de la Venta (Opcional)
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>Monto del Ticket</div>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: T.muted }}>$</span>
+                      <input 
+                        type="number" 
+                        value={ticketAmount}
+                        onChange={e => setTicketAmount(e.target.value)}
+                        placeholder="0.00"
+                        style={{ width: '100%', padding: '10px 10px 10px 24px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.9rem', fontWeight: 700 }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>ID Ticket POS</div>
+                    <input 
+                      type="text" 
+                      value={ticketId}
+                      onChange={e => setTicketId(e.target.value)}
+                      placeholder="Ej: #1234"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.9rem', fontWeight: 600 }}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -362,9 +408,16 @@ export default function CouponValidation({ userEmail }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.9rem', color: T.ink }}>{c.coupon_code}</span>
-                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: statusColor, textTransform: 'uppercase', background: statusColor + '10', padding: '1px 6px', borderRadius: 4 }}>
-                          {statusLabel}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 800, color: statusColor, textTransform: 'uppercase', background: statusColor + '10', padding: '1px 6px', borderRadius: 4 }}>
+                            {statusLabel}
+                          </span>
+                          {c.coupon_redeemed && c.redeemed_amount && (
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: T.green, background: T.green + '15', padding: '1px 6px', borderRadius: 4 }}>
+                              ${parseFloat(c.redeemed_amount).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>
                         {c.contact_phone || 'Sin teléfono'} · {formatDistanceToNow(new Date(c.created_at), { locale: es, addSuffix: true })}

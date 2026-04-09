@@ -335,9 +335,9 @@ function LocationBreakdown({ feedbacks, locations, loading }) {
   if (locations.length <= 1) return null;
 
   const rows = locations.map(loc => {
-    const fbs     = feedbacks.filter(f => f.location_id === loc.id);
+    const fbs     = feedbacks.filter(f => f.location_id === loc.id || f.tienda_id === loc.id);
     const reviews = fbs.filter(f => f.google_click_at || f.routed_to_google).length;
-    const unhappy = fbs.filter(f => f.score <= 2).length;
+    const unhappy = fbs.filter(f => (f.score ?? f.satisfaccion ?? 0) <= 2).length;
     const sent      = fbs.filter(f => f.recovery_sent).length;
     const redeemed  = fbs.filter(f => f.coupon_redeemed).length;
     const avgNum  = fbs.length ? fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / fbs.length : null;
@@ -561,9 +561,9 @@ function ActionPanel({ feedback, tenant, onUpdate }) {
 
   const handleConfirm = async () => {
     setSaving(true);
-    const updates = DB_UPDATES[action];
+    const table = feedback._table || 'feedbacks';
     if (Object.keys(updates).length > 0) {
-      await supabase.from('feedbacks').update(updates).eq('id', feedback.id);
+      await supabase.from(table).update(updates).eq('id', feedback.id);
       onUpdate({ ...feedback, ...updates });
     }
     setSaving(false);
@@ -674,7 +674,7 @@ function ActionPanel({ feedback, tenant, onUpdate }) {
 
 function FeedbackDrawer({ feedback, locations, onClose, tenant, onUpdate }) {
   if (!feedback) return null;
-  const loc = locations.find(l => l.id === feedback.location_id);
+  const loc = locations.find(l => l.id === feedback.location_id || l.id === feedback.tienda_id);
   const nps = NPS_CATEGORY(feedback.score);
   const scoreColor = SCORE_COLOR[feedback.score] || T.muted;
 
@@ -737,7 +737,7 @@ function FeedbackDrawer({ feedback, locations, onClose, tenant, onUpdate }) {
           {/* Info rows */}
           {[
             { label: 'Fecha y hora', value: format(new Date(feedback.created_at), "dd 'de' MMMM yyyy · HH:mm 'hrs'", { locale: es }) },
-            { label: 'Sucursal', value: loc?.name || '—' },
+            { label: 'Sucursal', value: loc?.name || feedback.tienda_nombre || '—' },
             { label: 'QR', value: feedback.qr_codes?.label ? `${feedback.qr_codes.label} (${feedback.qr_codes.type})` : '—' },
           ].map(({ label, value }) => (
             <div key={label} style={{ marginBottom: 16 }}>

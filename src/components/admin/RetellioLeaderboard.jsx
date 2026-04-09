@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
+import { dataService } from '../../services/dataService';
 import { Trophy, Star, MessageSquare, Zap, TrendingUp, MapPin, User, Users } from 'lucide-react';
 import { subDays } from 'date-fns';
 
@@ -30,25 +31,27 @@ export default function RetellioLeaderboard() {
   const [activeTab,    setActiveTab]    = useState('locations');
 
   const loadData = async () => {
+    if (!tenant?.id) return;
     setLoading(true);
-    const since = subDays(new Date(), range).toISOString();
-    const [fbRes, locRes, qrRes] = await Promise.all([
-      supabase.from('feedbacks')
-        .select('id, location_id, qr_id, score, routed_to_google, recovery_sent, created_at')
-        .eq('tenant_id', tenant.id)
-        .gte('created_at', since),
-      supabase.from('locations')
-        .select('id, name')
-        .eq('tenant_id', tenant.id),
-      supabase.from('qr_codes')
-        .select('id, label, location_id, type')
-        .eq('tenant_id', tenant.id)
-        .eq('type', 'employee'),
-    ]);
-    if (fbRes.data)  setFeedbacks(fbRes.data);
-    if (locRes.data) setLocations(locRes.data);
-    if (qrRes.data)  setEmployeeQRs(qrRes.data);
-    setLoading(false);
+    
+    try {
+      const [feedbacks, stores, qrCodes] = await Promise.all([
+        dataService.fetchFeedbacks(tenant.id),
+        dataService.fetchStores(tenant.id),
+        supabase.from('qr_codes')
+          .select('id, label, location_id, type')
+          .eq('tenant_id', tenant.id)
+          .eq('type', 'employee')
+      ]);
+
+      setFeedbacks(feedbacks);
+      setLocations(stores);
+      setEmployeeQRs(qrCodes.data || []);
+    } catch (error) {
+      console.error('Leaderboard load error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -57,12 +60,12 @@ export default function RetellioLeaderboard() {
 
   const rankings = useMemo(() => {
     return locations.map(loc => {
-      const fbs      = feedbacks.filter(f => f.location_id === loc.id);
+      const fbs      = feedbacks.filter(f => f.location_id === loc.id || f.tienda_id === loc.id);
       const total    = fbs.length;
       const reviews  = fbs.filter(f => f.routed_to_google).length;
-      const unhappy  = fbs.filter(f => f.score <= 2).length;
+      const unhappy  = fbs.filter(f => (f.score ?? f.satisfaccion ?? 0) <= 2).length;
       const recovered= fbs.filter(f => f.recovery_sent).length;
-      const avg      = total ? (fbs.reduce((s, f) => s + f.score, 0) / total) : 0;
+      const avg      = total ? (fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / total) : 0;
       const recRate  = unhappy ? Math.round((recovered / unhappy) * 100) : null;
       return { ...loc, total, reviews, avg: avg.toFixed(1), recRate, unhappy };
     }).sort((a, b) => parseFloat(b.avg) - parseFloat(a.avg) || b.reviews - a.reviews);
@@ -73,9 +76,9 @@ export default function RetellioLeaderboard() {
       const fbs      = feedbacks.filter(f => f.qr_id === qr.id);
       const total    = fbs.length;
       const reviews  = fbs.filter(f => f.routed_to_google).length;
-      const unhappy  = fbs.filter(f => f.score <= 2).length;
+      const unhappy  = fbs.filter(f => (f.score ?? f.satisfaccion ?? 0) <= 2).length;
       const recovered= fbs.filter(f => f.recovery_sent).length;
-      const avg      = total ? (fbs.reduce((s, f) => s + f.score, 0) / total) : 0;
+      const avg      = total ? (fbs.reduce((s, f) => s + (f.score ?? f.satisfaccion ?? 0), 0) / total) : 0;
       const recRate  = unhappy ? Math.round((recovered / unhappy) * 100) : null;
       const location = locations.find(l => l.id === qr.location_id);
       return { ...qr, total, reviews, avg: avg.toFixed(1), recRate, unhappy, locationName: location?.name || '—' };

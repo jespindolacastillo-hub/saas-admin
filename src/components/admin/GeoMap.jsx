@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
+import { dataService } from '../../services/dataService';
 import { MapPin, AlertTriangle, TrendingDown, Star, RefreshCw } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -90,9 +91,9 @@ function LeafletMap({ stores }) {
         circle.bindPopup(`
           <div style="font-family: ${font}; min-width: 180px;">
             <div style="font-weight: 800; font-size: 0.95rem; margin-bottom: 6px; color: #0D0D12;">
-              ${store.nombre}
+              ${store.name || store.nombre}
             </div>
-            ${store.ciudad ? `<div style="font-size: 0.78rem; color: #64748b; margin-bottom: 8px;">${store.ciudad}</div>` : ''}
+            ${store.municipio ? `<div style="font-size: 0.78rem; color: #64748b; margin-bottom: 8px;">${store.municipio}</div>` : ''}
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
               <div>
                 <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">Score</div>
@@ -152,77 +153,51 @@ export default function GeoMap() {
     if (!tenant?.id) return;
     setLoading(true);
     setError(null);
+
     try {
-      // Query ALL stores for this tenant (with or without coords)
-      const { data: locData, error: locErr } = await supabase
-        .from('Tiendas_Catalogo')
-        .select('id, nombre, lat, lng, direccion')
-        .eq('tenant_id', tenant.id);
+      const isTest = tenant?.test_mode === true;
+      const [fbData, allStores] = await Promise.all([
+        dataService.fetchFeedbacks(tenant.id, isTest),
+        dataService.fetchStores(tenant.id)
+      ]);
 
-      if (locErr) throw locErr;
-
-      if (!locData || locData.length === 0) {
-        setStores([]);
-        setLoading(false);
-        return;
-      }
-
-      // Auto-geocode stores missing lat/lng using Nominatim (OSM)
-      const geocoded = await Promise.all(locData.map(async (store) => {
+      // 1. Geocoding logic
+      const geocoded = await Promise.all(allStores.map(async (store) => {
         if (store.lat && store.lng) return store;
         try {
-          const q = [store.nombre, store.direccion, 'México'].filter(Boolean).join(', ');
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
-            { headers: { 'Accept-Language': 'es' } }
-          );
+          const q = [store.name, store.address, 'México'].filter(Boolean).join(', ');
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
           const data = await res.json();
-          if (data.length) {
-            const lat = parseFloat(data[0].lat);
-            const lng = parseFloat(data[0].lon);
-            // Update DB in background so next load is instant
-            supabase.from('Tiendas_Catalogo').update({ lat, lng }).eq('id', store.id).then(() => {});
-            return { ...store, lat, lng };
+          if (data && data[0]) {
+            return { ...store, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
           }
-        } catch (_) {}
+        } catch (e) { console.error('Geocoding error:', store.name, e); }
         return store;
       }));
 
-      // Only keep stores that have coords (after geocoding attempt)
-      const withCoords = geocoded.filter(s => s.lat && s.lng);
-      if (withCoords.length === 0) {
-        setStores([]);
-        setLoading(false);
-        return;
-      }
-
-      // Tiendas_Catalogo ya tiene `nombre` directamente
-      const storeData = withCoords;
-      const tiendaIds = storeData.map(s => s.id);
-
-      // Get feedback aggregates per tienda_id
-      const { data: fbData, error: fbErr } = await supabase
-        .from('Feedback')
-        .select('tienda_id, satisfaccion')
-        .in('tienda_id', tiendaIds);
-
-      if (fbErr) throw fbErr;
-
-      // Aggregate by tienda_id
+      // 2. Aggregate feedbacks by store
       const agg = {};
-      (fbData || []).forEach((fb) => {
-        if (!fb.tienda_id) return;
-        if (!agg[fb.tienda_id]) agg[fb.tienda_id] = { count: 0, sum: 0, bad: 0 };
-        agg[fb.tienda_id].count++;
-        const s = normScore(fb.satisfaccion);
-        if (s != null) agg[fb.tienda_id].sum += s;
-        if (s != null && s <= 2) agg[fb.tienda_id].bad++;
+      geocoded.forEach(s => {
+        agg[s.id] = { ...s, count: 0, sum: 0, bad: 0 };
       });
 
-      const enriched = storeData.map((s) => {
+      (fbData || []).forEach((fb) => {
+        let matchedId = fb.location_id;
+        if (!agg[matchedId]) return;
+
+        agg[matchedId].count++;
+        const s = fb.score;
+        if (s != null) {
+          agg[matchedId].sum += s;
+          if (s <= 2) agg[matchedId].bad++;
+        }
+      });
+
+      const enriched = geocoded.map((s) => {
         const a = agg[s.id] || { count: 0, sum: 0, bad: 0 };
         return {
           ...s,
+          nombre: s.name,
           count: a.count,
           avg_score: a.count > 0 ? a.sum / a.count : null,
           bad_count: a.bad,
@@ -399,8 +374,8 @@ export default function GeoMap() {
                   <MapPin size={16} color="white" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.nombre}</div>
-                  {store.ciudad && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{store.ciudad}</div>}
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.name || store.nombre}</div>
+                  {store.municipio && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{store.municipio}</div>}
                 </div>
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   <div style={{ fontWeight: 800, fontSize: '0.95rem', color: npsColor(store.avg_score) }}>

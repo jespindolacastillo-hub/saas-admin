@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
+import { dataService } from '../../services/dataService';
 import {
   CheckCircle2, Loader, RefreshCw, ChevronDown, ChevronUp,
   MessageSquare, Phone, Edit2, Tag,
@@ -360,7 +361,8 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
     setSaving(true);
     const now = new Date().toISOString();
     const u = { recovery_status: 'contacted', recovery_at: now, recovery_actor: userEmail };
-    await supabase.from('feedbacks').update(u).eq('id', fb.id);
+    const table = fb._table || 'feedbacks';
+    await supabase.from(table).update(u).eq('id', fb.id);
     onUpdate({ ...fb, ...u });
     setSaving(false);
   };
@@ -369,7 +371,8 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
     setSaving(true);
     const now = new Date().toISOString();
     const u = { recovery_status: 'resolved', recovery_resolved_at: now };
-    await supabase.from('feedbacks').update(u).eq('id', fb.id);
+    const table = fb._table || 'feedbacks';
+    await supabase.from(table).update(u).eq('id', fb.id);
     onUpdate({ ...fb, ...u });
     setSaving(false);
   };
@@ -379,7 +382,8 @@ function QueueCard({ fb, locationName, qrLabel, bucket, userEmail, coupons, onUp
     setCouponOpen(false);
     const code = genCode(cfg.coupon_prefix || 'MANUAL');
     const upd = { coupon_code: code, coupon_config_id: cfg.id, recovery_sent: true };
-    await supabase.from('feedbacks').update(upd).eq('id', fb.id);
+    const table = fb._table || 'feedbacks';
+    await supabase.from(table).update(upd).eq('id', fb.id);
     onUpdate({ ...fb, ...upd });
     setSaving(false);
   };
@@ -589,7 +593,9 @@ function FollowupCard({ fb, locationName, qrLabel, userEmail, coupons, onUpdate 
     const u = (newStatus === 'resolved' || newStatus === 'lost')
       ? { recovery_status: newStatus, recovery_resolved_at: now }
       : { recovery_status: newStatus };
-    await supabase.from('feedbacks').update(u).eq('id', fb.id);
+    const table = fb._table || 'feedbacks';
+    const { error } = await supabase.from(table).update(u).eq('id', fb.id);
+    if (error) console.error('Update recovery status error:', error);
     onUpdate({ ...fb, ...u });
     setSaving(false);
   };
@@ -606,7 +612,8 @@ function FollowupCard({ fb, locationName, qrLabel, userEmail, coupons, onUpdate 
     setSaving(true); setCouponOpen(false);
     const code = genCode(cfg.coupon_prefix || 'MANUAL');
     const upd = { coupon_code: code, coupon_config_id: cfg.id, recovery_sent: true };
-    await supabase.from('feedbacks').update(upd).eq('id', fb.id);
+    const table = fb._table || 'feedbacks';
+    await supabase.from(table).update(upd).eq('id', fb.id);
     onUpdate({ ...fb, ...upd });
     setSaving(false);
   };
@@ -784,14 +791,16 @@ function ValidationTab({ feedbacks, locations, tenant, userEmail, onUpdate }) {
     setSaving(fb.id);
     const now = new Date().toISOString();
     const u = { coupon_redeemed: true, coupon_redeemed_at: now, coupon_redeemed_by: userEmail, recovery_status: 'resolved', recovery_resolved_at: now };
-    await supabase.from('feedbacks').update(u).eq('id', fb.id).eq('tenant_id', tenant.id);
+    const table = fb._table || 'feedbacks';
+    await supabase.from(table).update(u).eq('id', fb.id).eq('tenant_id', tenant.id);
     onUpdate({ ...fb, ...u });
     setSaving(null);
   };
 
   const markNotReturned = async (fb) => {
     setSaving(fb.id + '_no');
-    await supabase.from('feedbacks').update({ coupon_not_returned: true }).eq('id', fb.id).eq('tenant_id', tenant.id);
+    const table = fb._table || 'feedbacks';
+    await supabase.from(table).update({ coupon_not_returned: true }).eq('id', fb.id).eq('tenant_id', tenant.id);
     onUpdate({ ...fb, coupon_not_returned: true });
     setSaving(null);
   };
@@ -870,6 +879,7 @@ export default function IssueManagement() {
   const [locations, setLocations]       = useState([]);
   const [qrLabels, setQrLabels]         = useState({});
   const [coupons, setCoupons]           = useState([]);
+  const [recoveryConfig, setRecoveryConfig] = useState(null);
   const [escalationBanner, setEscalationBanner] = useState([]);
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading]     = useState(true);
@@ -888,56 +898,57 @@ export default function IssueManagement() {
   }, [tenant?.id]);
 
   const loadData = async () => {
+    if (!tenant?.id) return;
     setLoading(true);
-    const since = subDays(new Date(), 30).toISOString();
-    const [fbRes, locRes, locRes2, cpRes, qrRes] = await Promise.all([
-      supabase.from('feedbacks')
-        .select('id, location_id, qr_id, score, comment, followup_answer, contact_phone, created_at, recovery_status, recovery_at, recovery_actor, recovery_resolved_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, recovery_sent')
-        .eq('tenant_id', tenant.id)
-        .eq('is_test', tenant.test_mode === true)
-        .lte('score', 2)
-        .gte('created_at', since)
-        .order('created_at', { ascending: false }),
-      supabase.from('locations').select('id, name').eq('tenant_id', tenant.id),
-      supabase.from('Tiendas_Catalogo').select('id, name:nombre').eq('tenant_id', tenant.id),
-      supabase.from('recovery_config').select('*').eq('tenant_id', tenant.id),
-      supabase.from('qr_codes').select('id, label').eq('tenant_id', tenant.id),
-    ]);
-    const allLocs = [...(locRes.data || []), ...(locRes2.data || [])];
-    setLocations(Object.values(Object.fromEntries(allLocs.map(l => [l.id, l]))));
-    const fbs = fbRes.data || [];
-    setFeedbacks(fbs);
-    setCoupons(cpRes.data || []);
-    setQrLabels(Object.fromEntries((qrRes.data || []).filter(q => q.label).map(q => [q.id, q.label])));
+    
+    try {
+      const isTest = tenant.test_mode === true;
+      const [feedbacks, stores, areas, recoveryConfigRes, qrCodesRes] = await Promise.all([
+        dataService.fetchFeedbacks(tenant.id, isTest),
+        dataService.fetchStores(tenant.id),
+        dataService.fetchAreas(tenant.id),
+        supabase.from('recovery_config').select('*').eq('tenant_id', tenant.id),
+        supabase.from('qr_codes').select('id, label').eq('tenant_id', tenant.id)
+      ]);
 
-    // ── Escalation check ──────────────────────────────────────────────────────
-    const nowMs = Date.now();
-    const toEscalate = fbs.filter(f => {
-      if (!f.contact_phone) return false;
-      if (f.recovery_status && f.recovery_status !== 'pending') return false;
-      const ageMin = (nowMs - new Date(f.created_at)) / 60000;
-      if (ageMin < 90 || ageMin > 120) return false; // 90–120 min window
-      return !localStorage.getItem(`esc_${f.id}`);
-    });
-    if (toEscalate.length > 0) {
-      const allLocs = [...(locRes.data || []), ...(locRes2.data || [])];
-      const locsMap = Object.fromEntries(allLocs.map(l => [l.id, l]));
-      toEscalate.forEach(f => {
-        localStorage.setItem(`esc_${f.id}`, '1');
-        const loc = locsMap[f.location_id];
-        if (loc?.whatsapp_number) {
-          const locName = loc.name || 'tu negocio';
-          const msg = encodeURIComponent(
-            `⚠️ Alerta Retelio: hay un cliente en ${locName} que lleva más de 90 minutos sin ser contactado (calificación ${f.score}★). Entra a retelio.app para actuar antes de que cierre la ventana de recuperación.`
-          );
-          supabase.functions.invoke('send-whatsapp-alert', {
-            body: { tenant_id: tenant.id, location_id: f.location_id, score: f.score, whatsapp_number: loc.whatsapp_number, comment: `ESCALACIÓN — sin contactar hace 90+ min`, qr_label: 'Escalación automática' },
-          }).catch(() => {});
-        }
+      setLocations(stores);
+      // Filter for negative ones only for this specific view (score <= 2)
+      setFeedbacks(feedbacks.filter(f => f.score <= 2));
+      setRecoveryConfig(recoveryConfigRes.data?.[0] || null);
+      setQrLabels(Object.fromEntries((qrCodesRes.data || []).map(q => [q.id, q.label])));
+
+      // ── Escalation check ──────────────────────────────────────────────────────
+      const nowMs = Date.now();
+      const toEscalate = feedbacks.filter(f => {
+        if (!f.contact_phone) return false;
+        if (f.recovery_status && f.recovery_status !== 'pending') return false;
+        const ageMin = (nowMs - new Date(f.created_at)) / 60000;
+        if (ageMin < 90 || ageMin > 120) return false; // 90–120 min window
+        return !localStorage.getItem(`esc_${f.id}`);
       });
-      setEscalationBanner(toEscalate);
+
+      if (toEscalate.length > 0) {
+        const locsMap = Object.fromEntries(stores.map(l => [l.id, l]));
+        toEscalate.forEach(f => {
+          localStorage.setItem(`esc_${f.id}`, '1');
+          const loc = locsMap[f.location_id];
+          if (loc?.whatsapp_number) {
+            const locName = loc.name || 'tu negocio';
+            const msg = encodeURIComponent(
+              `⚠️ Alerta Retelio: hay un cliente en ${locName} que lleva más de 90 minutos sin ser contactado (calificación ${f.score}★). Entra a retelio.app para actuar antes de que cierre la ventana de recuperación.`
+            );
+            supabase.functions.invoke('send-whatsapp-alert', {
+              body: { tenant_id: tenant.id, location_id: f.location_id, score: f.score, whatsapp_number: loc.whatsapp_number, comment: `ESCALACIÓN — sin contactar hace 90+ min`, qr_label: 'Escalación automática' },
+            }).catch(() => {});
+          }
+        });
+        setEscalationBanner(toEscalate);
+      }
+    } catch (error) {
+      console.error('IssueManagement load error:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const updateFeedback = useCallback(updated => {

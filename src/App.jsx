@@ -38,6 +38,7 @@ import { getPlanLimits, isActiveTrial, trialDaysLeft } from './config/planLimits
 import QRStudio from './components/admin/QRStudio';
 import IssueManagement from './components/admin/IssueManagement';
 import RetellioLeaderboard from './components/admin/RetellioLeaderboard';
+import { dataService } from './services/dataService';
 import { getSampleData } from './utils/sampleData';
 import SetupChecklist from './components/admin/SetupChecklist';
 import OnboardingWizard from './components/admin/OnboardingWizard';
@@ -2086,7 +2087,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
   const [filters, setFilters] = useState({
     store: 'Todas',
     area: 'Todas',
-    dateRange: 'last7days',
+    dateRange: 'last30days',
     sentiment: 'Todos',
     canal: 'Todos'
   });
@@ -2130,31 +2131,21 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
   };
 
   const refreshData = async () => {
-    if (!tenant?.id || tenant.id === '00000000-0000-0000-0000-000000000000') {
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setFetchError(null);
+    if (!tenant?.id) return;
+    setLoading(true);
 
-      // Simple, direct fetch with current tenant
-      const [fRes, sRes, aRes] = await Promise.all([
-        supabase.from('feedbacks').select('*').eq('tenant_id', tenant?.id).eq('is_test', tenant?.test_mode === true).order('created_at', { ascending: false }),
-        supabase.from('Tiendas_Catalogo').select('*').eq('tenant_id', tenant?.id),
-        supabase.from('Areas_Catalogo').select('*').eq('tenant_id', tenant?.id)
+    try {
+      const [feedbacks, stores, areas] = await Promise.all([
+        dataService.fetchFeedbacks(tenant.id, tenant.test_mode),
+        dataService.fetchStores(tenant.id),
+        dataService.fetchAreas(tenant.id)
       ]);
 
-      if (fRes.error) throw fRes.error;
-      if (sRes.error) throw sRes.error;
-      if (aRes.error) throw aRes.error;
-
-      setRawData(fRes.data || []);
-      setStores(sRes.data || []);
-      setAreas(aRes.data || []);
+      setRawData(feedbacks);
+      setStores(stores);
+      setAreas(areas);
     } catch (error) {
-      console.error('Refresh Data Error:', error);
-      setFetchError(error.message);
+      console.error('Error refreshing data:', error);
     } finally {
       setLoading(false);
     }
@@ -2196,19 +2187,24 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
 
   const storeFilteredData = useMemo(() => {
     if (filters.store === 'Todas') return dateFilteredData;
-    return dateFilteredData.filter(f => f.location_id === filters.store);
+    // Hybrid match: check both location_id and tienda_id
+    return dateFilteredData.filter(f => f.location_id === filters.store || f.tienda_id === filters.store);
   }, [dateFilteredData, filters.store]);
 
   const finalFilteredData = useMemo(() => {
     let filtered = storeFilteredData;
-    if (filters.area !== 'Todas') filtered = filtered.filter(f => f.area_id === filters.area);
+    if (filters.area !== 'Todas') filtered = filtered.filter(f => f.area_id === filters.area || f.area === filters.area); // area is legacy field
     if (filters.canal !== 'Todos') filtered = filtered.filter(f => f.canal === filters.canal);
-    if (filters.sentiment !== 'Todos') filtered = filtered.filter(f => (f.sentimiento || (f.score >= 4 ? 'Positivo' : f.score <= 2 ? 'Negativo' : 'Neutral')) === filters.sentiment);
+    if (filters.sentiment !== 'Todos') filtered = filtered.filter(f => {
+      const score = f.score ?? f.satisfaccion ?? 0;
+      const s = f.sentimiento || (score >= 4 ? 'Positivo' : score <= 2 ? 'Negativo' : 'Neutral');
+      return s === filters.sentiment;
+    });
     return filtered;
-  }, [storeFilteredData, filters.area, filters.sentiment]);
+  }, [storeFilteredData, filters.area, filters.sentiment, filters.canal]);
 
   const handleStoreChange = (newStore) => {
-    const newStoreData = newStore === 'Todas' ? dateFilteredData : dateFilteredData.filter(f => f.location_id === newStore);
+    const newStoreData = newStore === 'Todas' ? dateFilteredData : dateFilteredData.filter(f => f.location_id === newStore || f.tienda_id === newStore);
     const availableAreas = [...new Set(newStoreData.map(f => f.area_id).filter(Boolean))];
     const newArea = availableAreas.includes(filters.area) ? filters.area : 'Todas';
     setFilters({ ...filters, store: newStore, area: newArea });

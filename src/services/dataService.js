@@ -75,16 +75,26 @@ export const dataService = {
         nombre: s.nombre
       }));
 
-      // Merge by ID or Name to avoid duplicates if possible
+      // Step 1: Deduplicate by ID (modern wins over legacy if same ID)
       const storesMap = new Map();
       legacy.forEach(s => storesMap.set(s.id, s));
-      modern.forEach(s => {
-        storesMap.set(s.id, s); 
+      modern.forEach(s => storesMap.set(s.id, s));
+
+      // Step 2: Deduplicate by name — same branch in both tables with different IDs
+      // Modern source always wins over legacy when names match
+      const byName = new Map();
+      Array.from(storesMap.values()).forEach(s => {
+        const key = (s.name || s.nombre || '').toLowerCase().trim();
+        const existing = byName.get(key);
+        if (!existing || s.source === 'modern') {
+          byName.set(key, s);
+        }
       });
 
-      const finalStores = Array.from(storesMap.values());
-      console.log(`📊 [Data] Stores resolved: ${finalStores.length}`);
+      const finalStores = Array.from(byName.values());
+      console.log(`📊 [Data] Stores resolved: ${finalStores.length} (after name dedup)`);
       return finalStores;
+
     } catch (error) {
       console.error('dataService.fetchStores error:', error);
       return [];

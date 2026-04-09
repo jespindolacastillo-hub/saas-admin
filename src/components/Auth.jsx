@@ -202,7 +202,7 @@ const Auth = ({ onLogin, passwordRecovery = false, onPasswordReset }) => {
           @media (max-width: 768px) { .auth-left-panel { display: none !important; } }
         `}</style>
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <img src="/retelio-logo-light.svg?v=2" alt="Retelio" style={{ height: '38px', display: 'block' }} />
+          <img src="/retelio-final-logo-light.svg" alt="Retelio" style={{ height: '38px', display: 'block' }} />
         </div>
 
         <div style={{ position: 'relative', zIndex: 1 }}>

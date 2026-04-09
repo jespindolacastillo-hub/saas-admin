@@ -2522,7 +2522,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         {/* Logo */}
         <div style={{ padding: '0 0.25rem', marginBottom: '1.75rem' }}>
-          <img src="/retelio-logo-dark.svg?v=2" alt="Retelio" style={{ height: '30px', display: 'block' }} />
+          <img src="/retelio-final-logo-dark.svg" alt="Retelio" style={{ height: '30px', display: 'block' }} />
         </div>
 
         <nav style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>

@@ -429,8 +429,8 @@ function DoneBad({ couponCode, couponConfig, hasPhone }) {
           : 'Un manager revisará tu caso hoy y tomará acción para mejorar tu experiencia.'}
       </p>
       {couponCode && couponConfig && (
-        <div className="rf-coupon" style={{ textAlign: 'left' }}>
-          <p className="rf-coupon-label">Tu cupón de recuperación</p>
+        <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
+          <p className="rf-coupon-label">🎁 Tu cupón de recuperación</p>
           <p className="rf-coupon-code">{couponCode}</p>
           <p className="rf-coupon-desc">{couponConfig.offer_description}</p>
           <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>

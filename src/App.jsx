@@ -2522,15 +2522,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         {/* Logo */}
         <div style={{ padding: '0 0.25rem', marginBottom: '1.75rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', width: '28px', height: '28px', flexShrink: 0 }}>
-              <div style={{ borderRadius: '3px', background: '#FF5C3A' }} />
-              <div style={{ borderRadius: '3px', background: '#00C9A7' }} />
-              <div style={{ borderRadius: '3px', background: '#7C3AED' }} />
-              <div style={{ borderRadius: '3px', background: '#0D0D12' }} />
-            </div>
-            <span style={{ fontFamily: "'Plus Jakarta Sans', system-ui", fontWeight: 800, fontSize: '1.1rem', color: '#0D0D12', letterSpacing: '-0.02em' }}>retelio</span>
-          </div>
+          <img src="/retelio-logo-dark.svg" alt="Retelio" style={{ height: '30px', display: 'block' }} />
         </div>
 
         <nav style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>

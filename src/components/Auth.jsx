@@ -201,14 +201,8 @@ const Auth = ({ onLogin, passwordRecovery = false, onPasswordReset }) => {
         <style>{`
           @media (max-width: 768px) { .auth-left-panel { display: none !important; } }
         `}</style>
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', width: '32px', height: '32px', flexShrink: 0 }}>
-            <div style={{ borderRadius: '4px', background: '#FF5C3A' }} />
-            <div style={{ borderRadius: '4px', background: '#00C9A7' }} />
-            <div style={{ borderRadius: '4px', background: '#7C3AED' }} />
-            <div style={{ borderRadius: '4px', background: 'rgba(255,255,255,0.3)' }} />
-          </div>
-          <span style={{ fontFamily: font, fontWeight: 800, fontSize: '1.3rem', color: 'white', letterSpacing: '-0.02em' }}>retelio</span>
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <img src="/retelio-logo-light.svg" alt="Retelio" style={{ height: '38px', display: 'block' }} />
         </div>
 
         <div style={{ position: 'relative', zIndex: 1 }}>

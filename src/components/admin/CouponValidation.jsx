@@ -23,6 +23,7 @@ export default function CouponValidation({ userEmail }) {
   // Financial inputs for redemption
   const [ticketAmount, setTicketAmount] = useState('');
   const [ticketId, setTicketId]         = useState('');
+  const [errorMsg, setErrorMsg]         = useState(null);
 
   // List management
   const [coupons, setCoupons]       = useState([]);
@@ -98,36 +99,68 @@ export default function CouponValidation({ userEmail }) {
   const redeem = async () => {
     if (!result || !tenant?.id) return;
     setSaving(true);
-    const now = new Date().toISOString();
-    const email = userEmail || (await supabase.auth.getUser()).data?.user?.email || '';
-    const update = {
-      coupon_redeemed: true,
-      coupon_redeemed_at: now,
-      coupon_redeemed_by: email,
-      recovery_status: 'resolved',
-      recovery_resolved_at: now,
-      redeemed_amount: ticketAmount ? parseFloat(ticketAmount) : null,
-      redeemed_ticket_id: ticketId || null,
-    };
-    await supabase.from('feedbacks').update(update).eq('id', result.id).eq('tenant_id', tenant.id);
-    setResult(prev => ({ ...prev, ...update }));
-    setCoupons(prev => prev.map(c => c.id === result.id ? { ...c, ...update } : c));
-    setStatus('redeemed');
-    setSaving(false);
-    
-    // Hard refresh list to be sure
-    fetchCoupons();
+    setErrorMsg(null);
+    try {
+      const now = new Date().toISOString();
+      const userRes = await supabase.auth.getUser();
+      const email = userEmail || userRes.data?.user?.email || '';
+      
+      const update = {
+        coupon_redeemed: true,
+        coupon_redeemed_at: now,
+        coupon_redeemed_by: email,
+        recovery_status: 'resolved',
+        recovery_resolved_at: now,
+        redeemed_amount: ticketAmount ? parseFloat(ticketAmount) : null,
+        redeemed_ticket_id: ticketId || null,
+      };
+
+      const { error: updateError } = await supabase
+        .from('feedbacks')
+        .update(update)
+        .eq('id', result.id)
+        .eq('tenant_id', tenant.id);
+
+      if (updateError) throw updateError;
+
+      // Only update local state if DB was successful
+      setResult(prev => ({ ...prev, ...update }));
+      setCoupons(prev => prev.map(c => c.id === result.id ? { ...c, ...update } : c));
+      setStatus('redeemed');
+      
+      // Hard refresh list to be sure
+      fetchCoupons();
+    } catch (err) {
+      console.error('Redemption error:', err);
+      setErrorMsg(err.message || 'Error al canjear el cupón. Verifica tu conexión.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const markNotReturned = async () => {
     if (!result || !tenant?.id) return;
     setSaving(true);
-    await supabase.from('feedbacks').update({ coupon_not_returned: true }).eq('id', result.id).eq('tenant_id', tenant.id);
-    setResult(prev => ({ ...prev, coupon_not_returned: true }));
-    setStatus('not_found');
-    setResult(null);
-    setCode('');
-    setSaving(false);
+    setErrorMsg(null);
+    try {
+      const { error: updateError } = await supabase
+        .from('feedbacks')
+        .update({ coupon_not_returned: true })
+        .eq('id', result.id)
+        .eq('tenant_id', tenant.id);
+
+      if (updateError) throw updateError;
+
+      setResult(prev => ({ ...prev, coupon_not_returned: true }));
+      setStatus('not_found');
+      setResult(null);
+      setCode('');
+      fetchCoupons();
+    } catch (err) {
+      setErrorMsg(err.message || 'Error al actualizar el estado.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const reset = () => { 
@@ -136,6 +169,7 @@ export default function CouponValidation({ userEmail }) {
     setStatus(null); 
     setTicketAmount('');
     setTicketId('');
+    setErrorMsg(null);
   };
 
   const scoreColor = result?.score <= 1 ? T.red : result?.score <= 2 ? T.coral : T.teal;
@@ -181,6 +215,14 @@ export default function CouponValidation({ userEmail }) {
           Buscar
         </button>
       </div>
+
+      {/* Error Message */}
+      {errorMsg && (
+        <div style={{ background: '#FFF1F2', border: '1px solid #FDA4AF', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <XCircle size={18} color={T.red} />
+          <div style={{ fontSize: '0.82rem', color: '#9F1239', fontWeight: 600 }}>{errorMsg}</div>
+        </div>
+      )}
 
       {/* Not found */}
       {status === 'not_found' && (

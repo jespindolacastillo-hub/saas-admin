@@ -250,13 +250,17 @@ export default function CouponValidation({ userEmail }) {
 
             {/* Financial tracking inputs */}
             {status === 'found' && (
-              <div style={{ background: '#F8F9FC', borderRadius: 12, padding: '16px', border: `1.5px dashed ${T.border}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 800, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  📊 Datos de la Venta (Opcional)
+              <div style={{ 
+                background: '#F8F9FC', borderRadius: 12, padding: '16px', 
+                border: `1.5px dashed ${T.coral}40`, display: 'flex', 
+                flexDirection: 'column', gap: 12, animation: 'fadeIn 0.3s ease-out' 
+              }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: T.coral, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  📊 REGISTRAR VENTA (RECOMENDADO)
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>Monto del Ticket</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 140px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>Monto del Ticket</div>
                     <div style={{ position: 'relative' }}>
                       <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: T.muted }}>$</span>
                       <input 
@@ -264,21 +268,22 @@ export default function CouponValidation({ userEmail }) {
                         value={ticketAmount}
                         onChange={e => setTicketAmount(e.target.value)}
                         placeholder="0.00"
-                        style={{ width: '100%', padding: '10px 10px 10px 24px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.9rem', fontWeight: 700 }}
+                        style={{ width: '100%', padding: '10px 10px 10px 24px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.95rem', fontWeight: 800, color: T.ink }}
                       />
                     </div>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>ID Ticket POS</div>
+                  <div style={{ flex: '1 1 140px' }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 700, color: T.muted, marginBottom: 4 }}>ID Ticket / Factura</div>
                     <input 
                       type="text" 
                       value={ticketId}
                       onChange={e => setTicketId(e.target.value)}
-                      placeholder="Ej: #1234"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.9rem', fontWeight: 600 }}
+                      placeholder="# POS"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${T.border}`, fontFamily: font, fontSize: '0.95rem', fontWeight: 600, color: T.ink }}
                     />
                   </div>
                 </div>
+                <p style={{ fontSize: '0.65rem', color: T.muted, margin: 0 }}>Esto alimentará automáticamente tus métricas de ROI en el Dashboard.</p>
               </div>
             )}
 
@@ -441,6 +446,7 @@ export default function CouponValidation({ userEmail }) {
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
     </div>
   );

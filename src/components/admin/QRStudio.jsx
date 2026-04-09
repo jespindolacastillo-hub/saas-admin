@@ -337,6 +337,90 @@ function FieldRow({ label, children }) {
   );
 }
 
+function GoogleReviewTutorial() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: '0.75rem', color: T.teal, fontWeight: 700, fontFamily: font,
+          padding: 0,
+        }}
+      >
+        <span style={{ fontSize: '0.85rem' }}>{open ? '▾' : '▸'}</span>
+        ¿Cómo obtengo mi URL de Google Reviews?
+      </button>
+
+      {open && (
+        <div style={{
+          marginTop: 10, background: '#F0FDF9', border: '1px solid #99F6E4',
+          borderRadius: 12, padding: '14px 16px',
+        }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#065F46', marginBottom: 12 }}>
+            📋 Tutorial — 3 pasos rápidos
+          </div>
+          {[
+            {
+              n: 1,
+              title: 'Entra a Google Business Profile',
+              desc: 'Ve a',
+              link: 'https://business.google.com',
+              linkText: 'business.google.com',
+              extra: 'e inicia sesión con la cuenta de Google de tu negocio.',
+            },
+            {
+              n: 2,
+              title: 'Abre tu negocio y ve a "Pedir reseñas"',
+              desc: 'En el panel de tu negocio, busca el botón',
+              bold: '"Pedir reseñas"',
+              extra: 'o ve a Inicio → sección Obtener más reseñas. Google te mostrará un enlace directo.',
+            },
+            {
+              n: 3,
+              title: 'Copia el enlace y pégalo aquí',
+              desc: 'El enlace tiene el formato',
+              bold: 'https://g.page/r/XXXXX/review',
+              extra: 'Cópialo y pégalo en el campo de arriba.',
+            },
+          ].map(step => (
+            <div key={step.n} style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', background: T.teal,
+                color: '#fff', fontSize: '0.7rem', fontWeight: 800,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
+              }}>{step.n}</div>
+              <div style={{ fontSize: '0.76rem', color: '#065F46', lineHeight: 1.5 }}>
+                <strong>{step.title}</strong><br />
+                {step.desc}{' '}
+                {step.link && (
+                  <a href={step.link} target="_blank" rel="noopener noreferrer"
+                    style={{ color: T.teal, fontWeight: 700 }}>{step.linkText}</a>
+                )}
+                {step.bold && <strong> {step.bold}</strong>}
+                {' '}{step.extra}
+              </div>
+            </div>
+          ))}
+          <div style={{
+            marginTop: 4, padding: '8px 12px', background: '#CCFBF1',
+            borderRadius: 8, fontSize: '0.72rem', color: '#047857', fontWeight: 600,
+          }}>
+            💡 Tip: Si tu negocio aún no aparece en Google, primero debes verificarlo en{' '}
+            <a href="https://business.google.com" target="_blank" rel="noopener noreferrer"
+              style={{ color: '#065F46', fontWeight: 800 }}>Google Business Profile</a>.
+            El proceso tarda ~1 semana por correo postal.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function QRStudio() {
   const { tenant } = useTenant();
@@ -1438,15 +1522,44 @@ export default function QRStudio() {
             />
           </FieldRow>
 
-          {/* ── Opcionales ── */}
-          <FieldRow label="URL Google Reviews (opcional)">
+          {/* ── Google Reviews URL con tutorial ── */}
+          <div style={{ marginBottom: 14 }}>
+            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: T.muted,
+              textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+              URL Google Reviews
+              <span style={{ marginLeft: 6, color: T.coral, fontWeight: 800 }}>⚡ Importante</span>
+            </label>
+
+            {/* Warning when empty */}
+            {!locForm.google_review_url && (
+              <div style={{
+                background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 10,
+                padding: '10px 14px', marginBottom: 8, display: 'flex', gap: 10, alignItems: 'flex-start',
+              }}>
+                <span style={{ fontSize: '1rem', flexShrink: 0 }}>⚠️</span>
+                <div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#92400E', marginBottom: 2 }}>
+                    Sin esta URL los clientes satisfechos NO serán redirigidos a Google
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#B45309' }}>
+                    Configúrala para maximizar tus reseñas positivas automáticamente.
+                  </div>
+                </div>
+              </div>
+            )}
+
             <input style={inputSt} placeholder="https://g.page/r/…"
               value={locForm.google_review_url} onChange={e => setLocForm(f => ({ ...f, google_review_url: e.target.value }))} />
-          </FieldRow>
+
+            {/* Tutorial colapsable */}
+            <GoogleReviewTutorial />
+          </div>
+
           <FieldRow label="WhatsApp del encargado (opcional)">
             <input style={inputSt} placeholder="5215512345678"
               value={locForm.whatsapp_number} onChange={e => setLocForm(f => ({ ...f, whatsapp_number: e.target.value }))} />
           </FieldRow>
+
 
           {!editingLoc && !canAddLocation && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 10, marginBottom: 12 }}>

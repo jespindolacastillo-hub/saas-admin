@@ -151,7 +151,6 @@ function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
 }
 
 // ─── TOOLTIP EXPLANATIONS ─────────────────────────────────────────────────────
-// ─── TOOLTIP EXPLANATIONS ─────────────────────────────────────────────────────
 const REASONS = {
   seo: "VALOR ESTRATÉGICO: Valor proyectado a largo plazo por cada reseña de 5 estrellas en Google Business. Calculado mediante un factor de visibilidad del 2.8x sobre el ticket promedio (tráfico orgánico incremental).",
   recovery: "VALOR TRANSACCIONAL: Ingresos reales capturados en el punto de venta (POS) de clientes que regresaron físicamente a validar su incentivo de lealtad.",

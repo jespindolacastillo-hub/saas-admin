@@ -30,11 +30,11 @@ export default function CouponValidation({ userEmail }) {
     setLoadingList(true);
     const { data, error } = await supabase
       .from('feedbacks')
-      .select('id, coupon_code, coupon_redeemed, created_at, score, contact_phone, followup_answer')
+      .select('id, coupon_code, coupon_redeemed, created_at, score, contact_phone, followup_answer, recovery_sent, coupon_config_id')
       .eq('tenant_id', tenant.id)
       .not('coupon_code', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(50);
     
     if (!error && data) setCoupons(data);
     setLoadingList(false);
@@ -44,16 +44,19 @@ export default function CouponValidation({ userEmail }) {
     fetchCoupons();
   }, [fetchCoupons]);
 
-  const search = async () => {
-    const trimmed = code.trim().toUpperCase();
+  const search = async (overrideCode) => {
+    const targetCode = overrideCode || code;
+    const trimmed = targetCode.trim().toUpperCase();
     if (!trimmed || !tenant?.id) return;
+    
     setSearching(true);
+    if (!overrideCode) setCode(trimmed);
     setResult(null);
     setStatus(null);
 
     const { data: fb, error: fbError } = await supabase
       .from('feedbacks')
-      .select('id, score, comment, followup_answer, contact_phone, created_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, location_id, recovery_status, coupon_config_id')
+      .select('id, score, comment, followup_answer, contact_phone, created_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, location_id, recovery_status, coupon_config_id, recovery_sent')
       .eq('tenant_id', tenant.id)
       .eq('coupon_code', trimmed)
       .maybeSingle();
@@ -287,7 +290,7 @@ export default function CouponValidation({ userEmail }) {
             <h3 style={{ fontSize: '1rem', fontWeight: 800, color: T.ink }}>Historial reciente</h3>
           </div>
           <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 10, padding: 3 }}>
-            {['all', 'active', 'redeemed'].map(f => (
+            {['all', 'active', 'redeemed', 'expired'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -301,7 +304,7 @@ export default function CouponValidation({ userEmail }) {
                   textTransform: 'capitalize',
                 }}
               >
-                {f === 'all' ? 'Todos' : f === 'active' ? 'Pendientes' : 'Canjeados'}
+                {f === 'all' ? 'Todos' : f === 'active' ? 'Pendientes' : f === 'redeemed' ? 'Canjeados' : 'Expirados'}
               </button>
             ))}
           </div>
@@ -316,41 +319,61 @@ export default function CouponValidation({ userEmail }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {coupons
-              .filter(c => filter === 'all' ? true : filter === 'active' ? !c.coupon_redeemed : c.coupon_redeemed)
-              .map(c => (
-                <div
-                  key={c.id}
-                  onClick={() => { setCode(c.coupon_code); setStatus(null); setResult(null); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '12px 16px', borderRadius: 14,
-                    background: T.card, border: `1px solid ${T.border}`,
-                    cursor: 'pointer', transition: 'all 0.2s',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = T.coral}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
-                >
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    background: c.coupon_redeemed ? T.green + '15' : T.teal + '15',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    {c.coupon_redeemed ? <CheckCircle2 size={16} color={T.green} /> : <Tag size={16} color={T.teal} />}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.9rem', color: T.ink }}>{c.coupon_code}</span>
-                      {c.coupon_redeemed && <span style={{ fontSize: '0.65rem', fontWeight: 800, color: T.green, textTransform: 'uppercase' }}>Canjeado</span>}
+              .filter(c => {
+                const now = new Date();
+                const created = new Date(c.created_at);
+                const isExp = (now - created) / (1000 * 60 * 60 * 24) > 30; // Assuming 30 days global
+                
+                if (filter === 'all') return true;
+                if (filter === 'active') return !c.coupon_redeemed && !isExp;
+                if (filter === 'redeemed') return c.coupon_redeemed;
+                if (filter === 'expired') return isExp && !c.coupon_redeemed;
+                return true;
+              })
+              .map(c => {
+                const now = new Date();
+                const created = new Date(c.created_at);
+                const isExp = (now - created) / (1000 * 60 * 60 * 24) > 30;
+                const statusLabel = c.coupon_redeemed ? 'Canjeado' : isExp ? 'Expirado' : 'Pendiente';
+                const statusColor = c.coupon_redeemed ? T.green : isExp ? T.red : T.teal;
+
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => { setCode(c.coupon_code); search(c.coupon_code); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '12px 16px', borderRadius: 14,
+                      background: T.card, border: `1px solid ${result?.id === c.id ? T.coral : T.border}`,
+                      cursor: 'pointer', transition: 'all 0.2s',
+                      boxShadow: result?.id === c.id ? `0 4px 12px ${T.coral}15` : '0 1px 2px rgba(0,0,0,0.02)',
+                    }}
+                    onMouseEnter={e => { if (result?.id !== c.id) e.currentTarget.style.borderColor = T.coral; }}
+                    onMouseLeave={e => { if (result?.id !== c.id) e.currentTarget.style.borderColor = T.border; }}
+                  >
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      background: statusColor + '15',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      {c.coupon_redeemed ? <CheckCircle2 size={16} color={T.green} /> : <Tag size={16} color={statusColor} />}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>
-                      {c.contact_phone || 'Sin teléfono'} · {formatDistanceToNow(new Date(c.created_at), { locale: es, addSuffix: true })}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: '0.9rem', color: T.ink }}>{c.coupon_code}</span>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 800, color: statusColor, textTransform: 'uppercase', background: statusColor + '10', padding: '1px 6px', borderRadius: 4 }}>
+                          {statusLabel}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 1 }}>
+                        {c.contact_phone || 'Sin teléfono'} · {formatDistanceToNow(new Date(c.created_at), { locale: es, addSuffix: true })}
+                      </div>
                     </div>
+                    <ArrowRight size={14} color={result?.id === c.id ? T.coral : T.muted} />
                   </div>
-                  <ArrowRight size={14} color={T.muted} />
-                </div>
-              ))}
+                );
+              })}
             
             {coupons.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: T.muted }}>

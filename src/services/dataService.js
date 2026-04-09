@@ -46,7 +46,14 @@ export const dataService = {
 
       if (error) throw error;
 
-      const stores = (data || []).map(s => ({ ...s, nombre: s.name }));
+      // Deduplicate by name (case-insensitive) in case the table has duplicate rows
+      const byName = new Map();
+      (data || []).forEach(s => {
+        const key = (s.name || '').toLowerCase().trim();
+        if (!byName.has(key)) byName.set(key, s); // first row wins
+      });
+
+      const stores = Array.from(byName.values()).map(s => ({ ...s, nombre: s.name }));
       console.log(`📊 [Data] Stores: ${stores.length}`);
       return stores;
     } catch (error) {
@@ -54,6 +61,7 @@ export const dataService = {
       return [];
     }
   },
+
 
   /**
    * Fetches areas from the modern `areas` table (or Areas_Catalogo if still in use).

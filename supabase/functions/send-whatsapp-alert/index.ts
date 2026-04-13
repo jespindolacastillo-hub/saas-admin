@@ -92,11 +92,11 @@ serve(async (req) => {
     const msg   = [
       `${emoji} *Alerta Retelio — Feedback crítico*`,
       ``,
-      `📍 Área: ${area}`,
+      `📍 Lugar: ${area}`,
       `⭐ Calificación: ${score}/5`,
       comment ? `💬 Comentario: "${comment}"` : null,
       ``,
-      `Responde rápido — tienes <60 segundos para marcar la diferencia.`,
+      `El cliente está esperando una respuesta. Actúa ahora para recuperar la experiencia.`,
     ]
       .filter((l) => l !== null)
       .join("\n");

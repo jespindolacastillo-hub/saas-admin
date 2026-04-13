@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
 import { PLAN_LIMITS, getEffectivePrice } from '../../config/planLimits';
 import { loadStripe } from '@stripe/stripe-js';
-import { Save, CheckCircle2, Zap, Building2, Star, AlertTriangle, RotateCcw, FlaskConical, Rocket } from 'lucide-react';
+import { Save, CheckCircle2, Zap, Building2, Star, AlertTriangle, RotateCcw, FlaskConical, Rocket, MessageSquare, Loader, HelpCircle, ExternalLink } from 'lucide-react';
 
 const T = {
   coral:  '#FF5C3A',
@@ -27,6 +27,25 @@ export default function OrganizationSettings() {
   const [saving, setSaving]       = useState(false);
   const [upgrading, setUpgrading] = useState(null);
   const [saved, setSaved]         = useState(false);
+  const [usage, setUsage]   = useState(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+
+  useEffect(() => {
+    if (tenant?.id) fetchUsage();
+  }, [tenant?.id, tenant?.whatsapp_number]);
+
+  const fetchUsage = async () => {
+    setLoadingUsage(true);
+    const period = new Date().toISOString().slice(0, 7);
+    const { data } = await supabase
+      .from('tenant_whatsapp_usage')
+      .select('*')
+      .eq('tenant_id', tenant.id)
+      .eq('period', period)
+      .maybeSingle();
+    setUsage(data);
+    setLoadingUsage(false);
+  };
   const [resetting, setResetting]       = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [togglingTest, setTogglingTest] = useState(false);
@@ -49,26 +68,57 @@ export default function OrganizationSettings() {
   const handleSave = async () => {
     if (!tenant?.id) return;
     setSaving(true);
+    const cleanNumber = form.whatsapp_number.replace(/\D/g, '');
     await supabase.from('tenants').update({
       name:               form.name,
       google_review_url:  form.google_review_url,
-      whatsapp_number:    form.whatsapp_number,
+      whatsapp_number:    cleanNumber,
     }).eq('id', tenant.id);
 
-    // Also update all locations with the same defaults if they don't have their own
+    // Also update all locations with the same defaults
     await supabase.from('locations')
       .update({
         google_review_url: form.google_review_url,
-        whatsapp_number:   form.whatsapp_number,
+        whatsapp_number:   cleanNumber,
       })
-      .eq('tenant_id', tenant.id)
-      .is('google_review_url', null);
+      .eq('tenant_id', tenant.id);
+
 
     await refresh();
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
+
+  const [testing, setTesting] = useState(false);
+  const testWhatsApp = async () => {
+    const cleanNum = form.whatsapp_number.replace(/\D/g, '');
+    if (!cleanNum) {
+      alert('Por favor, ingresa el número del manager primero.');
+      return;
+    }
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-alert', {
+        body: {
+          tenant_id: tenant.id,
+          location_id: '00000000-0000-0000-0000-000000000000',
+          qr_label: 'Configuración',
+          score: 1,
+          comment: '👋 ¡Hola! Este es un mensaje de prueba de Retelio. Tu configuración de alertas es correcta.',
+          whatsapp_number: cleanNum,
+        }
+      });
+      if (error) throw error;
+      alert('¡Mensaje de prueba enviado! Revisa tu WhatsApp.');
+    } catch (err) {
+      console.error(err);
+      alert('Error al enviar prueba: ' + (err.message || 'Error desconocido'));
+    } finally {
+      setTesting(false);
+    }
+  };
+
 
   const handleToggleTestMode = async () => {
     if (!tenant?.id) return;
@@ -213,27 +263,121 @@ export default function OrganizationSettings() {
           'https://g.page/r/TU-LUGAR/review',
           'Clientes con ≥4★ serán redirigidos aquí. Encuéntrala en Google Maps → Compartir → Copia el enlace de reseñas.'
         )}
-        {input(
-          'WhatsApp del manager',
-          'whatsapp_number',
-          '5215512345678',
-          'Sin +, sin espacios. Ej: 5215512345678. Recibirá alertas de feedbacks críticos.'
-        )}
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700,
+            color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            WhatsApp del manager
+          </label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input
+              value={form.whatsapp_number}
+              onChange={e => setForm(f => ({ ...f, whatsapp_number: e.target.value }))}
+              placeholder="5215512345678"
+              style={{
+                flex: 1, border: `1.5px solid ${T.border}`, borderRadius: 10,
+                padding: '10px 14px', fontFamily: font, fontSize: '0.95rem', outline: 'none',
+              }}
+              onFocus={e => e.target.style.borderColor = T.coral}
+              onBlur={e => e.target.style.borderColor = T.border}
+            />
+            <button
+              onClick={testWhatsApp}
+              disabled={testing}
+              style={{
+                padding: '0 20px', borderRadius: 10, border: 'none',
+                background: '#25D366', color: '#fff', fontWeight: 800,
+                fontSize: '0.82rem', cursor: 'pointer', fontFamily: font,
+                boxShadow: '0 4px 12px rgba(37,211,102,0.25)',
+                display: 'flex', alignItems: 'center', gap: 6,
+                minWidth: 140, justifyContent: 'center'
+              }}
+            >
+              {testing ? 'Probando...' : <><MessageSquare size={14} /> Probar Alerta</>}
+            </button>
+          </div>
+          <p style={{ fontSize: '0.72rem', color: T.muted, marginTop: 4 }}>
+            Sin +, sin espacios. Ej: 5215512345678. Recibirá alertas de feedbacks críticos.
+          </p>
+        </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            background: saved ? T.teal : T.ink, color: '#fff', border: 'none',
-            borderRadius: 10, padding: '11px 24px', fontFamily: font,
-            fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 8,
-            opacity: saving ? 0.7 : 1,
-          }}
-        >
-          {saved ? <><CheckCircle2 size={16} /> Guardado</> : <><Save size={16} /> {saving ? 'Guardando…' : 'Guardar cambios'}</>}
-        </button>
+        {/* Usage Info */}
+        <div style={{ 
+          background: T.bg, borderRadius: 12, padding: 16, border: `1px solid ${T.border}`,
+          marginBottom: 20
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: (tenant?.whatsapp_number ? T.teal : T.muted) }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: T.ink, textTransform: 'uppercase' }}>Uso de WhatsApp</span>
+            </div>
+            {usage && (
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted }}>
+                {new Date().toLocaleString('es-MX', { month: 'long' })}
+              </span>
+            )}
+          </div>
+
+          {!usage ? (
+            <div style={{ fontSize: '0.82rem', color: T.muted }}>
+              {loadingUsage ? 'Cargando consumo...' : 'Sin uso registrado este mes.'}
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: T.ink }}>
+                  {usage.used_count} <span style={{ fontWeight: 500, color: T.muted }}>mensajes enviados</span>
+                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: T.ink }}>
+                  {usage.included_limit === -1 ? '∞' : usage.included_limit + (usage.addon_purchased || 0)}
+                </span>
+              </div>
+              <div style={{ height: 6, background: T.border, borderRadius: 999, overflow: 'hidden' }}>
+                <div style={{ 
+                  height: '100%', 
+                  width: `${usage.included_limit === -1 ? 0 : Math.min(100, (usage.used_count / (usage.included_limit + (usage.addon_purchased || 0))) * 100)}%`,
+                  background: (usage.used_count / (usage.included_limit + (usage.addon_purchased || 0))) > 0.9 ? T.red : T.teal,
+                  borderRadius: 999 
+                }} />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              flex: 1,
+              background: saved ? T.teal : T.ink, color: '#fff', border: 'none',
+              borderRadius: 10, padding: '11px 24px', fontFamily: font,
+              fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saved ? <><CheckCircle2 size={16} /> Guardado</> : <><Save size={16} /> {saving ? 'Guardando…' : 'Guardar cambios'}</>}
+          </button>
+          
+          <button
+            onClick={testWhatsApp}
+            disabled={testing}
+            style={{
+              background: '#fff', color: T.ink, border: `1.5px solid ${T.border}`,
+              borderRadius: 10, padding: '11px 20px', fontFamily: font,
+              fontWeight: 700, fontSize: '0.9rem', cursor: testing ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = T.coral}
+            onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
+          >
+            {testing ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <MessageSquare size={16} />}
+            Probar Alerta
+          </button>
+        </div>
       </div>
+
 
       {/* Plans */}
       <div style={{ marginBottom: 16 }}>

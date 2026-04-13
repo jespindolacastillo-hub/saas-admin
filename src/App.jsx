@@ -2014,7 +2014,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
     '/': 'dash'
   };
 
-  const allowedTabs = ROLE_PERMS[userRole] || ROLE_PERMS['admin'];
+
 
   const activeTab = pathMap[pathname] || 'dash';
 
@@ -2027,7 +2027,18 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [masterMode, setMasterMode] = useState(localStorage.getItem('ps_master_mode') === 'active');
-  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_complete') || (tenant?.id === '00000000-0000-0000-0000-000000000000'));
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    const config = localStorage.getItem('saas_tenant_config');
+    const tenantId = config ? JSON.parse(config)?.id : null;
+    return !localStorage.getItem('onboarding_complete') || tenantId === '00000000-0000-0000-0000-000000000000';
+  });
+
+  const allowedTabs = useMemo(() => {
+    const base = ROLE_PERMS[userRole] || ROLE_PERMS['admin'];
+    if (masterMode) return base;
+    return base.filter(t => !['affiliates', 'distributors', 'dist-portal', 'dev-val'].includes(t));
+  }, [userRole, masterMode]);
+
 
 
   // Shared Filtering State
@@ -2938,10 +2949,10 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'questions' && <QuestionManager />}
           {activeTab === 'audit' && <AuditTrail />}
           {activeTab === 'geomap' && <GeoMap />}
-          {activeTab === 'affiliates' && <AffiliatesManager />}
-          {activeTab === 'distributors' && <DistributorsManager />}
-          {activeTab === 'dist-portal' && <DistributorPortal userEmail={session?.user?.email} />}
-          {activeTab === 'dev-val' && <DevValuationPanel />}
+          {allowedTabs.includes('affiliates') && activeTab === 'affiliates' && <AffiliatesManager />}
+          {allowedTabs.includes('distributors') && activeTab === 'distributors' && <DistributorsManager />}
+          {allowedTabs.includes('dist-portal') && activeTab === 'dist-portal' && <DistributorPortal userEmail={session?.user?.email} />}
+          {allowedTabs.includes('dev-val') && activeTab === 'dev-val' && <DevValuationPanel />}
         </main>
       </div >
       </div>

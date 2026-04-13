@@ -42,12 +42,12 @@ const DEFAULT_CONFIG = {
 };
 
 const TYPE_DEFAULTS = {
-  area: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Tiempo de espera', 'Trato del personal', 'Calidad', 'Limpieza', 'Ambiente', 'Otro'] },
-  employee: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Amabilidad', 'Rapidez', 'Atención', 'Presentación', 'Conocimiento del menú', 'Otro'] },
-  shift: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Limpieza', 'Servicio', 'Disponibilidad de productos', 'Rapidez', 'Otro'] },
-  product: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Sabor', 'Calidad', 'Precio', 'Presentación', 'Temperatura', 'Otro'] },
-  event: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Organización', 'Ambiente', 'Contenido', 'Atención del personal', 'Lugar', 'Otro'] },
-  channel: { rating_style: 'nps', negative_threshold: 6, followup_options: ['Tiempo de entrega', 'Estado del pedido', 'Facilidad de pedido', 'Atención telefónica', 'Otro'] }
+  area: { followup_options: ['Tiempo de espera', 'Trato del personal', 'Calidad', 'Limpieza', 'Ambiente', 'Otro'] },
+  employee: { followup_options: ['Amabilidad', 'Rapidez', 'Atención', 'Presentación', 'Conocimiento del menú', 'Otro'] },
+  shift: { followup_options: ['Limpieza', 'Servicio', 'Disponibilidad de productos', 'Rapidez', 'Otro'] },
+  product: { followup_options: ['Sabor', 'Calidad', 'Precio', 'Presentación', 'Temperatura', 'Otro'] },
+  event: { followup_options: ['Organización', 'Ambiente', 'Contenido', 'Atención del personal', 'Lugar', 'Otro'] },
+  channel: { followup_options: ['Tiempo de entrega', 'Estado del pedido', 'Facilidad de pedido', 'Atención telefónica', 'Otro'] }
 };
 
 // ─── Test mode helpers ────────────────────────────────────────────────────────
@@ -489,7 +489,7 @@ function DoneNeutral({ onSuggest }) {
 }
 
 // ─── Done: happy ──────────────────────────────────────────────────────────────
-function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick }) {
+function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick, testMode }) {
   const [showPhone, setShowPhone] = useState(false);
   const [phone, setPhone]         = useState('');
   const [googleClicked, setGoogleClicked] = useState(false);
@@ -520,6 +520,20 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
           style={{ display: 'block', padding: '16px', background: S.teal, color: '#fff', borderRadius: 14, fontFamily: fontStack, fontWeight: 700, fontSize: '1rem', textDecoration: 'none', textAlign: 'center', marginBottom: 16 }}>
           ⭐ Escribir reseña en Google
         </a>
+      )}
+
+      {testMode && !googleUrl && (
+        <div style={{ 
+          background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 12, 
+          padding: '14px', marginBottom: 16, textAlign: 'left', display: 'flex', gap: 10,
+          animation: 'fadeSlide 0.4s ease-out'
+        }}>
+          <span style={{ fontSize: '1.2rem' }}>💡</span>
+          <div style={{ fontSize: '0.8rem', color: '#92400E', lineHeight: 1.45 }}>
+            <strong style={{ display: 'block', marginBottom: 2 }}>Aviso de Configuración:</strong> 
+            El botón de Google no aparece porque falta el Link de Reseñas en los ajustes de esta sucursal.
+          </div>
+        </div>
       )}
 
       {/* Loyalty coupon — shown if configured AND (no google URL or google was clicked) */}
@@ -874,6 +888,7 @@ export default function FeedbackPublic() {
       loyaltyConfig={loyalty} 
       onLoyalty={(ph) => updateFeedback({ contact_phone: ph })} 
       onGoogleClick={() => updateFeedback({ google_click_at: new Date().toISOString() })}
+      testMode={testMode}
     />);
 
   return null;

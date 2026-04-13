@@ -465,13 +465,22 @@ const OnboardingWizard = ({
     setCpStatus('loading');
     setColoniaOptions([]);
     try {
-      const result = await lookupCP(clean);
+      // 1. Try local Supabase table
+      let result = await lookupCP(clean);
+      
+      // 2. Fallback to external SEPOMEX API if not found locally
+      if (!result) {
+        console.log('CP not found in local DB, trying SEPOMEX fallback...');
+        result = await lookupCP_legacy(clean);
+      }
+
       if (result) {
         setColoniaOptions(result.colonias);
         setMunicipio(result.municipio);
         setEstado(result.estado);
         setColonia(result.colonias.length === 1 ? result.colonias[0] : '');
         setCpStatus('found');
+        
         // Geocode for map using municipio + estado
         setGeoLoading(true);
         try {
@@ -486,10 +495,11 @@ const OnboardingWizard = ({
         } catch (_) {}
         setGeoLoading(false);
       } else {
+        // Not found in either — allow manual entry
         setCpStatus('error');
       }
     } catch (_) {
-      // Network timeout or API error — let user proceed anyway
+      // Network timeout or API error — let user proceed manually
       setCpStatus('error');
     }
   };
@@ -973,15 +983,15 @@ const OnboardingWizard = ({
                       Código postal *
                       {cpStatus === 'loading' && <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: '8px', textTransform: 'none' }}>Buscando…</span>}
                       {cpStatus === 'found'   && <span style={{ fontWeight: 400, color: '#00C9A7', marginLeft: '8px', textTransform: 'none' }}>✓ {municipio}</span>}
-                      {cpStatus === 'error'   && <span style={{ fontWeight: 400, color: '#f59e0b', marginLeft: '8px', textTransform: 'none' }}>CP no reconocido — puedes continuar</span>}
+                      {cpStatus === 'error'   && <span style={{ fontWeight: 400, color: '#FF5C3A', marginLeft: '8px', textTransform: 'none' }}>No encontrado — ingresa datos manual</span>}
                     </label>
                     <input type="text" inputMode="numeric" maxLength={5} value={cp}
                       onChange={e => handleCpChange(e.target.value)}
                       placeholder="ej. 53900" style={IS(cpStatus === 'found')} />
                   </div>
 
-                  {/* Municipio / Estado — auto-llenados */}
-                  {cpStatus === 'found' && (
+                  {/* Municipio / Estado — auto-llenados o manuales */}
+                  {(cpStatus === 'found' || cpStatus === 'error') && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                       <div>
                         <label style={LS}>Municipio / Alcaldía</label>
@@ -997,7 +1007,7 @@ const OnboardingWizard = ({
                   )}
 
                   {/* Colonia — dropdown si hay opciones, input si no */}
-                  {cpStatus === 'found' && (
+                  {(cpStatus === 'found' || cpStatus === 'error') && (
                     <div>
                       <label style={LS}>Colonia <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
                       {coloniaOptions.length > 1
@@ -1012,7 +1022,7 @@ const OnboardingWizard = ({
                   )}
 
                   {/* Calle */}
-                  {cpStatus === 'found' && (
+                  {(cpStatus === 'found' || cpStatus === 'error') && (
                     <div>
                       <label style={LS}>Calle y número <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
                       <input type="text" value={calle} onChange={e => setCalle(e.target.value)}

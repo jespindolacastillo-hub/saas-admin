@@ -51,7 +51,10 @@ export default function UserManagement({ session }) {
   const openAdd = () => { setForm(initForm); setModal({ type: 'add' }); };
   const openEdit = (u) => { setForm({ nombre: u.nombre || '', apellido: u.apellido || '', email: u.email || '', password: '', rol: u.rol || 'Usuario', activo: u.activo ?? true, id: u.id }); setModal({ type: 'edit', user: u }); };
 
-  const showMsg = (type, text) => { setMessage({ type, text }); setTimeout(() => setMessage(null), 4000); };
+  const showMsg = (type, text) => { 
+    setMessage({ type, text }); 
+    if (type !== 'error') setTimeout(() => setMessage(null), 4000); 
+  };
 
   const handleSave = async () => {
     if (!form.nombre?.trim() || !form.email?.trim()) { showMsg('error', 'Nombre y email son requeridos.'); return; }
@@ -61,21 +64,10 @@ export default function UserManagement({ session }) {
     try {
       if (modal.type === 'add') {
         const { data: fnData, error: fnErr } = await supabase.functions.invoke('admin-api', {
-          body: { action: 'sync', email: form.email, password: form.password, nombre: form.nombre, apellido: form.apellido },
+          body: { action: 'sync', email: form.email, password: form.password, nombre: form.nombre, apellido: form.apellido, tenant_id: tenant.id, rol: form.rol },
         });
         if (fnErr || fnData?.success === false) throw new Error(fnErr?.message || fnData?.error || 'Error al crear usuario');
 
-        const { error: dbErr } = await supabase.from('Usuarios').upsert({
-          id: fnData.user.id,
-          email: form.email,
-          nombre: form.nombre,
-          apellido: form.apellido,
-          rol: form.rol,
-          activo: true,
-          tenant_id: tenant.id,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'email' });
-        if (dbErr) throw dbErr;
         showMsg('success', 'Usuario creado correctamente.');
       } else {
         const updates = { nombre: form.nombre, apellido: form.apellido, rol: form.rol, activo: form.activo, updated_at: new Date().toISOString() };
@@ -86,6 +78,8 @@ export default function UserManagement({ session }) {
       setModal(null);
       loadUsers();
     } catch (err) {
+      console.error('❌ UserManagement handleSave error:', err);
+      window.alert('ERROR CRÍTICO AL GUARDAR: ' + err.message);
       showMsg('error', err.message);
     } finally {
       setSaving(false);
@@ -227,6 +221,26 @@ export default function UserManagement({ session }) {
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20 }}>
           <div style={{ background: T.card, borderRadius: 20, padding: 28, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            
+            {/* Message inside Modal */}
+            {message && (
+              <div style={{
+                padding: '16px 20px', borderRadius: 12, marginBottom: 20,
+                display: 'flex', alignItems: 'center', gap: 12,
+                background: message.type === 'success' ? '#DCFCE7' : '#FEE2E2',
+                color: message.type === 'success' ? T.green : T.red,
+                fontSize: '0.9rem', fontWeight: 800,
+                border: message.type === 'success' ? `1px solid ${T.green}40` : `1px solid ${T.red}40`,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+              }}>
+                {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                <div style={{ flex: 1 }}>{message.text}</div>
+                <button onClick={() => setMessage(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'inherit', opacity: 0.5 }}>
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: T.ink, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <ShieldCheck size={20} color={T.coral} />

@@ -358,23 +358,6 @@ export default function OrganizationSettings() {
           >
             {saved ? <><CheckCircle2 size={16} /> Guardado</> : <><Save size={16} /> {saving ? 'Guardando…' : 'Guardar cambios'}</>}
           </button>
-          
-          <button
-            onClick={testWhatsApp}
-            disabled={testing}
-            style={{
-              background: '#fff', color: T.ink, border: `1.5px solid ${T.border}`,
-              borderRadius: 10, padding: '11px 20px', fontFamily: font,
-              fontWeight: 700, fontSize: '0.9rem', cursor: testing ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', gap: 8,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = T.coral}
-            onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
-          >
-            {testing ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <MessageSquare size={16} />}
-            Probar Alerta
-          </button>
         </div>
       </div>
 

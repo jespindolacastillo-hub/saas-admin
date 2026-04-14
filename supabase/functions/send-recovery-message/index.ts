@@ -44,14 +44,16 @@ serve(async (req) => {
     const period = new Date().toISOString().slice(0, 7);
     let usedCount = 0;
     let totalLimit = Infinity;
+    let tenantName = "nuestro negocio";
 
     if (isWhatsApp) {
       const [tenantRes, usageRes] = await Promise.all([
-        supabase.from("tenants").select("plan, plan_status, trial_ends_at").eq("id", tenant_id).single(),
+        supabase.from("tenants").select("plan, plan_status, trial_ends_at, name").eq("id", tenant_id).single(),
         supabase.from("tenant_whatsapp_usage").select("used_count, included_limit, addon_purchased").eq("tenant_id", tenant_id).eq("period", period).maybeSingle(),
       ]);
 
       const planSlug = tenantRes.data?.plan || "trial";
+      tenantName = tenantRes.data?.name || "nuestro negocio";
       const planStatus = tenantRes.data?.plan_status;
       const trialEndsAt = tenantRes.data?.trial_ends_at;
 
@@ -97,6 +99,23 @@ serve(async (req) => {
     }
 
     // ── Send via Twilio ───────────────────────────────────────────────────────
+    const templateSid = Deno.env.get("TWILIO_RECOVERY_TEMPLATE_SID");
+    let bodyParams;
+
+    if (isWhatsApp && templateSid) {
+      bodyParams = new URLSearchParams({
+        From: from,
+        To: to,
+        ContentSid: templateSid,
+        ContentVariables: JSON.stringify({
+          "1": tenantName,
+          "2": message, // El mensaje manual o link que el admin ponga
+        }),
+      });
+    } else {
+      bodyParams = new URLSearchParams({ From: from, To: to, Body: message });
+    }
+
     const twilioRes = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
       {
@@ -105,7 +124,7 @@ serve(async (req) => {
           Authorization: "Basic " + btoa(`${accountSid}:${authToken}`),
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({ From: from, To: to, Body: message }),
+        body: bodyParams.toString(),
       }
     );
 

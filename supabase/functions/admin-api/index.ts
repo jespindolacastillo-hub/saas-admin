@@ -26,9 +26,34 @@ serve(async (req) => {
     try {
         const supabaseClient = createClient(supabaseUrl, serviceKey)
         const text = await req.text();
-        const { action, email, password, nombre, apellido, id } = JSON.parse(text);
+        const { action, email, password, nombre, apellido, id, tenant_id, rol } = JSON.parse(text);
 
-        console.log(`🚀 [Admin API] Action: ${action || 'sync'} for ${email || id}`);
+        console.log(`🚀 [Admin API] Action: ${action || 'sync'} for ${email || id} | Tenant: ${tenant_id}`);
+
+        // Helper to sync with DB
+        const syncWithDB = async (user: any) => {
+            if (!tenant_id) {
+                console.warn('⚠️ [Admin API] No tenant_id provided for sync. Skipping DB upsert.');
+                return;
+            }
+            console.log(`🚀 [Admin API] Attempting DB upsert for ${user.email} (Tenant: ${tenant_id})`);
+            const { error: dbErr } = await supabaseClient.from('Usuarios').upsert({
+                id: user.id,
+                email: user.email,
+                nombre,
+                apellido,
+                rol: rol || 'Usuario',
+                tenant_id,
+                updated_at: new Date().toISOString(),
+                activo: true
+            }, { onConflict: 'email' });
+            
+            if (dbErr) {
+                console.error(`❌ [Admin API] DB Sync Error details:`, dbErr);
+                throw new Error(`Error en base de datos: ${dbErr.message} ${dbErr.details || ''} ${dbErr.hint || ''}`);
+            }
+            console.log(`✅ [Admin API] DB sync successful for ${user.email}`);
+        };
 
         // --- ACTION: DELETE ---
         if (action === 'delete') {
@@ -63,6 +88,7 @@ serve(async (req) => {
         // --- ACTION: SYNC (CREATE/UPDATE) ---
         if (!email) throw new Error('Email is required for sync');
 
+        console.log(`🔍 [Admin API] Checking/Creating Auth user for ${email}...`);
         const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
             email,
             password,
@@ -71,29 +97,41 @@ serve(async (req) => {
         })
 
         if (createError) {
+            console.log(`ℹ️ [Admin API] Create error (checking if exists): ${createError.message}`);
             if (createError.message.includes('already registered') || createError.status === 422) {
+                console.log(`🔍 [Admin API] Searching for existing user ${email}...`);
                 const { data: { users }, error: listError } = await supabaseClient.auth.admin.listUsers()
                 if (listError) throw listError;
 
                 let existingUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase())
 
                 if (!existingUser) {
+                    console.log(`🔍 [Admin API] Not in listUsers, checking Usuarios table...`);
                     const { data: dbUser } = await supabaseClient.from('Usuarios').select('id').eq('email', email).maybeSingle();
                     if (!dbUser) throw new Error('User already registered in Auth but could not be located.');
                     existingUser = { id: dbUser.id };
                 }
 
+                console.log(`🚀 [Admin API] Updating Auth user ${existingUser.id}...`);
                 const updateData: any = { user_metadata: { nombre, apellido }, email_confirm: true };
                 if (password && password.length >= 6) updateData.password = password;
 
                 const { data: updatedUser, error: updateError } = await supabaseClient.auth.admin.updateUserById(existingUser.id, updateData);
                 if (updateError) throw updateError;
 
+                // Sync with DB
+                console.log(`🚀 [Admin API] Syncing DB for ${email}...`);
+                await syncWithDB(updatedUser.user);
+
                 return new Response(JSON.stringify({ user: updatedUser.user, success: true, message: 'Updated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
             } else {
                 throw createError;
             }
         }
+
+        // Sync with DB
+        console.log(`🚀 [Admin API] Syncing DB for new user ${email}...`);
+        await syncWithDB(newUser.user);
 
         return new Response(JSON.stringify({ user: newUser.user, success: true, message: 'Created' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 

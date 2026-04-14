@@ -46,11 +46,14 @@ serve(async (req) => {
 
     const period = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-    // Get tenant plan + current usage
-    const [tenantRes, usageRes] = await Promise.all([
+    // Get tenant plan + current usage + location name
+    const [tenantRes, usageRes, locRes] = await Promise.all([
       supabase.from("tenants").select("plan, plan_status, trial_ends_at").eq("id", tenant_id).single(),
       supabase.from("tenant_whatsapp_usage").select("used_count, included_limit, addon_purchased").eq("tenant_id", tenant_id).eq("period", period).maybeSingle(),
+      supabase.from("locations").select("name").eq("id", location_id).maybeSingle(),
     ]);
+
+    const locationName = locRes.data?.name || "tu negocio";
 
     const planSlug = tenantRes.data?.plan || "trial";
     const planStatus = tenantRes.data?.plan_status;
@@ -86,23 +89,36 @@ serve(async (req) => {
       );
     }
 
-    // ── Build message ──────────────────────────────────────────────────────
-    const emoji = STAR_EMOJI[score] ?? "⚠️";
-    const area  = qr_label ? `*${qr_label}*` : "tu negocio";
-    const msg   = [
-      `${emoji} *Alerta Retelio — Feedback crítico*`,
-      ``,
-      `📍 Lugar: ${area}`,
-      `⭐ Calificación: ${score}/5`,
-      comment ? `💬 Comentario: "${comment}"` : null,
-      ``,
-      `El cliente está esperando una respuesta. Actúa ahora para recuperar la experiencia.`,
-    ]
-      .filter((l) => l !== null)
-      .join("\n");
+    const twilioFrom = Deno.env.get("TWILIO_WHATSAPP_FROM");
 
     // ── Send via Twilio ────────────────────────────────────────────────────
     const to = `whatsapp:+${whatsapp_number.replace(/\D/g, "")}`;
+    const templateSid = Deno.env.get("TWILIO_ALERT_TEMPLATE_SID");
+
+    let bodyParams;
+    
+    if (templateSid) {
+      // Usar Plantilla (Requerido para producción)
+      bodyParams = new URLSearchParams({
+        From: twilioFrom,
+        To: to,
+        ContentSid: templateSid,
+        ContentVariables: JSON.stringify({
+          "1": locationName,
+          "2": qr_label,
+          "3": score.toString(),
+          "4": comment || "Sin comentario",
+        }),
+      });
+    } else {
+      // Fallback a texto libre (Solo funciona si el usuario escribió en las últimas 24h)
+      const msg = `Retelio: ¡Nuevo feedback crítico! 🚨\nSucursal: ${locationName}\nQR: ${qr_label}\nPuntuación: ${score}★\nComentario: ${comment || "Sin comentario"}`;
+      bodyParams = new URLSearchParams({
+        From: twilioFrom,
+        To: to,
+        Body: msg,
+      });
+    }
 
     const twilioRes = await fetch(
       `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
@@ -112,7 +128,7 @@ serve(async (req) => {
           Authorization: "Basic " + btoa(`${accountSid}:${authToken}`),
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: new URLSearchParams({ From: fromNumber, To: to, Body: msg }),
+        body: bodyParams.toString(),
       }
     );
 

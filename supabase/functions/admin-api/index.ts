@@ -72,37 +72,43 @@ serve(async (req) => {
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
 
-        // --- HANDLER: SYNC ---
+        // --- HANDLER: SYNC (Create/Invite/Update) ---
         if (!email) throw new Error('Email is required');
 
-        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-            email,
-            password,
-            user_metadata: { nombre, apellido },
-            email_confirm: true
-        });
+        console.log(`🔍 [Admin API] Checking user existence for ${email}...`);
+        
+        // Try to find the user first to decide between Invite and Update
+        const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
+        if (listErr) throw listErr;
+        
+        const existing = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-        if (createError) {
-            if (createError.status === 422 || createError.message.includes('already registered')) {
-                const { data: { users } } = await supabase.auth.admin.listUsers();
-                const existing = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+        if (!existing) {
+            console.log(`✉️ [Admin API] User not found. Sending Invitation to ${email}...`);
+            const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+                data: { nombre, apellido },
+                // Redirect to the admin site if configured
+                redirectTo: req.headers.get('origin') || undefined
+            });
 
-                if (!existing) throw new Error('User already in Auth but could not be retrieved.');
+            if (inviteError) throw inviteError;
 
-                const updateData: any = { user_metadata: { nombre, apellido }, email_confirm: true };
-                if (password && password.length >= 6) updateData.password = password;
+            // Sync with DB immediately so the UI shows the user (pending)
+            await syncWithDB(inviteData.user);
+            return new Response(JSON.stringify({ user: inviteData.user, success: true, mode: 'invited' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+        } else {
+            // User exists: Update metadata
+            console.log(`ℹ️ [Admin API] User exists. Updating metadata for ${existing.id}...`);
+            const updateData: any = { user_metadata: { nombre, apellido } };
+            // If admin provided a password, update it too
+            if (password && password.length >= 6) updateData.password = password;
 
-                const { data: updated, error: updErr } = await supabase.auth.admin.updateUserById(existing.id, updateData);
-                if (updErr) throw updErr;
+            const { data: updated, error: updErr } = await supabase.auth.admin.updateUserById(existing.id, updateData);
+            if (updErr) throw updErr;
 
-                await syncWithDB(updated.user);
-                return new Response(JSON.stringify({ user: updated.user, success: true, mode: 'updated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-            }
-            throw createError;
+            await syncWithDB(updated.user);
+            return new Response(JSON.stringify({ user: updated.user, success: true, mode: 'updated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
         }
-
-        await syncWithDB(newUser.user);
-        return new Response(JSON.stringify({ user: newUser.user, success: true, mode: 'created' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
 
     } catch (error: any) {
         console.error(`❌ Error logic:`, error.message);

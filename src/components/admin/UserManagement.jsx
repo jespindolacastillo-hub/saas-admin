@@ -270,8 +270,8 @@ export default function UserManagement({ session }) {
                 { label: 'Nombre *', field: 'nombre', type: 'text', colSpan: 1 },
                 { label: 'Apellido', field: 'apellido', type: 'text', colSpan: 1 },
                 { label: 'Email *', field: 'email', type: 'email', colSpan: 2, disabled: modal.type === 'edit' },
-                { label: modal.type === 'add' ? 'Contraseña *' : 'Nueva contraseña (opcional)', field: 'password', type: 'password', colSpan: 2 },
-              ].map(({ label, field, type, colSpan, disabled }) => (
+                modal.type === 'edit' && { label: 'Nueva contraseña (opcional)', field: 'password', type: 'password', colSpan: 2 },
+              ].filter(Boolean).map(({ label, field, type, colSpan, disabled }) => (
                 <div key={field} style={{ gridColumn: `span ${colSpan}` }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>{label}</label>
                   <input
@@ -281,6 +281,11 @@ export default function UserManagement({ session }) {
                   />
                 </div>
               ))}
+              {modal.type === 'add' && (
+                <div style={{ gridColumn: 'span 2', fontSize: '0.78rem', color: T.muted, background: '#F8FAFC', padding: '8px 12px', borderRadius: 8, border: `1px solid ${T.border}` }}>
+                  ℹ️ Se enviará un correo de invitación para que el usuario active su cuenta y defina su contraseña.
+                </div>
+              )}
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>Rol</label>
                 <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
@@ -302,7 +307,11 @@ export default function UserManagement({ session }) {
               </button>
               <button onClick={handleSave} disabled={saving}
                 style={{ flex: 1, padding: 10, borderRadius: 12, border: 'none', background: saving ? T.muted : T.coral, color: '#fff', fontWeight: 700, fontSize: '0.88rem', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: font, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {saving ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Guardando…</> : 'Guardar'}
+                {saving ? (
+                  <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> {modal.type === 'add' ? 'Enviando...' : 'Guardando…'}</>
+                ) : (
+                  modal.type === 'add' ? 'Enviar invitación' : 'Guardar cambios'
+                )}
               </button>
             </div>
           </div>

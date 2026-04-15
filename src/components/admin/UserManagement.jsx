@@ -62,11 +62,22 @@ export default function UserManagement({ session }) {
 
     setSaving(true);
     try {
+      if (!tenant?.id) throw new Error('No se pudo identificar la empresa. Por favor, refresca la página.');
+
       if (modal.type === 'add') {
+        console.log('🚀 [UserManagement] Invoking admin-api for sync...');
         const { data: fnData, error: fnErr } = await supabase.functions.invoke('admin-api', {
           body: { action: 'sync', email: form.email, password: form.password, nombre: form.nombre, apellido: form.apellido, tenant_id: tenant.id, rol: form.rol },
         });
-        if (fnErr || fnData?.success === false) throw new Error(fnErr?.message || fnData?.error || 'Error al crear usuario');
+
+        if (fnErr) {
+          console.error('❌ Edge Function Error:', fnErr);
+          throw new Error(`Error de Servidor: ${fnErr.message || 'No se pudo contactar con la función.'}`);
+        }
+
+        if (fnData?.success === false) {
+          throw new Error(fnData.error || 'Error desconocido al crear usuario');
+        }
 
         showMsg('success', 'Usuario creado correctamente.');
       } else {
@@ -79,8 +90,13 @@ export default function UserManagement({ session }) {
       loadUsers();
     } catch (err) {
       console.error('❌ UserManagement handleSave error:', err);
-      window.alert('ERROR CRÍTICO AL GUARDAR: ' + err.message);
-      showMsg('error', err.message);
+      // More descriptive error for the user
+      const msg = err.message.includes('non-2xx') 
+        ? 'Error de Red: La función de servidor no respondió correctamente. Revisa los logs en Supabase.'
+        : err.message;
+      
+      window.alert('ERROR CRÍTICO AL GUARDAR: ' + msg);
+      showMsg('error', msg);
     } finally {
       setSaving(false);
     }

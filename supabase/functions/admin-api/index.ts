@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -8,113 +9,175 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-    // Handle CORS Preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders, status: 200 })
     }
 
-    // Capture logs immediately
-    console.log(`📡 [Admin API] Incoming ${req.method} request`);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || '';
-
-    if (!supabaseUrl || !serviceKey) {
-        return new Response(
-            JSON.stringify({ error: 'Server configuration error: Missing Secrets (SUPABASE_SERVICE_ROLE_KEY).', success: false }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
-    }
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    // SMTP Config (Same as campaign-email, likely Resend)
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPass = Deno.env.get("SMTP_PASS");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
 
     try {
         const supabase = createClient(supabaseUrl, serviceKey);
-        
-        const bodyText = await req.text();
-        if (!bodyText) throw new Error('Request body is empty');
-        
-        let payload;
-        try {
-            payload = JSON.parse(bodyText);
-        } catch (e) {
-            throw new Error(`Malformed JSON in body`);
-        }
+        const { action, email, nombre, apellido, id, tenant_id, rol, flow, redirectTo } = await req.json();
 
-        const { action, email, password, nombre, apellido, id, tenant_id, rol } = payload;
-
-        // Helper: Database Synchronization
+        // 1. Helper: Database Synchronization for App User
         const syncWithDB = async (userData: any) => {
-            if (!tenant_id || tenant_id === '00000000-0000-0000-0000-000000000000') {
-                console.warn('⚠️ No valid tenant_id provided.');
-                return;
-            }
-
             const { error: dbError } = await supabase.from('Usuarios').upsert({
                 id: userData.id,
                 email: userData.email,
-                nombre: nombre || 'Admin',
+                nombre: nombre || 'Usuario',
                 apellido: apellido || '',
                 rol: rol || 'Usuario',
                 tenant_id,
                 activo: true,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'email' });
-
-            if (dbError) throw new Error(`Database error: ${dbError.message}`);
+            if (dbError) throw dbError;
         };
 
-        if (action === 'ping') {
-            return new Response(JSON.stringify({ success: true, message: 'pong' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-        }
+        // 2. Helper: Ensure Distributor Record (Fix "Acceso Denegado")
+        const ensureDistributor = async (userEmail: string, userName: string) => {
+            console.log(`🔍 [Admin API] Checking distributor record for ${userEmail}...`);
+            const { data: existing } = await supabase.from('distributors').select('id').eq('email', userEmail).maybeSingle();
+            
+            if (!existing) {
+                const code = userEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '-') + Math.floor(Math.random() * 100);
+                console.log(`✨ [Admin API] Creating new distributor record with code: ${code}`);
+                const { error: distErr } = await supabase.from('distributors').insert({
+                    email: userEmail,
+                    name: userName,
+                    code: code,
+                    active: true,
+                    portal_enabled: true,
+                    tier: 'bronze',
+                    commission_pct: 10,
+                    tenant_id: tenant_id
+                });
+                if (distErr) throw distErr;
+            } else {
+                console.log(`ℹ️ [Admin API] Distributor exists. Ensuring portal access...`);
+                await supabase.from('distributors').update({ portal_enabled: true, active: true }).eq('email', userEmail);
+            }
+        };
+
+        // --- ACTIONS ---
 
         if (action === 'delete') {
             const { error: delErr } = await supabase.auth.admin.deleteUser(id);
             if (delErr && delErr.status !== 404) throw delErr;
-            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // --- HANDLER: SYNC (Create/Invite/Update) ---
-        if (!email) throw new Error('Email is required');
+        if (action === 'sync') {
+            if (!email) throw new Error('Email required');
 
-        console.log(`🔍 [Admin API] Checking user existence for ${email}...`);
-        
-        // Try to find the user first to decide between Invite and Update
-        const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
-        if (listErr) throw listErr;
-        
-        const existing = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+            // Find or Invite
+            const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
+            if (listErr) throw listErr;
+            
+            const existing = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+            let targetUser = existing;
 
-        if (!existing) {
-            console.log(`✉️ [Admin API] User not found. Sending Invitation to ${email}...`);
-            const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-                data: { nombre, apellido },
-                // Prioritize payload redirectTo, fallback to header origin
-                redirectTo: payload.redirectTo || req.headers.get('origin') || undefined
-            });
+            if (!existing) {
+                console.log(`✉️ [Admin API] Generating Invitation link for ${email}...`);
+                // Generate the link instead of sending auto-email
+                const { data: inviteData, error: inviteError } = await supabase.auth.admin.generateLink({
+                    type: 'invite',
+                    email,
+                    options: { 
+                        data: { nombre, apellido },
+                        redirectTo: redirectTo || 'https://retelio.app'
+                    }
+                });
 
-            if (inviteError) throw inviteError;
+                if (inviteError) throw inviteError;
+                targetUser = inviteData.user;
+                const invitationLink = inviteData.properties.action_link;
 
-            // Sync with DB immediately so the UI shows the user (pending)
-            await syncWithDB(inviteData.user);
-            return new Response(JSON.stringify({ user: inviteData.user, success: true, mode: 'invited' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
-        } else {
-            // User exists: Update metadata
-            console.log(`ℹ️ [Admin API] User exists. Updating metadata for ${existing.id}...`);
-            const updateData: any = { user_metadata: { nombre, apellido } };
-            // If admin provided a password, update it too
-            if (password && password.length >= 6) updateData.password = password;
+                // Provision Distributor if needed
+                if (flow === 'distributor') {
+                    await ensureDistributor(email, nombre);
+                }
 
-            const { data: updated, error: updErr } = await supabase.auth.admin.updateUserById(existing.id, updateData);
-            if (updErr) throw updErr;
+                // Send Custom Email via SMTP
+                if (smtpHost && smtpUser && smtpPass) {
+                    const isDist = flow === 'distributor';
+                    const subject = isDist ? "Invitación: Portal de Socios Retelio" : "Bienvenido a Retelio - Activa tu cuenta";
+                    
+                    const html = `
+                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #eef0f2; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                            <div style="background: #0D0D12; padding: 32px; text-align: center;">
+                                <img src="https://admin.retelio.app/retelio-final-logo-light.svg" alt="Retelio" style="height: 32px;">
+                            </div>
+                            <div style="padding: 40px 32px;">
+                                <h1 style="font-size: 24px; color: #0D0D12; margin-bottom: 16px; font-weight: 800;">¡Hola, ${nombre}!</h1>
+                                <p style="font-size: 16px; color: #4B5563; line-height: 1.6; margin-bottom: 24px;">
+                                    ${isDist 
+                                        ? `Has sido invitado a unirte al **Programa de Socios de Retelio**. Desde tu portal podrás gestionar tus referidos, ver tus comisiones en tiempo real y descargar tu kit de ventas.`
+                                        : `Te damos la bienvenida a **Retelio**. Tu cuenta ha sido creada y está lista para que comiences a gestionar la reputación de tu negocio.`}
+                                </p>
+                                <div style="text-align: center; margin: 40px 0;">
+                                    <a href="${invitationLink}" style="background: #FF5C3A; color: #fff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block; box-shadow: 0 8px 16px rgba(255, 92, 58, 0.25);">
+                                        ${isDist ? 'Activar mi Portal de Socio' : 'Activar mi Cuenta'}
+                                    </a>
+                                </div>
+                                <p style="font-size: 14px; color: #9CA3AF; text-align: center;">
+                                    Si el botón no funciona, copia y pega este enlace:<br>
+                                    <span style="word-break: break-all; color: #FF5C3A;">${invitationLink}</span>
+                                </p>
+                            </div>
+                            <div style="background: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #eef0f2;">
+                                <p style="font-size: 12px; color: #9CA3AF; margin: 0;">© 2026 Retelio · Inteligencia que escucha.</p>
+                            </div>
+                        </div>
+                    `;
 
-            await syncWithDB(updated.user);
-            return new Response(JSON.stringify({ user: updated.user, success: true, mode: 'updated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
+                    const client = new SMTPClient({
+                        connection: {
+                            hostname: smtpHost,
+                            port: smtpPort,
+                            tls: true,
+                            auth: { username: smtpUser, password: smtpPass },
+                        },
+                    });
+
+                    await client.send({
+                        from: `Retelio <${smtpUser}>`,
+                        to: email,
+                        subject: subject,
+                        html: html,
+                    });
+                    await client.close();
+                }
+
+                await syncWithDB(targetUser);
+                return new Response(JSON.stringify({ success: true, mode: 'invited' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            } else {
+                // Update existing
+                const { data: updated, error: updErr } = await supabase.auth.admin.updateUserById(targetUser.id, {
+                    user_metadata: { nombre, apellido }
+                });
+                if (updErr) throw updErr;
+                
+                if (flow === 'distributor') {
+                    await ensureDistributor(email, nombre);
+                }
+
+                await syncWithDB(updated.user);
+                return new Response(JSON.stringify({ success: true, mode: 'updated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
         }
+
+        throw new Error('Action not supported');
 
     } catch (error: any) {
-        console.error(`❌ Error logic:`, error.message);
-        return new Response(
-            JSON.stringify({ error: error.message, success: false }), 
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-        );
+        console.error(`❌ Admin API Error:`, error.message);
+        return new Response(JSON.stringify({ error: error.message, success: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
 });

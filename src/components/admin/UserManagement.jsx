@@ -21,7 +21,7 @@ const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 const ROLES = ['Admin', 'Gerente', 'Usuario'];
 const ROLE_COLORS = { Admin: T.red, Gerente: T.amber, Usuario: T.teal };
 
-const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'Usuario', activo: true };
+const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'Usuario', activo: true, flow: 'platform' };
 
 export default function UserManagement({ session }) {
   const { tenant } = useTenant();
@@ -78,7 +78,8 @@ export default function UserManagement({ session }) {
             apellido: form.apellido, 
             tenant_id: tenant.id, 
             rol: form.rol,
-            redirectTo: window.location.origin // Dynamic redirect based on where the admin is
+            flow: form.flow,
+            redirectTo: form.flow === 'distributor' ? 'https://admin.retelio.app/' : 'https://retelio.app/'
           },
         });
 
@@ -298,12 +299,31 @@ export default function UserManagement({ session }) {
                   ℹ️ Se enviará un correo de invitación para que el usuario active su cuenta y defina su contraseña.
                 </div>
               )}
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>Rol</label>
-                <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, outline: 'none', background: '#fff' }}>
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', gridColumn: 'span 2' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>Rol</label>
+                  <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, outline: 'none', background: '#fff' }}>
+                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                {modal.type === 'add' && (
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.purple, marginBottom: 6, display: 'block' }}>Flujo de Invitación</label>
+                    <select value={form.flow} onChange={e => setForm(f => ({ ...f, flow: e.target.value }))}
+                      style={{ 
+                        width: '100%', padding: '9px 12px', borderRadius: 10, 
+                        border: `1.5px solid ${form.flow === 'distributor' ? T.purple : T.border}`, 
+                        fontSize: '0.88rem', fontFamily: font, 
+                        color: form.flow === 'distributor' ? T.purple : T.ink, 
+                        fontWeight: form.flow === 'distributor' ? '800' : '400',
+                        outline: 'none', background: '#fff' 
+                      }}>
+                      <option value="platform">Plataforma (retelio.app)</option>
+                      <option value="distributor">Socio (admin.retelio.app)</option>
+                    </select>
+                  </div>
+                )}
               </div>
               {modal.type === 'edit' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>

@@ -57,8 +57,12 @@ export default function UserManagement({ session }) {
   };
 
   const handleSave = async () => {
-    if (!form.nombre?.trim() || !form.email?.trim()) { showMsg('error', 'Nombre y email son requeridos.'); return; }
-    if (modal.type === 'add' && !form.password) { showMsg('error', 'La contraseña es requerida para nuevos usuarios.'); return; }
+    if (!form.nombre || !form.email) {
+      showMsg('error', 'Nombre y Email son requeridos.');
+      return;
+    }
+    // Only require password if we are adding and NOT using the invitation flow (but we ARE using it now)
+    // Actually, let's just make it optional since Supabase will handle the invite link
 
     setSaving(true);
     try {

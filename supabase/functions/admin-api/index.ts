@@ -87,8 +87,8 @@ serve(async (req) => {
             console.log(`✉️ [Admin API] User not found. Sending Invitation to ${email}...`);
             const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
                 data: { nombre, apellido },
-                // Redirect to the admin site if configured
-                redirectTo: req.headers.get('origin') || undefined
+                // Prioritize payload redirectTo, fallback to header origin
+                redirectTo: payload.redirectTo || req.headers.get('origin') || undefined
             });
 
             if (inviteError) throw inviteError;

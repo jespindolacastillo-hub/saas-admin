@@ -69,9 +69,17 @@ export default function UserManagement({ session }) {
       if (!tenant?.id) throw new Error('No se pudo identificar la empresa. Por favor, refresca la página.');
 
       if (modal.type === 'add') {
-        console.log('🚀 [UserManagement] Invoking admin-api for sync...');
+        console.log('🚀 [UserManagement] Invoking admin-api for sync with invitation...');
         const { data: fnData, error: fnErr } = await supabase.functions.invoke('admin-api', {
-          body: { action: 'sync', email: form.email, password: form.password, nombre: form.nombre, apellido: form.apellido, tenant_id: tenant.id, rol: form.rol },
+          body: { 
+            action: 'sync', 
+            email: form.email, 
+            nombre: form.nombre, 
+            apellido: form.apellido, 
+            tenant_id: tenant.id, 
+            rol: form.rol,
+            redirectTo: window.location.origin // Dynamic redirect based on where the admin is
+          },
         });
 
         if (fnErr) {

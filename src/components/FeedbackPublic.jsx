@@ -426,7 +426,7 @@ function DoneBad({ couponCode, couponConfig, hasPhone }) {
       {couponCode && couponConfig && (
         <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
           <p className="rf-coupon-label">🎁 Tu cupón de recuperación</p>
-          <p className="rf-coupon-code">{couponCode}</p>
+          <p className="rf-coupon-code notranslate" translate="no">{couponCode}</p>
           <p className="rf-coupon-desc">{couponConfig.offer_description}</p>
           <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
             Válido {couponConfig.validity_days || 30} días · Presenta al pagar
@@ -541,7 +541,7 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
         (!googleUrl || googleClicked) ? (
           <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
             <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
-            <p className="rf-coupon-code">{loyaltyCouponCode}</p>
+            <p className="rf-coupon-code notranslate" translate="no">{loyaltyCouponCode}</p>
             <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
             <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
               Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar

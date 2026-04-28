@@ -35,6 +35,38 @@ const formatAddress = (str) => {
   }).join(' ');
 };
 
+const Confetti = () => {
+  const colors = ['#FF5C3A', '#00C9A7', '#7C3AED', '#F59E0B', '#0D0D12', '#EC4899'];
+  const pieces = Array.from({ length: 90 }).map((_, i) => ({
+    id: i, color: colors[i % colors.length],
+    left: `${Math.random() * 100}%`, delay: `${Math.random() * 1.5}s`,
+    duration: `${2.5 + Math.random() * 2}s`, size: `${5 + Math.random() * 9}px`,
+    shape: i % 3 === 0 ? '0%' : i % 3 === 1 ? '50%' : '2px',
+  }));
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 99999, overflow: 'hidden' }}>
+      {pieces.map(p => (
+        <div key={p.id} style={{
+          position: 'absolute', top: '-10px', left: p.left,
+          width: p.size, height: p.size, background: p.color,
+          borderRadius: p.shape, opacity: 0.8,
+          animation: `fall ${p.duration} linear ${p.delay} infinite`,
+        }} />
+      ))}
+      <style>{`
+        @keyframes fall {
+          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+        @keyframes bounce-pointer {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const QR_TYPES = [
   { value: 'area',     label: 'Área / Mesa',  color: T.teal   },
   { value: 'employee', label: 'Empleado',      color: T.purple },
@@ -468,6 +500,7 @@ export default function QRStudio() {
   const [editingLoc,     setEditingLoc]     = useState(null);
   const [locMenuOpen,    setLocMenuOpen]    = useState(null);
   const [isCustomColonia, setIsCustomColonia] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const planLimits       = getPlanLimits(tenant?.plan);
   const canAddLocation   = withinLimit(locations.length, planLimits.maxLocations);
@@ -508,6 +541,8 @@ export default function QRStudio() {
     setQrForm({ location_id: '', type: 'area', label: '', area_id: '', coupon_config_id: '' });
     setShowQRModal(false);
     await loadData();
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 5000);
     setSaving(false);
   };
 
@@ -716,6 +751,7 @@ export default function QRStudio() {
 
   return (
     <div style={{ fontFamily: font, background: T.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {showConfetti && <Confetti />}
 
       {/* ── Top bar ── */}
       <div style={{
@@ -982,6 +1018,11 @@ export default function QRStudio() {
                       }}>
                         <Plus size={14} /> Nueva área
                       </button>
+
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 24, color: T.teal, animation: 'bounce-pointer 1.5s infinite' }}>
+                        <span style={{ fontSize: '1.2rem' }}>☝️</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: font }}>¡Empieza creando tu primera área!</span>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1049,11 +1090,55 @@ export default function QRStudio() {
               {/* ── QR table ── */}
               {rightTab === 'qrs' && <div style={{ flex: 1, overflowY: 'auto' }}>
                 {visibleQRs.length === 0 ? (
-                  <div style={{ padding: 48, textAlign: 'center' }}>
-                    <QrCode size={32} color="#E5E7EB" style={{ marginBottom: 10 }} />
-                    <p style={{ color: T.muted, fontSize: '0.85rem', fontWeight: 500 }}>
-                      Sin QRs. Haz clic en "+ Nuevo QR" para crear uno.
+                  <div style={{ padding: '60px 24px', textAlign: 'center', maxWidth: 440, margin: '0 auto' }}>
+                    <QrCode size={40} color={T.coral} style={{ marginBottom: 16, opacity: 0.8 }} />
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: T.ink, marginBottom: 8, fontFamily: font }}>
+                      ¡Ya tienes tu sucursal! ¿Qué sigue?
+                    </h3>
+                    <p style={{ color: T.muted, fontSize: '0.82rem', lineHeight: 1.4, marginBottom: 24, fontFamily: font }}>
+                      Crea áreas (como "Caja", "Barra") y luego genera tus QRs para empezar a recibir feedback.
                     </p>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left', background: '#FFF', padding: 16, borderRadius: 12, border: `1px solid ${T.border}`, boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                      {/* Paso 1 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: currentAreas.length > 0 ? T.teal : T.bg, color: currentAreas.length > 0 ? '#FFF' : T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
+                          {currentAreas.length > 0 ? '✓' : '1'}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink, fontFamily: font }}>Registra tus áreas</div>
+                          <div style={{ fontSize: '0.72rem', color: T.muted, fontFamily: font }}>Ej: Caja, Comedor, Baños.</div>
+                        </div>
+                        {currentAreas.length === 0 && (
+                          <button onClick={() => { setRightTab('areas'); openNewArea(); }} style={{ padding: '5px 10px', borderRadius: 8, background: T.teal + '15', color: T.teal, border: 'none', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', fontFamily: font }}>
+                            + Crear
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Divider */}
+                      <div style={{ borderTop: `1px solid ${T.border}`, margin: '4px 0' }} />
+                      
+                      {/* Paso 2 */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: currentQRs.length > 0 ? T.coral : T.bg, color: currentQRs.length > 0 ? '#FFF' : T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
+                          2
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink, fontFamily: font }}>Genera el Código QR</div>
+                          <div style={{ fontSize: '0.72rem', color: T.muted, fontFamily: font }}>¡Y explota de felicidad! 🎉</div>
+                        </div>
+                        <button onClick={() => { setQrForm(f => ({ ...f, location_id: selectedLoc })); setShowQRModal(true); }} style={{ padding: '5px 10px', borderRadius: 8, background: T.coral + '15', color: T.coral, border: 'none', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', fontFamily: font }}>
+                          + Generar
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Floating hand */}
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 24, color: T.coral, animation: 'bounce-pointer 1.5s infinite' }}>
+                      <span style={{ fontSize: '1.2rem' }}>☝️</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, fontFamily: font }}>¡Usa los botones rápidos de arriba!</span>
+                    </div>
                   </div>
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>

@@ -412,23 +412,46 @@ function StepContact({ submitting, onSubmit, onSkip }) {
 }
 
 // ─── Done: bad score ──────────────────────────────────────────────────────────
-function DoneBad({ couponCode, couponConfig, hasPhone }) {
+function DoneBad({ couponCode, couponConfig, hasPhone, category, comment }) {
+  let title = 'Notificamos al equipo';
+  let desc = 'Un manager revisará tu caso hoy y tomará acción para mejorar tu experiencia.';
+
+  if (hasPhone) {
+    title = '¡Listo! Te contactamos pronto';
+    desc = 'Un manager te contactará en menos de 2 horas para resolver tu caso personalmente.';
+  }
+
+  // Empathetic adjustments depending on what went wrong
+  if (category && category !== 'Comentario' && category !== 'Otro') {
+    title = `Lamentamos el inconveniente`;
+    desc = hasPhone 
+      ? `Un manager te contactará en breve para atender personalmente tu reporte sobre ${category.toLowerCase()}.`
+      : `Hemos canalizado tu reporte sobre ${category.toLowerCase()} con el equipo para solucionarlo cuanto antes.`;
+  } else if (comment && comment.length > 5) {
+    title = 'Lamentamos tu mala experiencia';
+    desc = hasPhone 
+      ? 'Un supervisor te llamará para escuchar tus comentarios y resolver esta situación.'
+      : 'Tus comentarios han sido enviados directamente a la administración para tomar medidas.';
+  }
+
   return (
     <div className="rf-card rf-state">
       <Logo />
       <div className="rf-state-icon">{hasPhone ? '📞' : '⚡'}</div>
-      <h2 className="rf-state-title">{hasPhone ? '¡Listo! Te contactamos pronto' : 'Notificamos al equipo'}</h2>
-      <p className="rf-state-desc">
-        {hasPhone
-          ? 'Un manager te contactará en menos de 2 horas para resolver tu caso personalmente.'
-          : 'Un manager revisará tu caso hoy y tomará acción para mejorar tu experiencia.'}
-      </p>
+      <h2 className="rf-state-title" style={{ fontSize: '1.4rem', fontWeight: 800, color: S.ink, marginBottom: '12px' }}>{title}</h2>
+      <p className="rf-state-desc" style={{ fontSize: '0.95rem', color: S.muted, lineHeight: 1.6, marginBottom: '24px' }}>{desc}</p>
+      
       {couponCode && couponConfig && (
         <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
           <p className="rf-coupon-label">🎁 Tu cupón de recuperación</p>
           <p className="rf-coupon-code notranslate" translate="no">{couponCode}</p>
           <p className="rf-coupon-desc">{couponConfig.offer_description}</p>
-          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
+          {category && category !== 'Otro' && category !== 'Comentario' && (
+            <p style={{ fontSize: '0.75rem', color: S.teal, marginTop: 6, fontWeight: 700 }}>
+              ✓ Compensación por reporte en: {category}
+            </p>
+          )}
+          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 8 }}>
             Válido {couponConfig.validity_days || 30} días · Presenta al pagar
           </p>
         </div>
@@ -772,29 +795,28 @@ export default function FeedbackPublic() {
     setSubmitting(true);
 
     // Cascade: QR-level → Area-level → Global
+    // Use linked QR/Area coupon config if present, regardless of trigger_type
     const qrCouponCfg = qr.qr_coupon || qr.area?.area_coupon || null;
 
     const triggerScore  = recovery?.trigger_score ?? 2;
     const isRecoveryTriggered = questionConfig?.rating_style === 'nps' ? s <= 6 : s <= triggerScore;
-    const needsRecovery = (qrCouponCfg?.trigger_type === 'recovery' || recovery?.enabled) && isRecoveryTriggered;
-    const recoveryPrefix = qrCouponCfg?.trigger_type === 'recovery'
-      ? (qrCouponCfg.coupon_prefix || 'RECOVERY')
-      : (recovery?.coupon_prefix || 'RECOVERY');
+    
+    const needsRecovery = isRecoveryTriggered && (qrCouponCfg || recovery?.enabled);
+    const recoveryPrefix = qrCouponCfg?.coupon_prefix || recovery?.coupon_prefix || 'RECOVERY';
     const code = needsRecovery ? genCode(recoveryPrefix) : null;
     if (code) setCouponCode(code);
 
-    const loyaltyPrefix = qrCouponCfg?.trigger_type === 'loyalty'
-      ? (qrCouponCfg.coupon_prefix || 'LOYAL')
-      : (loyalty?.loyalty_coupon_prefix || 'LOYAL');
-    const loyaltyCode = getIsHappy(s, questionConfig?.rating_style) && (qrCouponCfg?.trigger_type === 'loyalty' || loyalty?.loyalty_enabled)
-      ? genCode(loyaltyPrefix) : null;
+    const isLoyaltyTriggered = getIsHappy(s, questionConfig?.rating_style);
+    const needsLoyalty = isLoyaltyTriggered && (qrCouponCfg || loyalty?.loyalty_enabled);
+    const loyaltyPrefix = qrCouponCfg?.coupon_prefix || loyalty?.loyalty_coupon_prefix || 'LOYAL';
+    const loyaltyCode = needsLoyalty ? genCode(loyaltyPrefix) : null;
     if (loyaltyCode) setLoyaltyCouponCode(loyaltyCode);
 
-    // Use QR coupon config for display if applicable
-    if (qrCouponCfg?.trigger_type === 'recovery' && code) {
+    // Update configs used for copy rendering
+    if (qrCouponCfg && code) {
       setRecovery({ ...recovery, offer_description: qrCouponCfg.offer_description, validity_days: qrCouponCfg.validity_days });
     }
-    if (qrCouponCfg?.trigger_type === 'loyalty' && loyaltyCode) {
+    if (qrCouponCfg && loyaltyCode) {
       setLoyalty({ ...loyalty, loyalty_offer_description: qrCouponCfg.offer_description, loyalty_validity_days: qrCouponCfg.validity_days, loyalty_enabled: true });
     }
 
@@ -876,7 +898,7 @@ export default function FeedbackPublic() {
     return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} />);
 
   if (screen === 'done-bad')
-    return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} hasPhone={!!contactPhone} />);
+    return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} hasPhone={!!contactPhone} category={category} comment={comment} />);
 
   if (screen === 'done-neutral')
     return wrap(<DoneNeutral onSuggest={(cmt) => updateFeedback({ comment: cmt })} />);

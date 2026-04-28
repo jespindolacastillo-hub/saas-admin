@@ -2534,37 +2534,17 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
 
         <nav style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           <ul className="nav-links">
-            {/* Principal */}
-            <li style={{ padding: '0 0.5rem', marginBottom: '0.25rem' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Principal</span>
-            </li>
+            {/* ── Monitoreo y Rendimiento ── */}
+            {(allowedTabs.includes('dash') || allowedTabs.includes('geomap') || allowedTabs.includes('leaderboard') || allowedTabs.includes('kpi')) && (
+              <li style={{ padding: '0.25rem 0.5rem', marginBottom: '0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monitoreo</span>
+              </li>
+            )}
             {allowedTabs.includes('dash') && <li>
               <button className={`nav-item ${activeTab === 'dash' ? 'active' : ''}`} onClick={() => { navigate('/'); setIsSidebarOpen(false); }}>
                 <LayoutDashboard size={16} /> Dashboard
               </button>
             </li>}
-            {allowedTabs.includes('qr') && <li>
-              <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { navigate('/qr'); setIsSidebarOpen(false); }}>
-                <QrCode size={16} /> QR Studio
-              </button>
-            </li>}
-            {allowedTabs.includes('issues') && <li>
-              <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
-                <AlertTriangle size={16} /> Recuperación
-              </button>
-            </li>}
-            {allowedTabs.includes('validar') && <li>
-              <button className={`nav-item ${activeTab === 'validar' ? 'active' : ''}`} onClick={() => { navigate('/validar'); setIsSidebarOpen(false); }}>
-                <CheckCircle2 size={16} /> Validar Cupones
-              </button>
-            </li>}
-
-            {/* Analítica */}
-            {(allowedTabs.includes('geomap') || allowedTabs.includes('leaderboard') || allowedTabs.includes('kpi')) && (
-              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Analítica</span>
-              </li>
-            )}
             {allowedTabs.includes('geomap') && <li>
               <button className={`nav-item ${activeTab === 'geomap' ? 'active' : ''}`} onClick={() => { navigate('/mapa'); setIsSidebarOpen(false); }}>
                 <Map size={16} /> Mapa geográfico
@@ -2581,15 +2561,42 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
               </button>
             </li>}
 
-            {/* Comunicación */}
-            {(allowedTabs.includes('email') || allowedTabs.includes('cupones')) && (
+            {/* ── Operación Diaria ── */}
+            {(allowedTabs.includes('issues') || allowedTabs.includes('validar') || allowedTabs.includes('email')) && (
               <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Comunicación</span>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Operación</span>
               </li>
             )}
+            {allowedTabs.includes('issues') && <li>
+              <button className={`nav-item ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { navigate('/issues'); setIsSidebarOpen(false); }}>
+                <AlertTriangle size={16} /> Recuperación
+              </button>
+            </li>}
+            {allowedTabs.includes('validar') && <li>
+              <button className={`nav-item ${activeTab === 'validar' ? 'active' : ''}`} onClick={() => { navigate('/validar'); setIsSidebarOpen(false); }}>
+                <CheckCircle2 size={16} /> Validar Cupones
+              </button>
+            </li>}
             {allowedTabs.includes('email') && <li>
               <button className={`nav-item ${activeTab === 'email' ? 'active' : ''}`} onClick={() => { navigate('/marketing'); setIsSidebarOpen(false); }}>
                 <Mail size={16} /> Campañas
+              </button>
+            </li>}
+
+            {/* ── Estructura y Setup ── */}
+            {(allowedTabs.includes('qr') || allowedTabs.includes('questions') || allowedTabs.includes('cupones')) && (
+              <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Estructura</span>
+              </li>
+            )}
+            {allowedTabs.includes('qr') && <li>
+              <button className={`nav-item ${activeTab === 'qr' ? 'active' : ''}`} onClick={() => { navigate('/qr'); setIsSidebarOpen(false); }}>
+                <QrCode size={16} /> QR Studio
+              </button>
+            </li>}
+            {allowedTabs.includes('questions') && <li>
+              <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
+                <MessageSquare size={16} /> Preguntas
               </button>
             </li>}
             {allowedTabs.includes('cupones') && <li>
@@ -2598,10 +2605,10 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
               </button>
             </li>}
 
-            {/* Configuración */}
-            {(allowedTabs.includes('org') || allowedTabs.includes('users') || allowedTabs.includes('questions')) && (
+            {/* ── Administración ── */}
+            {(allowedTabs.includes('org') || allowedTabs.includes('users')) && (
               <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Configuración</span>
+                <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Administración</span>
               </li>
             )}
             {allowedTabs.includes('org') && <li>
@@ -2614,36 +2621,31 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
                 <Users size={16} /> Equipo
               </button>
             </li>}
-            {allowedTabs.includes('questions') && <li>
-              <button className={`nav-item ${activeTab === 'questions' ? 'active' : ''}`} onClick={() => { navigate('/preguntas'); setIsSidebarOpen(false); }}>
-                <MessageSquare size={16} /> Preguntas
-              </button>
-            </li>}
 
-            {/* Negocio */}
-            {(allowedTabs.includes('affiliates') || allowedTabs.includes('distributors')) && <>
+            {/* ── Negocio ── */}
+            {(allowedTabs.includes('affiliates') || allowedTabs.includes('distributors') || allowedTabs.includes('dist-portal')) && (
               <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
                 <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Negocio</span>
               </li>
-              {allowedTabs.includes('affiliates') && <li>
-                <button className={`nav-item ${activeTab === 'affiliates' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores'); setIsSidebarOpen(false); }}>
-                  <Share2 size={16} /> Afiliados
-                </button>
-              </li>}
-              {allowedTabs.includes('distributors') && <li>
-                <button className={`nav-item ${activeTab === 'distributors' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores-qr'); setIsSidebarOpen(false); }}>
-                  <QrCode size={16} /> Distribuidores QR
-                </button>
-              </li>}
-              {allowedTabs.includes('dist-portal') && <li>
-                <button className={`nav-item ${activeTab === 'dist-portal' ? 'active' : ''}`} onClick={() => { navigate('/mi-portal'); setIsSidebarOpen(false); }}>
-                  <Share2 size={16} /> Mi Portal
-                </button>
-              </li>}
-            </>}
+            )}
+            {allowedTabs.includes('affiliates') && <li>
+              <button className={`nav-item ${activeTab === 'affiliates' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores'); setIsSidebarOpen(false); }}>
+                <Share2 size={16} /> Afiliados
+              </button>
+            </li>}
+            {allowedTabs.includes('distributors') && <li>
+              <button className={`nav-item ${activeTab === 'distributors' ? 'active' : ''}`} onClick={() => { navigate('/distribuidores-qr'); setIsSidebarOpen(false); }}>
+                <QrCode size={16} /> Distribuidores QR
+              </button>
+            </li>}
+            {allowedTabs.includes('dist-portal') && <li>
+              <button className={`nav-item ${activeTab === 'dist-portal' ? 'active' : ''}`} onClick={() => { navigate('/mi-portal'); setIsSidebarOpen(false); }}>
+                <Share2 size={16} /> Mi Portal
+              </button>
+            </li>}
 
-            {/* Sistema */}
-            {(allowedTabs.includes('backup') || allowedTabs.includes('audit')) && (
+            {/* ── Sistema ── */}
+            {(allowedTabs.includes('backup') || allowedTabs.includes('dev-val')) && (
               <li style={{ padding: '0.75rem 0.5rem 0.25rem' }}>
                 <span style={{ fontSize: '0.62rem', fontWeight: 800, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistema</span>
               </li>

@@ -280,6 +280,23 @@ const getSmartSuggestions = (bizType, areaLabel) => {
 };
 const TIPO_LABELS = { stars:'⭐ Estrellas', si_no:'👍 Sí / No', nps:'📊 NPS', emoji:'😊 Emojis' };
 
+const formatAddress = (str) => {
+  if (!str) return '';
+  let cleaned = str.replace(/\s+/g, ' ').trim();
+  const prepositions = ['de', 'del', 'la', 'las', 'el', 'los', 'y', 'en', 'para', 'con', 'a'];
+  
+  return cleaned.split(' ').map((word, index) => {
+    if (!word) return '';
+    let lower = word.toLowerCase();
+    
+    if (word === word.toUpperCase() && word.length > 1) return word; 
+    if (index === 0 || !prepositions.includes(lower)) {
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }
+    return lower;
+  }).join(' ');
+};
+
 // ─── CP lookup — Supabase local table (fast, no external API) ────────────────
 const lookupCP = async (cp) => {
   try {
@@ -976,6 +993,7 @@ const OnboardingWizard = ({
                   <div>
                     <label style={LS}>Nombre de la sucursal *</label>
                     <input autoFocus type="text" value={storeName} onChange={e => setStoreName(e.target.value)}
+                      onBlur={e => setStoreName(formatAddress(e.target.value))}
                       placeholder="ej. Sucursal Interlomas" style={IS(!!storeName)} />
                   </div>
 
@@ -1032,6 +1050,7 @@ const OnboardingWizard = ({
                             </button>
                           </div>
                         : <input type="text" value={colonia} onChange={e => setColonia(e.target.value)}
+                            onBlur={e => setColonia(formatAddress(e.target.value))}
                             placeholder="ej. Viveros de la Loma" style={IS(!!colonia)} />}
                     </div>
                   )}
@@ -1041,6 +1060,7 @@ const OnboardingWizard = ({
                     <div>
                       <label style={LS}>Calle y número <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
                       <input type="text" value={calle} onChange={e => setCalle(e.target.value)}
+                        onBlur={e => setCalle(formatAddress(e.target.value))}
                         placeholder="ej. Eje Satélite Tlalnepantla 9" style={IS(!!calle)} />
                     </div>
                   )}

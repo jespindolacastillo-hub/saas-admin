@@ -18,6 +18,23 @@ const T = {
 };
 const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
+const formatAddress = (str) => {
+  if (!str) return '';
+  let cleaned = str.replace(/\s+/g, ' ').trim();
+  const prepositions = ['de', 'del', 'la', 'las', 'el', 'los', 'y', 'en', 'para', 'con', 'a'];
+  
+  return cleaned.split(' ').map((word, index) => {
+    if (!word) return '';
+    let lower = word.toLowerCase();
+    
+    if (word === word.toUpperCase() && word.length > 1) return word; 
+    if (index === 0 || !prepositions.includes(lower)) {
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }
+    return lower;
+  }).join(' ');
+};
+
 const QR_TYPES = [
   { value: 'area',     label: 'Área / Mesa',  color: T.teal   },
   { value: 'employee', label: 'Empleado',      color: T.purple },
@@ -1505,6 +1522,7 @@ export default function QRStudio() {
                   placeholder="Ej: Del Valle, Polanco, Roma Norte…"
                   value={locForm.colonia}
                   onChange={e => setLocForm(f => ({ ...f, colonia: e.target.value }))}
+                  onBlur={e => setLocForm(f => ({ ...f, colonia: formatAddress(e.target.value) }))}
                 />
               )}
             </FieldRow>
@@ -1518,6 +1536,7 @@ export default function QRStudio() {
                 placeholder="Ej: Insurgentes Sur 1602, Local 4"
                 value={locForm.calle}
                 onChange={e => setLocForm(f => ({ ...f, calle: e.target.value }))}
+                onBlur={e => setLocForm(f => ({ ...f, calle: formatAddress(e.target.value) }))}
               />
             </FieldRow>
           )}
@@ -1534,6 +1553,7 @@ export default function QRStudio() {
               placeholder={locForm.colonia ? `Ej: Sucursal ${locForm.colonia}` : 'Ej: Sucursal Norte, Centro, Aeropuerto…'}
               value={locForm.name}
               onChange={e => setLocForm(f => ({ ...f, name: e.target.value }))}
+              onBlur={e => setLocForm(f => ({ ...f, name: formatAddress(e.target.value) }))}
             />
           </FieldRow>
 

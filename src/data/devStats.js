@@ -1,26 +1,26 @@
 // AUTO-GENERADO — ejecutar: bash scripts/update-dev-stats.sh
 // Fuente de verdad: git history del repositorio (inmutable, auditable)
-// Generado: 2026-04-09T01:30:40Z
+// Generado: 2026-04-28T14:59:38Z
 
 export const DEV_STATS = {
-  generatedAt: "2026-04-09T01:30:40Z",
+  generatedAt: "2026-04-28T14:59:38Z",
   repo: {
     firstCommit: "2026-03-12",
-    lastCommit:  "2026-04-08",
-    totalCommits: 130,
-    activeDays:   10,
+    lastCommit:  "2026-04-15",
+    totalCommits: 170,
+    activeDays:   14,
   },
   code: {
-    sloc:          21293,
-    linesAdded:    43179,
-    linesDeleted:  12285,
-    totalFiles:    49,
+    sloc:          22283,
+    linesAdded:    45640,
+    linesDeleted:  13358,
+    totalFiles:    50,
     jsxComponents: 30,
-    jsFiles:       17,
+    jsFiles:       18,
     cssFiles:      2,
   },
   activity: {
-    topDays:      [{"date":"2026-03-13","commits":40},{"date":"2026-03-24","commits":27},{"date":"2026-03-12","commits":21},{"date":"2026-03-25","commits":17},{"date":"2026-03-26","commits":8}],
-    recentCommits: [{"date":"2026-04-08","msg":"||fix: safely fallback to event defaults for unconfigured QR types"},{"date":"2026-04-08","msg":"||fix: apply NPS logic to automatic recovery coupon generation"},{"date":"2026-04-08","msg":"||fix: dashboard aggregation for new NPS scale and add error reporting in feedback form"},{"date":"2026-04-08","msg":"||fix: resolve ReferenceErrors (isHappy/isUnhappy) blocking feedback submission"},{"date":"2026-04-08","msg":"||fix: logic for type-specific default questions and options"},{"date":"2026-04-08","msg":"||feat: dynamic feedback configurations & type-specific defaults"},{"date":"2026-04-08","msg":"||feat: deploy updates to auth, partner landing and stats"},{"date":"2026-03-27","msg":"||feat: nuevo motor de growth publico para distribuidores"},{"date":"2026-03-27","msg":"||Fix: detect Supabase PKCE recovery code in query string to prevent onboarding redirect"},{"date":"2026-03-27","msg":"||Fix: detect password recovery from URL hash on initial render to prevent onboarding redirect"},{"date":"2026-03-27","msg":"||Fix: inline font string in module-level style objects to prevent Rollup bundle init order error"},{"date":"2026-03-27","msg":"||Feat: Portfolio valuation panel with GitHub API live data (COCOMO I & II)"},{"date":"2026-03-26","msg":"||Feat: Full distributor program — portal, wizard, public application"},{"date":"2026-03-26","msg":"||Fix: keep AffiliatesManager, add DistributorsManager as separate tab"},{"date":"2026-03-26","msg":"||Feat: Distributors module with QR one-pager PDF"}],
+    topDays:      [{"date":"2026-03-13","commits":40},{"date":"2026-04-08","commits":28},{"date":"2026-03-24","commits":27},{"date":"2026-03-12","commits":21},{"date":"2026-03-25","commits":17}],
+    recentCommits: [{"date":"2026-04-15","msg":"||Feat: Dual invitation flow (Distributor vs User) with Resend and auto-provisioning"},{"date":"2026-04-15","msg":"||Fix: Explicit dynamic redirectTo for multiple invitation flows"},{"date":"2026-04-15","msg":"||Fix: Remove password validation for new user invitations"},{"date":"2026-04-15","msg":"||Feature: Implement email invitation flow for new users"},{"date":"2026-04-15","msg":"||Merge pull request #1 from jespindolacastillo-hub/fix/evitar-traduccion-cupones"},{"date":"2026-04-15","msg":"||fix(cupones): Prevenir traducción automática del código de descuento"},{"date":"2026-04-15","msg":"||Fix: Revert to 'serve' import for Edge Function compatibility"},{"date":"2026-04-15","msg":"||Fix: Ultra-robust Edge Function rewrite and defensive UI for User Management"},{"date":"2026-04-15","msg":"||Doc: Updated README.md with project overview and dev guidelines for new collaborators"},{"date":"2026-04-14","msg":"||Fix: Centralized user management and finalized WhatsApp messaging integration"},{"date":"2026-04-13","msg":"||feat: complete whatsapp infrastructure with usage tracking and webhook"},{"date":"2026-04-13","msg":"||feat: restrict distributor sections to master mode and fix CP lookup fallback"},{"date":"2026-04-09","msg":"||feat: Google Reviews URL guided setup in location modal"},{"date":"2026-04-09","msg":"||feat: auto-refresh dashboard every 5min with last-updated indicator"},{"date":"2026-04-09","msg":"||fix: deduplicate locations by name — two rows with same name in locations table"}],
   },
 };

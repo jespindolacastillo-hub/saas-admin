@@ -21,6 +21,8 @@ serve(async (req) => {
       score,
       comment,
       whatsapp_number,
+      client_phone,
+      recovery_code,
     } = await req.json();
 
     // ── Validations ────────────────────────────────────────────────────────
@@ -78,7 +80,7 @@ serve(async (req) => {
 
     // ── Twilio credentials ─────────────────────────────────────────────────
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const authToken  = Deno.env.get("TWILIO_AUTH_TOKEN");
+    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
     const fromNumber = Deno.env.get("TWILIO_WHATSAPP_FROM");
 
     if (!accountSid || !authToken || !fromNumber) {
@@ -96,7 +98,7 @@ serve(async (req) => {
     const templateSid = Deno.env.get("TWILIO_ALERT_TEMPLATE_SID");
 
     let bodyParams;
-    
+
     if (templateSid) {
       // Usar Plantilla (Requerido para producción)
       bodyParams = new URLSearchParams({
@@ -108,11 +110,15 @@ serve(async (req) => {
           "2": qr_label,
           "3": score.toString(),
           "4": comment || "Sin comentario",
+          "5": client_phone ? client_phone.replace(/\D/g, "") : "",
+          "6": recovery_code || "N/A",
         }),
       });
     } else {
       // Fallback a texto libre (Solo funciona si el usuario escribió en las últimas 24h)
-      const msg = `Retelio: ¡Nuevo feedback crítico! 🚨\nSucursal: ${locationName}\nQR: ${qr_label}\nPuntuación: ${score}★\nComentario: ${comment || "Sin comentario"}`;
+      const clientLink = client_phone ? `\n📱 Cliente: https://wa.me/${client_phone.replace(/\D/g, "")}` : "";
+      const recoveryMsg = recovery_code ? `\n🎁 Código: ${recovery_code}` : "";
+      const msg = `Retelio: ¡Nuevo feedback crítico! 🚨\nSucursal: ${locationName}\nQR: ${qr_label}\nPuntuación: ${score}★\nComentario: ${comment || "Sin comentario"}${clientLink}${recoveryMsg}`;
       bodyParams = new URLSearchParams({
         From: twilioFrom,
         To: to,

@@ -38,7 +38,7 @@ const KpiManager = () => {
     setLoading(true);
     try {
       const [locRes, goalRes] = await Promise.all([
-        supabase.from('locations').select('id, name').eq('tenant_id', tenant.id).order('name'),
+        supabase.from('Tiendas_Catalogo').select('id, name:nombre').eq('tenant_id', tenant.id).order('nombre'),
         supabase.from('Metas_KPI').select('*').eq('mes', selectedMonth).eq('anio', selectedYear).eq('tenant_id', tenant.id),
       ]);
       if (locRes.error) throw locRes.error;

@@ -432,6 +432,7 @@ const OnboardingWizard = ({
 
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
+  const [isCustomColonia, setIsCustomColonia] = useState(false);
 
   // ── Helpers ──
   const transition = (newStep, direction = 1) => {
@@ -461,6 +462,7 @@ const OnboardingWizard = ({
   const handleCpChange = async (val) => {
     const clean = val.replace(/\D/g, '');
     setCp(clean);
+    setIsCustomColonia(false);
     if (clean.length !== 5) { setCpStatus('idle'); setColoniaOptions([]); return; }
     setCpStatus('loading');
     setColoniaOptions([]);
@@ -1010,12 +1012,25 @@ const OnboardingWizard = ({
                   {(cpStatus === 'found' || cpStatus === 'error') && (
                     <div>
                       <label style={LS}>Colonia <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
-                      {coloniaOptions.length > 1
-                        ? <select value={colonia} onChange={e => setColonia(e.target.value)}
-                            style={{ ...IS(!!colonia), appearance: 'none', cursor: 'pointer' }}>
-                            <option value="">Selecciona una colonia…</option>
-                            {coloniaOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                          </select>
+                      {coloniaOptions.length > 1 && !isCustomColonia
+                        ? <div style={{ position: 'relative' }}>
+                            <select value={colonia} onChange={e => setColonia(e.target.value)}
+                              style={{ ...IS(!!colonia), appearance: 'none', cursor: 'pointer' }}>
+                              <option value="">Selecciona una colonia…</option>
+                              {coloniaOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => setIsCustomColonia(true)}
+                              style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: '0.72rem', color: '#FF5C3A', fontWeight: 700,
+                                padding: '4px 0', marginTop: 4, display: 'block'
+                              }}
+                            >
+                              ✎ No encuentro mi colonia (escribir manualmente)
+                            </button>
+                          </div>
                         : <input type="text" value={colonia} onChange={e => setColonia(e.target.value)}
                             placeholder="ej. Viveros de la Loma" style={IS(!!colonia)} />}
                     </div>

@@ -450,6 +450,7 @@ export default function QRStudio() {
   const [coloniaOptions, setColoniaOptions] = useState([]);
   const [editingLoc,     setEditingLoc]     = useState(null);
   const [locMenuOpen,    setLocMenuOpen]    = useState(null);
+  const [isCustomColonia, setIsCustomColonia] = useState(false);
 
   const planLimits       = getPlanLimits(tenant?.plan);
   const canAddLocation   = withinLimit(locations.length, planLimits.maxLocations);
@@ -1440,6 +1441,7 @@ export default function QRStudio() {
                   const v = e.target.value.replace(/\D/g, '');
                   setLocForm(f => ({ ...f, cp: v }));
                   setCpStatus('idle');
+                  setIsCustomColonia(false);
                   if (v.length === 5) lookupCP(v);
                 }}
               />
@@ -1475,15 +1477,28 @@ export default function QRStudio() {
           {/* ── Colonia ── */}
           {(cpStatus === 'found' || cpStatus === 'error' || editingLoc) && (
             <FieldRow label="Colonia">
-              {coloniaOptions.length > 1 ? (
-                <select
-                  style={{ ...inputSt, fontWeight: coloniaOptions.find(c => c === locForm.colonia) ? 600 : 400 }}
-                  value={locForm.colonia}
-                  onChange={e => setLocForm(f => ({ ...f, colonia: e.target.value }))}
-                >
-                  <option value="">Selecciona colonia…</option>
-                  {coloniaOptions.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+              {coloniaOptions.length > 1 && !isCustomColonia ? (
+                <div style={{ position: 'relative' }}>
+                  <select
+                    style={{ ...inputSt, fontWeight: coloniaOptions.find(c => c === locForm.colonia) ? 600 : 400 }}
+                    value={locForm.colonia}
+                    onChange={e => setLocForm(f => ({ ...f, colonia: e.target.value }))}
+                  >
+                    <option value="">Selecciona colonia…</option>
+                    {coloniaOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomColonia(true)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '0.72rem', color: T.teal, fontWeight: 700, fontFamily: font,
+                      padding: '4px 0', marginTop: 4, display: 'block'
+                    }}
+                  >
+                    ✎ No encuentro mi colonia (escribir manualmente)
+                  </button>
+                </div>
               ) : (
                 <input
                   style={inputSt}

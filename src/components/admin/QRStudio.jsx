@@ -86,6 +86,58 @@ function locationHealthColor(qrs) {
   return T.red;
 }
 
+// ─── Country Code Selector ────────────────────────────────────────────────────
+const COUNTRY_CODES = [
+  { flag: '🇲🇽', code: '+52',  label: 'México' },
+  { flag: '🇺🇸', code: '+1',   label: 'EE.UU.' },
+  { flag: '🇨🇴', code: '+57',  label: 'Colombia' },
+  { flag: '🇦🇷', code: '+54',  label: 'Argentina' },
+  { flag: '🇨🇱', code: '+56',  label: 'Chile' },
+  { flag: '🇵🇪', code: '+51',  label: 'Perú' },
+  { flag: '🇪🇸', code: '+34',  label: 'España' },
+];
+
+function PhoneInput({ value, onChange, style }) {
+  // Split stored value into countryCode + local number
+  const getCountryCode = (v) => COUNTRY_CODES.find(c => v?.startsWith(c.code))?.code || '+52';
+  const getLocalNumber = (v) => {
+    const cc = getCountryCode(v);
+    return v?.startsWith(cc) ? v.slice(cc.length) : (v || '');
+  };
+
+  const [country, setCountry] = React.useState(getCountryCode(value));
+  const [local,   setLocal]   = React.useState(getLocalNumber(value));
+
+  const update = (newCountry, newLocal) => {
+    const digits = newLocal.replace(/\D/g, '');
+    setCountry(newCountry);
+    setLocal(digits);
+    onChange(newCountry + digits);
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select
+        value={country}
+        onChange={e => update(e.target.value, local)}
+        style={{ ...style, width: 'auto', paddingLeft: 8, paddingRight: 8, flexShrink: 0 }}
+      >
+        {COUNTRY_CODES.map(c => (
+          <option key={c.code} value={c.code}>{c.flag} {c.code}</option>
+        ))}
+      </select>
+      <input
+        type="tel"
+        value={local}
+        onChange={e => update(country, e.target.value)}
+        placeholder="5512345678"
+        style={{ ...style, flex: 1 }}
+      />
+    </div>
+  );
+}
+
+
 function downloadQR(id, label) {
   const svg = document.getElementById(id);
   if (!svg) return;
@@ -1676,8 +1728,11 @@ export default function QRStudio() {
           </div>
 
           <FieldRow label="WhatsApp del encargado (opcional)">
-            <input style={inputSt} placeholder="5215512345678"
-              value={locForm.whatsapp_number} onChange={e => setLocForm(f => ({ ...f, whatsapp_number: e.target.value }))} />
+            <PhoneInput
+              value={locForm.whatsapp_number}
+              onChange={v => setLocForm(f => ({ ...f, whatsapp_number: v }))}
+              style={inputSt}
+            />
           </FieldRow>
 
 

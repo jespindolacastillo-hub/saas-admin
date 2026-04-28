@@ -14,6 +14,35 @@ const LANGS = [
   { code: 'pt', flag: '🇧🇷', label: 'PT' },
 ];
 
+// ─── Country Phone Codes ─────────────────────────────────────────────────────
+const COUNTRY_CODES = [
+  { flag: '🇲🇽', code: '+52',  label: 'México' },
+  { flag: '🇺🇸', code: '+1',   label: 'EE.UU.' },
+  { flag: '🇨🇴', code: '+57',  label: 'Colombia' },
+  { flag: '🇦🇷', code: '+54',  label: 'Argentina' },
+  { flag: '🇨🇱', code: '+56',  label: 'Chile' },
+  { flag: '🇵🇪', code: '+51',  label: 'Perú' },
+  { flag: '🇪🇸', code: '+34',  label: 'España' },
+];
+
+function PhoneInput({ value, onChange, inputStyle }) {
+  const getCC  = (v) => COUNTRY_CODES.find(c => v?.startsWith(c.code))?.code || '+52';
+  const getLoc = (v) => { const cc = getCC(v); return v?.startsWith(cc) ? v.slice(cc.length) : (v || ''); };
+  const [country, setCountry] = React.useState(getCC(value));
+  const [local,   setLocal]   = React.useState(getLoc(value));
+  const update = (nc, nl) => { const d = nl.replace(/\D/g,''); setCountry(nc); setLocal(d); onChange(nc + d); };
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      <select value={country} onChange={e => update(e.target.value, local)}
+        style={{ ...inputStyle, width: 'auto', paddingLeft: 8, paddingRight: 8, flexShrink: 0 }}>
+        {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+      </select>
+      <input type="tel" value={local} onChange={e => update(country, e.target.value)}
+        placeholder="5512345678" style={{ ...inputStyle, flex: 1 }} />
+    </div>
+  );
+}
+
 // ─── Confetti ─────────────────────────────────────────────────────────────────
 const Confetti = () => {
   const colors = ['#FF5C3A', '#00C9A7', '#7C3AED', '#F59E0B', '#0D0D12', '#EC4899'];
@@ -661,7 +690,7 @@ const OnboardingWizard = ({
               colonia:    colonia.trim()   || null,
               municipio:  municipio.trim() || null,
               estado:     estado.trim()    || null,
-              whatsapp_number: phone.trim() || null,
+              whatsapp_number: phone.trim() ? (phone.startsWith('+') ? phone.trim() : '+52' + phone.replace(/\D/g,'')) : null,
               ...(coords && { lat: coords.lat, lng: coords.lng }),
             }).select('id').single();
             if (newLoc?.id) setSavedLocationId(newLoc.id);
@@ -1066,9 +1095,8 @@ const OnboardingWizard = ({
                   )}
 
                   <div>
-                    <label style={LS}>Teléfono WhatsApp <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(incluye lada)</span></label>
-                    <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-                      placeholder="ej. 55 5073 3331" style={IS(!!phone)} />
+                    <label style={LS}>Teléfono WhatsApp <span style={{ fontWeight: 400, fontSize: '0.7rem', color: '#94a3b8', textTransform: 'none' }}>(opcional)</span></label>
+                    <PhoneInput value={phone} onChange={v => setPhone(v)} inputStyle={IS(!!phone)} />
                   </div>
                 </div>
 

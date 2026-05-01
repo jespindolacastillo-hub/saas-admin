@@ -305,7 +305,7 @@ export default function CouponManagement() {
   const saveCoupon = async (form) => {
     let error;
     if (form.id) {
-      ({ error } = await supabase.from('coupon_configs').update({ ...form, updated_at: new Date().toISOString() }).eq('id', form.id));
+      ({ error } = await supabase.from('coupon_configs').update(form).eq('id', form.id));
     } else {
       const { name, offer_description, coupon_prefix, validity_days, trigger_type, enabled } = form;
       ({ error } = await supabase.from('coupon_configs').insert({ name, offer_description, coupon_prefix, validity_days, trigger_type, enabled, tenant_id: tenant.id }));

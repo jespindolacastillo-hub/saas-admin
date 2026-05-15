@@ -593,6 +593,9 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
     setContactDone(true);
   };
 
+  // Contact form visible: immediately when no coupon, or after Google click when there's a coupon
+  const showContactSection = !loyaltyCouponCode || googleClicked || !googleUrl;
+
   return (
     <div className="rf-card rf-state">
       <Logo />
@@ -602,7 +605,8 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
         Tu visita de hoy nos motiva a seguir dando lo mejor.
       </p>
 
-      {googleUrl && (
+      {/* Google button — standalone only when no loyalty coupon */}
+      {!loyaltyCouponCode && googleUrl && (
         <a href={googleUrl} target="_blank" rel="noreferrer" onClick={handleGoogleClick}
           style={{ display: 'block', padding: '16px', background: S.teal, color: '#fff', borderRadius: 14, fontFamily: fontStack, fontWeight: 700, fontSize: '1rem', textDecoration: 'none', textAlign: 'center', marginBottom: 16 }}>
           ⭐ Escribir reseña en Google
@@ -623,28 +627,18 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
         </div>
       )}
 
-      {/* Loyalty coupon — locked until Google review clicked */}
+      {/* Loyalty coupon */}
       {loyaltyCouponCode && loyaltyConfig && (
         (!googleUrl || googleClicked) ? (
+          /* ── Revealed: flip + confetti ── */
           <div style={{ position: 'relative', marginBottom: 16 }}>
             {showConfetti && <Confetti />}
             {justUnlocked && (
-              <p style={{
-                textAlign: 'center', fontSize: '0.88rem', fontWeight: 700,
-                color: S.teal, marginBottom: 10,
-                animation: 'fadeSlide 0.3s ease-out',
-              }}>
+              <p style={{ textAlign: 'center', fontSize: '0.88rem', fontWeight: 700, color: S.teal, marginBottom: 10, animation: 'fadeSlide 0.3s ease-out' }}>
                 ¡Desbloqueaste tu recompensa! 🎉
               </p>
             )}
-            <div
-              className="rf-coupon"
-              style={{
-                textAlign: 'left',
-                animation: justUnlocked ? 'rf-flip 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
-                transformOrigin: 'center',
-              }}
-            >
+            <div className="rf-coupon" style={{ textAlign: 'left', animation: justUnlocked ? 'rf-flip 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none', transformOrigin: 'center' }}>
               <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
               <p className="rf-coupon-code notranslate" translate="no">{loyaltyCouponCode}</p>
               <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
@@ -654,101 +648,66 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
             </div>
           </div>
         ) : (
-          /* ── Locked gift card with shimmer + glow pulse ── */
+          /* ── Locked: shimmer card with Google button inside ── */
           <div style={{
-            borderRadius: 16,
-            padding: '22px 20px',
-            marginBottom: 16,
+            borderRadius: 16, padding: '22px 20px', marginBottom: 16,
             background: 'linear-gradient(110deg, #12121f 25%, #1c1c38 50%, #12121f 75%)',
             backgroundSize: '220% auto',
             animation: 'rf-shimmer 2.4s linear infinite, rf-glow-pulse 2.8s ease-in-out infinite',
             border: '1.5px solid rgba(0,201,167,0.25)',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 10,
+            textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
-            <div style={{ fontSize: '2rem' }}>🎁</div>
-            <p style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', margin: 0 }}>
-              Tu recompensa está lista
-            </p>
-            <p style={{ fontSize: '0.8rem', color: 'rgba(0,201,167,0.9)', margin: 0, fontWeight: 600 }}>
-              {loyaltyConfig.loyalty_offer_description}
-            </p>
+            <div style={{ fontSize: '2.2rem' }}>🎁</div>
+            <div>
+              <p style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', margin: '0 0 4px' }}>
+                Hay un regalo para ti
+              </p>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>
+                Deja tu reseña para descubrir qué es
+              </p>
+            </div>
             <div style={{
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: 10,
-              padding: '8px 20px',
-              border: '1px dashed rgba(255,255,255,0.12)',
-              letterSpacing: '0.3em',
-              fontSize: '1.2rem',
-              color: 'rgba(255,255,255,0.2)',
-              fontFamily: 'monospace',
-              userSelect: 'none',
+              background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '8px 24px',
+              border: '1px dashed rgba(255,255,255,0.12)', letterSpacing: '0.3em',
+              fontSize: '1.2rem', color: 'rgba(255,255,255,0.18)', fontFamily: 'monospace', userSelect: 'none',
             }}>
               ● ● ● ● ● ●
             </div>
-            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>
-              Escribe una reseña en Google para desbloquearlo ↑
-            </p>
+            <a href={googleUrl} target="_blank" rel="noreferrer" onClick={handleGoogleClick}
+              style={{ display: 'block', width: '100%', padding: '13px 16px', background: S.teal, color: '#fff', borderRadius: 12, fontFamily: fontStack, fontWeight: 700, fontSize: '0.92rem', textDecoration: 'none', textAlign: 'center', marginTop: 2, boxSizing: 'border-box' }}>
+              ⭐ Escribir reseña en Google
+            </a>
           </div>
         )
       )}
 
-      {/* Contact capture — always shown */}
-      <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16 }}>
-        {contactDone ? (
-          <p style={{ fontSize: '0.9rem', color: S.teal, fontWeight: 600, textAlign: 'center' }}>
-            ¡Listo! Te avisaremos de las mejores ofertas
-          </p>
-        ) : !contactShown ? (
-          <div style={{ textAlign: 'center' }}>
-            <button className="rf-btn rf-btn-ghost" onClick={() => setContactShown(true)}
-              style={{ color: S.ink, fontSize: '0.9rem' }}>
-              Recibir ofertas y beneficios exclusivos
-            </button>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'left' }}>
-            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: S.ink, marginBottom: 4 }}>
-              ¿Quieres recibir beneficios exclusivos?
+      {/* Contact form — appears after Google click (or immediately when no coupon) */}
+      {showContactSection && (
+        <div style={{ borderTop: loyaltyCouponCode ? `1px solid ${S.border}` : 'none', paddingTop: loyaltyCouponCode ? 16 : 0 }}>
+          {contactDone ? (
+            <p style={{ fontSize: '0.9rem', color: S.teal, fontWeight: 600, textAlign: 'center' }}>
+              ¡Listo! Te avisaremos de las mejores ofertas
             </p>
-            <p style={{ fontSize: '0.78rem', color: S.muted, marginBottom: 14 }}>
-              Déjanos tu correo o WhatsApp — ambos son opcionales
-            </p>
-            <input
-              type="email"
-              className="rf-input"
-              placeholder="tu@correo.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              style={{ marginBottom: 10 }}
-            />
-            <input
-              type="tel"
-              className="rf-input"
-              placeholder="55 1234 5678 (WhatsApp)"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-            />
-            <button
-              className="rf-btn rf-btn-primary"
-              disabled={!phone.trim() && !email.trim()}
-              onClick={handleSaveContact}
-            >
-              Guardar
-            </button>
-            <button
-              className="rf-btn rf-btn-ghost"
-              onClick={() => setContactShown(false)}
-              style={{ color: S.muted, fontSize: '0.82rem', marginTop: 4 }}
-            >
-              No, gracias
-            </button>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div style={{ textAlign: 'left', animation: justUnlocked ? 'fadeSlide 0.4s ease-out 0.5s both' : 'none' }}>
+              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: S.ink, marginBottom: 4 }}>
+                ¿Quieres recibir más beneficios?
+              </p>
+              <p style={{ fontSize: '0.78rem', color: S.muted, marginBottom: 14 }}>
+                Déjanos tu correo o WhatsApp — ambos son opcionales
+              </p>
+              <input type="email" className="rf-input" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} style={{ marginBottom: 10 }} />
+              <input type="tel" className="rf-input" placeholder="55 1234 5678 (WhatsApp)" value={phone} onChange={e => setPhone(e.target.value)} />
+              <button className="rf-btn rf-btn-primary" disabled={!phone.trim() && !email.trim()} onClick={handleSaveContact}>
+                Guardar
+              </button>
+              <button className="rf-btn rf-btn-ghost" onClick={() => setContactDone(true)} style={{ color: S.muted, fontSize: '0.82rem', marginTop: 4 }}>
+                No, gracias
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>

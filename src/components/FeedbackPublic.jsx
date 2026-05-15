@@ -313,23 +313,53 @@ function StepScore({ locationName, qrLabel, testMode, onSecretTap, onSelect, con
 }
 
 // ─── Step 2: Reason (bad scores only) ─────────────────────────────────────────
-function StepReason({ config, onNext, onSkip }) {
-  const [selected, setSelected] = useState('');
-  const [comment, setComment]   = useState('');
+function StepReason({ config, onNext }) {
+  const [selected, setSelected]   = useState('');
+  const [comment, setComment]     = useState('');
+  const [showBox, setShowBox]     = useState(false);
+  const [countdown, setCountdown] = useState(null);
+  const [userTyped, setUserTyped] = useState(false);
+  const intervalRef = useRef(null);
 
-  const type = config?.followup_type || 'multiple_choice';
+  const type    = config?.followup_type    || 'multiple_choice';
   const options = config?.followup_options || DEFAULT_OPTIONS;
-  const title = config?.followup_question || '¿Qué falló hoy?';
+  const title   = config?.followup_question || '¿Qué falló hoy?';
+
+  useEffect(() => () => clearInterval(intervalRef.current), []);
+
+  const startCountdown = (cat) => {
+    let secs = 3;
+    setCountdown(secs);
+    intervalRef.current = setInterval(() => {
+      secs -= 1;
+      setCountdown(secs);
+      if (secs <= 0) {
+        clearInterval(intervalRef.current);
+        onNext({ category: cat, comment: null });
+      }
+    }, 1000);
+  };
 
   const handleChip = (opt) => {
+    clearInterval(intervalRef.current);
     setSelected(opt);
-    // Auto-advance after a brief pause so the selection is visible
-    if (opt !== 'Otro') {
-      setTimeout(() => onNext({ category: opt, comment: comment.trim() || null }), 250);
+    setComment('');
+    setUserTyped(false);
+    setShowBox(true);
+    if (opt !== 'Otro') startCountdown(opt);
+  };
+
+  const handleCommentChange = (val) => {
+    setComment(val);
+    if (!userTyped && val.length > 0) {
+      setUserTyped(true);
+      clearInterval(intervalRef.current);
+      setCountdown(null);
     }
   };
 
-  const handleNextAction = () => {
+  const handleSend = () => {
+    clearInterval(intervalRef.current);
     onNext({ category: selected || 'Comentario', comment: comment.trim() || null });
   };
 
@@ -349,20 +379,28 @@ function StepReason({ config, onNext, onSkip }) {
               </button>
             ))}
           </div>
-          {selected === 'Otro' && (
-            <>
+
+          {showBox && (
+            <div style={{ animation: 'fadeSlide 0.2s ease-out' }}>
               <textarea
                 className="rf-textarea"
                 rows={3}
-                placeholder="Cuéntanos más…"
+                placeholder={selected === 'Otro' ? 'Cuéntanos qué pasó…' : '¿Algo más que quieras contarnos? (opcional)'}
                 value={comment}
-                onChange={e => setComment(e.target.value)}
+                onChange={e => handleCommentChange(e.target.value)}
                 autoFocus
+                style={{ marginTop: 8 }}
               />
-              <button className="rf-btn rf-btn-primary" onClick={handleNextAction} style={{ marginBottom: 12 }}>
-                Continuar
-              </button>
-            </>
+              {userTyped || selected === 'Otro' ? (
+                <button className="rf-btn rf-btn-primary" onClick={handleSend} style={{ marginBottom: 12 }}>
+                  Enviar
+                </button>
+              ) : (
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', color: S.muted, marginBottom: 16 }}>
+                  Continuando en {countdown}…
+                </p>
+              )}
+            </div>
           )}
         </>
       ) : (
@@ -375,7 +413,7 @@ function StepReason({ config, onNext, onSkip }) {
             onChange={e => setComment(e.target.value)}
             autoFocus
           />
-          <button className="rf-btn rf-btn-primary" disabled={!comment.trim()} onClick={handleNextAction} style={{ marginBottom: 12 }}>
+          <button className="rf-btn rf-btn-primary" disabled={!comment.trim()} onClick={handleSend} style={{ marginBottom: 12 }}>
             Siguiente
           </button>
         </>
@@ -1066,7 +1104,7 @@ export default function FeedbackPublic() {
     return wrap(<StepScore locationName={location?.name} qrLabel={qr?.label} testMode={testMode} onSecretTap={secretTap} onSelect={handleScoreSelect} config={questionConfig} />);
 
   if (screen === 'reason')
-    return wrap(<StepReason config={questionConfig} onNext={handleReasonNext} onSkip={handleReasonSkip} />);
+    return wrap(<StepReason config={questionConfig} onNext={handleReasonNext} />);
 
   if (screen === 'contact')
     return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} businessName={location?.name} />);

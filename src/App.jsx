@@ -2943,7 +2943,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'leaderboard' && <RetellioLeaderboard />}
           {activeTab === 'cupones' && <CouponManagement />}
           {activeTab === 'validar' && <CouponValidation userEmail={session?.user?.email} />}
-          {activeTab === 'issues' && <IssueManagement />}
+          {activeTab === 'issues' && <IssueManagement tenantOverride={tenant} />}
           {activeTab === 'qr' && <QRStudio />}
           {activeTab === 'users' && <UserManagement session={session} />}
           {activeTab === 'email' && <CampaignManager />}

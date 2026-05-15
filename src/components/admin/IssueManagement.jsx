@@ -885,8 +885,9 @@ function ValidationTab({ feedbacks, locations, tenant, userEmail, onUpdate }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function IssueManagement() {
-  const { tenant } = useTenant();
+export default function IssueManagement({ tenantOverride } = {}) {
+  const { tenant: tenantFromHook } = useTenant();
+  const tenant = tenantOverride || tenantFromHook;
   const [feedbacks, setFeedbacks]       = useState([]);
   const [locations, setLocations]       = useState([]);
   const [qrLabels, setQrLabels]         = useState({});

@@ -1350,7 +1350,7 @@ export default function RetelioDashboard() {
     if (!tenant?.id) return;
     if (silent) setRefreshing(true); else setLoading(true);
     try {
-      const isTest = tenant?.test_mode === true;
+      const isTest = !!tenant?.test_mode;
       const since = subDays(new Date(), range).getTime();
 
       const [allFbs, stores] = await Promise.all([

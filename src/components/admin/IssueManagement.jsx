@@ -923,7 +923,7 @@ export default function IssueManagement() {
     setLoading(true);
     
     try {
-      const isTest = tenant.test_mode === true;
+      const isTest = !!tenant.test_mode;
       const [feedbacks, stores, areas, recoveryConfigRes, qrCodesRes] = await Promise.all([
         dataService.fetchFeedbacks(tenant.id, isTest),
         dataService.fetchStores(tenant.id),

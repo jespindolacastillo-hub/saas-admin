@@ -514,7 +514,7 @@ function DoneNeutral({ onSuggest }) {
 // ─── Done: happy ──────────────────────────────────────────────────────────────
 function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick, testMode }) {
   const [googleClicked, setGoogleClicked] = useState(false);
-  const [contactShown, setContactShown]   = useState(false);
+  const [contactShown, setContactShown]   = useState(true);
   const [contactDone, setContactDone]     = useState(false);
   const [phone, setPhone]                 = useState('');
   const [email, setEmail]                 = useState('');

@@ -319,7 +319,7 @@ function StepReason({ config, onNext, onSkip }) {
 
   const type = config?.followup_type || 'multiple_choice';
   const options = config?.followup_options || DEFAULT_OPTIONS;
-  const title = config?.followup_question || '¿Qué podríamos mejorar?';
+  const title = config?.followup_question || '¿Qué falló hoy?';
 
   const handleChip = (opt) => {
     setSelected(opt);
@@ -381,9 +381,6 @@ function StepReason({ config, onNext, onSkip }) {
         </>
       )}
 
-      <button className="rf-btn rf-btn-ghost" onClick={() => onSkip()}>
-        Omitir
-      </button>
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
   );

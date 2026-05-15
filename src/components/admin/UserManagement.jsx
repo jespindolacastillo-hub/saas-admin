@@ -18,10 +18,15 @@ const T = {
 };
 const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
-const ROLES = ['Admin', 'Gerente', 'Usuario'];
-const ROLE_COLORS = { Admin: T.red, Gerente: T.amber, Usuario: T.teal };
+const ROLES = [
+  { value: 'owner',   label: 'Owner',   desc: 'Acceso total + billing' },
+  { value: 'admin',   label: 'Admin',   desc: 'Acceso total, sin billing' },
+  { value: 'gerente', label: 'Gerente', desc: 'Dashboard y operación de sucursal' },
+  { value: 'caja',    label: 'Caja',    desc: 'Solo validación de cupones' },
+];
+const ROLE_COLORS = { owner: T.purple, admin: T.red, gerente: T.amber, caja: T.teal };
 
-const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'Usuario', activo: true, flow: 'platform' };
+const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'gerente', activo: true, flow: 'platform' };
 
 export default function UserManagement({ session }) {
   const { tenant } = useTenant();
@@ -49,7 +54,7 @@ export default function UserManagement({ session }) {
   };
 
   const openAdd = () => { setForm(initForm); setModal({ type: 'add' }); };
-  const openEdit = (u) => { setForm({ nombre: u.nombre || '', apellido: u.apellido || '', email: u.email || '', password: '', rol: u.rol || 'Usuario', activo: u.activo ?? true, id: u.id }); setModal({ type: 'edit', user: u }); };
+  const openEdit = (u) => { setForm({ nombre: u.nombre || '', apellido: u.apellido || '', email: u.email || '', password: '', rol: u.rol?.toLowerCase() || 'gerente', activo: u.activo ?? true, id: u.id }); setModal({ type: 'edit', user: u }); };
 
   const showMsg = (type, text) => { 
     setMessage({ type, text }); 
@@ -215,9 +220,16 @@ export default function UserManagement({ session }) {
                     </td>
                     <td style={{ padding: '14px 20px', color: T.muted }}>{u.email}</td>
                     <td style={{ padding: '14px 20px' }}>
-                      <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: (ROLE_COLORS[u.rol] || T.muted) + '18', color: ROLE_COLORS[u.rol] || T.muted }}>
-                        {u.rol || 'Usuario'}
-                      </span>
+                      {(() => {
+                        const key = u.rol?.toLowerCase();
+                        const meta = ROLES.find(r => r.value === key);
+                        const color = ROLE_COLORS[key] || T.muted;
+                        return (
+                          <span style={{ padding: '4px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, background: color + '18', color }}>
+                            {meta?.label || u.rol || '—'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '14px 20px' }}>
                       <button onClick={() => !isSelf && toggleStatus(u)} disabled={isSelf}
@@ -304,7 +316,7 @@ export default function UserManagement({ session }) {
                   <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink, marginBottom: 6, display: 'block' }}>Rol</label>
                   <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`, fontSize: '0.88rem', fontFamily: font, color: T.ink, outline: 'none', background: '#fff' }}>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label} — {r.desc}</option>)}
                   </select>
                 </div>
                 {modal.type === 'add' && (

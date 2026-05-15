@@ -1981,6 +1981,7 @@ const AuditTrail = () => {
 };
 
 const ROLE_PERMS = {
+  owner:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','billing','affiliates','distributors','dist-portal','dev-val','backup','audit'],
   admin:   ['dash','qr','issues','validar','cupones','geomap','leaderboard','kpi','email','org','users','questions','affiliates','distributors','dist-portal','dev-val','backup','audit'],
   gerente: ['dash','issues','validar','leaderboard','kpi','geomap'],
   caja:    ['validar'],
@@ -2034,7 +2035,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
   });
 
   const allowedTabs = useMemo(() => {
-    const base = ROLE_PERMS[userRole] || ROLE_PERMS['admin'];
+    const base = ROLE_PERMS[userRole?.toLowerCase()] || ROLE_PERMS['admin'];
     if (masterMode) return base;
     return base.filter(t => !['affiliates', 'distributors', 'dist-portal', 'dev-val'].includes(t));
   }, [userRole, masterMode]);
@@ -2408,7 +2409,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
   }
 
   // Caja role: minimal layout — only coupon validation
-  if (userRole === 'caja') {
+  if (userRole?.toLowerCase() === 'caja') {
     return (
       <div style={{ minHeight: '100vh', background: '#F7F8FC', display: 'flex', flexDirection: 'column' }}>
         <div style={{ background: '#0D0D12', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

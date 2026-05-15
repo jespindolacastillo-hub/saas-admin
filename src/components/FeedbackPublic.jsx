@@ -572,10 +572,10 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
   const [googleClicked, setGoogleClicked] = useState(false);
   const [justUnlocked, setJustUnlocked]   = useState(false);
   const [showConfetti, setShowConfetti]   = useState(false);
-  const [contactShown, setContactShown]   = useState(true);
-  const [contactDone, setContactDone]     = useState(false);
-  const [phone, setPhone]                 = useState('');
-  const [email, setEmail]                 = useState('');
+  const [contactDone, setContactDone]       = useState(false);
+  const [phone, setPhone]                   = useState('');
+  const [email, setEmail]                   = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const prevClicked = useRef(false);
 
   const handleGoogleClick = () => {
@@ -595,7 +595,13 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
 
   const handleSaveContact = () => {
     if (!phone.trim() && !email.trim()) return;
-    onLoyalty({ phone: phone.trim() || null, email: email.trim() || null });
+    onLoyalty({
+      phone:           phone.trim() || null,
+      email:           email.trim() || null,
+      marketingConsent,
+      consentAt:       new Date().toISOString(),
+      consentVersion:  '1.0',
+    });
     setContactDone(true);
   };
 
@@ -705,10 +711,33 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
               </p>
               <input type="email" className="rf-input" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} style={{ marginBottom: 10 }} />
               <input type="tel" className="rf-input" placeholder="55 1234 5678 (WhatsApp)" value={phone} onChange={e => setPhone(e.target.value)} />
+
+              {/* Marketing consent — NOT pre-checked, LFPDPPP compliant */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginTop: 14, marginBottom: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={e => setMarketingConsent(e.target.checked)}
+                  style={{ marginTop: 2, accentColor: S.teal, width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '0.74rem', color: S.muted, lineHeight: 1.5 }}>
+                  Deseo recibir ofertas exclusivas{businessName ? ` de ${businessName}` : ''} y comunicaciones de marketing por este medio
+                </span>
+              </label>
+
               <button className="rf-btn rf-btn-primary" disabled={!phone.trim() && !email.trim()} onClick={handleSaveContact}>
                 Guardar
               </button>
-              <button className="rf-btn rf-btn-ghost" onClick={() => setContactDone(true)} style={{ color: S.muted, fontSize: '0.82rem', marginTop: 4 }}>
+
+              <p style={{ fontSize: '0.67rem', color: S.muted, textAlign: 'center', marginTop: 6, lineHeight: 1.55 }}>
+                Al guardar aceptas nuestro{' '}
+                <a href="https://retelio.com.mx/privacidad" target="_blank" rel="noreferrer"
+                  style={{ color: S.teal, textDecoration: 'none', fontWeight: 600 }}>
+                  Aviso de Privacidad
+                </a>
+              </p>
+
+              <button className="rf-btn rf-btn-ghost" onClick={() => setContactDone(true)} style={{ color: S.muted, fontSize: '0.8rem', marginTop: 2 }}>
                 No, gracias
               </button>
             </div>
@@ -1012,7 +1041,9 @@ export default function FeedbackPublic() {
       googleUrl={location?.google_review_url} 
       loyaltyCouponCode={loyaltyCouponCode} 
       loyaltyConfig={loyalty} 
-      onLoyalty={({ phone: ph, email: em }) => updateFeedback({ contact_phone: ph || null, contact_email: em || null })}
+      onLoyalty={({ phone: ph, email: em, marketingConsent: mc, consentAt: ca, consentVersion: cv }) =>
+        updateFeedback({ contact_phone: ph || null, contact_email: em || null, marketing_consent: mc ?? false, consent_at: ca || null, consent_version: cv || null })
+      }
       onGoogleClick={() => updateFeedback({ google_click_at: new Date().toISOString() })}
       testMode={testMode}
       businessName={location?.name}

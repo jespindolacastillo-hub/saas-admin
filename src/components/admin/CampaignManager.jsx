@@ -20,47 +20,51 @@ const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 // ─── Campaign type presets ────────────────────────────────────────────────────
 const CAMPAIGN_TYPES = [
   {
-    value:    'recovery',
-    label:    'Recuperar clientes',
-    icon:     TrendingDown,
-    color:    T.coral,
-    desc:     'Contacta a clientes insatisfechos (1-2★) que aún no han sido recuperados.',
-    segment:  { min_score: 1, max_score: 2, recovery_status: 'pending' },
+    value:           'recovery',
+    label:           'Recuperar clientes',
+    icon:            TrendingDown,
+    color:           T.coral,
+    desc:            'Contacta a clientes insatisfechos (1-2★) que aún no han sido recuperados.',
+    segment:         { min_score: 1, max_score: 2, recovery_status: 'pending' },
+    allowedChannels: ['whatsapp'],
     template: (loc) =>
-      `Hola, lamentamos que tu experiencia reciente${loc ? ` en ${loc}` : ''} no haya sido la mejor 😔 Queremos compensarte con un beneficio especial en tu próxima visita. ¿Podemos hacer algo por ti?`,
-    note:     'Campaña de recuperación automática',
+      `Hola 👋 Lamentamos que tu experiencia reciente${loc ? ` en ${loc}` : ''} no haya sido la mejor. Queremos compensarte con un beneficio especial en tu próxima visita. ¿Podemos hacer algo por ti? Escríbenos aquí mismo 🙏`,
+    note:            'Campaña de recuperación automática',
   },
   {
-    value:    'amplify',
-    label:    'Pedir reseña Google',
-    icon:     TrendingUp,
-    color:    T.teal,
-    desc:     'Pide a tus clientes más satisfechos (5★) que compartan su experiencia en Google.',
-    segment:  { min_score: 5, max_score: 5, routed_to_google: false },
+    value:           'amplify',
+    label:           'Pedir reseña Google',
+    icon:            TrendingUp,
+    color:           T.teal,
+    desc:            'Pide a tus clientes más satisfechos (5★) que compartan su experiencia en Google.',
+    segment:         { min_score: 5, max_score: 5, routed_to_google: false },
+    allowedChannels: ['whatsapp', 'email'],
     template: (loc) =>
-      `Hola, nos alegra mucho saber que tuviste una gran experiencia${loc ? ` en ${loc}` : ''} 🌟 ¿Nos ayudarías compartiendo tu opinión en Google? Solo toma un minuto y significa mucho para nuestro equipo. ¡Gracias!`,
-    note:     'Campaña de amplificación Google',
+      `Hola 🌟 Nos alegra saber que tuviste una gran experiencia${loc ? ` en ${loc}` : ''}. ¿Nos ayudarías dejando una reseña en Google? Solo toma un minuto y significa muchísimo para el equipo. ¡Gracias de corazón! 🙏`,
+    note:            'Campaña de amplificación Google',
   },
   {
-    value:    'reactivate',
-    label:    'Reactivar clientes',
-    icon:     RotateCcw,
-    color:    T.purple,
-    desc:     'Re-engancha a clientes con experiencia regular (3-4★) que no han regresado.',
-    segment:  { min_score: 3, max_score: 4 },
+    value:           'reactivate',
+    label:           'Reactivar clientes',
+    icon:            RotateCcw,
+    color:           T.purple,
+    desc:            'Re-engancha a clientes con experiencia regular (3-4★) que no han regresado.',
+    segment:         { min_score: 3, max_score: 4 },
+    allowedChannels: ['whatsapp', 'email'],
     template: (loc) =>
-      `Hola, ha pasado un tiempo desde tu última visita${loc ? ` a ${loc}` : ''} y nos gustaría verte pronto 😊 Tenemos algo especial para ti. ¿Te animamos con un descuento exclusivo?`,
-    note:     'Campaña de reactivación',
+      `Hola 😊 Ha pasado un tiempo desde tu última visita${loc ? ` a ${loc}` : ''} y nos gustaría verte pronto. Tenemos algo especial esperándote. ¿Te apuntas con un descuento exclusivo solo para ti?`,
+    note:            'Campaña de reactivación',
   },
   {
-    value:    'custom',
-    label:    'Campaña personalizada',
-    icon:     Zap,
-    color:    T.amber,
-    desc:     'Define tu propio segmento y mensaje para cualquier tipo de campaña.',
-    segment:  { min_score: 1, max_score: 5 },
-    template: () => '',
-    note:     '',
+    value:           'custom',
+    label:           'Campaña personalizada',
+    icon:            Zap,
+    color:           T.amber,
+    desc:            'Define tu propio segmento y mensaje para cualquier tipo de campaña.',
+    segment:         { min_score: 1, max_score: 5 },
+    allowedChannels: ['whatsapp', 'email'],
+    template:        () => '',
+    note:            '',
   },
 ];
 
@@ -205,6 +209,7 @@ export default function CampaignManager() {
   const [camName,    setCamName]    = useState('');
   const [sending,    setSending]    = useState(false);
   const [sendProgress, setSendProgress] = useState({ done: 0, total: 0, errors: 0 });
+  const [suppressedContacts, setSuppressedContacts] = useState(new Set());
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -233,6 +238,16 @@ export default function CampaignManager() {
         .gte('created_at', subDays(new Date(), 90).toISOString());
       if (fbData) setFeedbacks(fbData);
     }
+
+    // Load contacts already reached in the last 30 days for suppression
+    const { data: recentRecipients } = await supabase
+      .from('campaign_recipients')
+      .select('destination')
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'sent')
+      .gte('sent_at', subDays(new Date(), 30).toISOString());
+    setSuppressedContacts(new Set((recentRecipients || []).map(r => r.destination)));
+
     setLoading(false);
   };
 
@@ -249,16 +264,18 @@ export default function CampaignManager() {
     return countAudience(feedbacks, audienceConfig).filter(f => {
       const key = channel === 'whatsapp' ? f.contact_phone : f.contact_email;
       if (!key || seen.has(key)) return false;
+      if (suppressedContacts.has(key)) return false;
       seen.add(key);
       return true;
     });
-  }, [feedbacks, audienceConfig, channel]);
+  }, [feedbacks, audienceConfig, channel, suppressedContacts]);
 
   // ── Auto-fill campaign name + message when type selected ──────────────────
   const selectType = (typeVal) => {
     const type = CAMPAIGN_TYPES.find(t => t.value === typeVal);
     setCamType(typeVal);
     setOnlyUnredeemed(false);
+    if (type.allowedChannels?.length === 1) setChannel(type.allowedChannels[0]);
     const locName = locationIds.length === 1
       ? locations.find(l => l.id === locationIds[0])?.name
       : null;
@@ -404,7 +421,6 @@ export default function CampaignManager() {
   const resetWizard = () => {
     setStep(0); setCamType(null); setChannel('whatsapp');
     setLocationIds([]); setDateRange(30); setOnlyUnredeemed(false); setMessage(''); setCamName('');
-    setSendProgress({ done: 0, total: 0, errors: 0 });
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -635,28 +651,46 @@ export default function CampaignManager() {
           {camType && (
             <>
               {/* Channel */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Canal</div>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  {CHANNELS.map(ch => {
-                    const active = channel === ch.value;
-                    return (
-                      <button key={ch.value} onClick={() => setChannel(ch.value)} style={{
-                        padding: '10px 16px', borderRadius: 10, flex: 1,
-                        border: `2px solid ${active ? ch.color : T.border}`,
-                        background: active ? ch.color + '08' : T.card,
-                        cursor: 'pointer', fontFamily: font, textAlign: 'left',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                          <ch.Icon size={14} color={active ? ch.color : T.muted} />
-                          <span style={{ fontWeight: 700, color: active ? ch.color : T.ink, fontSize: '0.82rem' }}>{ch.label}</span>
+              {(() => {
+                const allowed = CAMPAIGN_TYPES.find(t => t.value === camType)?.allowedChannels || ['whatsapp', 'email'];
+                const visibleChannels = CHANNELS.filter(ch => allowed.includes(ch.value));
+                return (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Canal</div>
+                    {visibleChannels.length === 1 ? (() => {
+                      const onlyCh = visibleChannels[0];
+                      const OnlyIcon = onlyCh.Icon;
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: onlyCh.color + '08', border: `2px solid ${onlyCh.color}` }}>
+                          <OnlyIcon size={14} color={onlyCh.color} />
+                          <span style={{ fontWeight: 700, color: onlyCh.color, fontSize: '0.82rem' }}>{onlyCh.label}</span>
+                          <span style={{ fontSize: '0.7rem', color: T.muted, marginLeft: 4 }}>— único canal disponible para este tipo de campaña</span>
                         </div>
-                        <div style={{ fontSize: '0.68rem', color: T.muted }}>{ch.desc}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                      );
+                    })() : (
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        {visibleChannels.map(ch => {
+                          const active = channel === ch.value;
+                          return (
+                            <button key={ch.value} onClick={() => setChannel(ch.value)} style={{
+                              padding: '10px 16px', borderRadius: 10, flex: 1,
+                              border: `2px solid ${active ? ch.color : T.border}`,
+                              background: active ? ch.color + '08' : T.card,
+                              cursor: 'pointer', fontFamily: font, textAlign: 'left',
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                                <ch.Icon size={14} color={active ? ch.color : T.muted} />
+                                <span style={{ fontWeight: 700, color: active ? ch.color : T.ink, fontSize: '0.82rem' }}>{ch.label}</span>
+                              </div>
+                              <div style={{ fontSize: '0.68rem', color: T.muted }}>{ch.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Location filter */}
               {locations.length > 1 && (

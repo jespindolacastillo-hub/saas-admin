@@ -152,6 +152,51 @@ function MetricCard({ label, value, sub, color, Icon, loading, accent }) {
 }
 
 // ─── TOOLTIP EXPLANATIONS ─────────────────────────────────────────────────────
+// ─── Info tooltip ─────────────────────────────────────────────────────────────
+function InfoTooltip({ text }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-flex', cursor: 'help' }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      <Info size={13} color={visible ? T.coral : T.muted} />
+      {visible && (
+        <div style={{
+          position: 'absolute',
+          bottom: 'calc(100% + 8px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#1F2937',
+          color: '#fff',
+          borderRadius: 8,
+          padding: '9px 13px',
+          fontSize: '0.72rem',
+          lineHeight: 1.55,
+          width: 260,
+          zIndex: 200,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+          pointerEvents: 'none',
+          whiteSpace: 'normal',
+        }}>
+          {text}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0, height: 0,
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: '6px solid #1F2937',
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 const REASONS = {
   seo: "VALOR ESTRATÉGICO: Valor proyectado a largo plazo por cada reseña de 5 estrellas en Google Business. Calculado mediante un factor de visibilidad del 2.8x sobre el ticket promedio (tráfico orgánico incremental).",
   recovery: "VALOR TRANSACCIONAL: Ingresos reales capturados en el punto de venta (POS) de clientes que regresaron físicamente a validar su incentivo de lealtad.",
@@ -247,9 +292,7 @@ function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenu
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink }}>Impacto Futuro</span>
-                      <div title={REASONS.seo} style={{ cursor: 'help' }}>
-                        <Info size={12} color={T.muted} />
-                      </div>
+                      <InfoTooltip text={REASONS.seo} />
                     </div>
                     <div style={{ fontSize: '0.68rem', color: T.muted }}>Proyección por Reviews</div>
                   </div>
@@ -261,9 +304,7 @@ function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenu
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.ink }}>Recuperación Real</span>
-                      <div title={REASONS.recovery} style={{ cursor: 'help' }}>
-                        <Info size={12} color={T.muted} />
-                      </div>
+                      <InfoTooltip text={REASONS.recovery} />
                     </div>
                     <div style={{ fontSize: '0.68rem', color: T.muted }}>Ventas confirmadas POS</div>
                   </div>
@@ -275,9 +316,7 @@ function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenu
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.muted }}>Costo Incentivos</span>
-                      <div title={REASONS.incentives} style={{ cursor: 'help' }}>
-                        <Info size={12} color={T.muted} />
-                      </div>
+                      <InfoTooltip text={REASONS.incentives} />
                     </div>
                     <div style={{ fontSize: '0.68rem', color: T.muted }}>Descuento otorgado</div>
                   </div>
@@ -289,9 +328,7 @@ function RevenueCard({ reviewsGen, recovered, plan, isTrial, loading, realRevenu
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: T.muted }}>Costo Retelio</span>
-                      <div title={REASONS.subscription} style={{ cursor: 'help' }}>
-                        <Info size={12} color={T.muted} />
-                      </div>
+                      <InfoTooltip text={REASONS.subscription} />
                     </div>
                     <div style={{ fontSize: '0.68rem', color: T.muted }}>Suscripción {plan}</div>
                   </div>

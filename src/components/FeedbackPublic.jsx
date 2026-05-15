@@ -513,20 +513,21 @@ function DoneNeutral({ onSuggest }) {
 
 // ─── Done: happy ──────────────────────────────────────────────────────────────
 function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick, testMode }) {
-  const [showPhone, setShowPhone] = useState(false);
-  const [phone, setPhone]         = useState('');
   const [googleClicked, setGoogleClicked] = useState(false);
-  const [loyaltyDone, setLoyaltyDone] = useState(false);
+  const [contactShown, setContactShown]   = useState(false);
+  const [contactDone, setContactDone]     = useState(false);
+  const [phone, setPhone]                 = useState('');
+  const [email, setEmail]                 = useState('');
 
   const handleGoogleClick = () => {
     setGoogleClicked(true);
     if (onGoogleClick) onGoogleClick();
   };
 
-  const handleLoyalty = () => {
-    if (!phone.trim()) return;
-    onLoyalty(phone.trim());
-    setLoyaltyDone(true);
+  const handleSaveContact = () => {
+    if (!phone.trim() && !email.trim()) return;
+    onLoyalty({ phone: phone.trim() || null, email: email.trim() || null });
+    setContactDone(true);
   };
 
   return (
@@ -546,14 +547,14 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
       )}
 
       {testMode && !googleUrl && (
-        <div style={{ 
-          background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 12, 
+        <div style={{
+          background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 12,
           padding: '14px', marginBottom: 16, textAlign: 'left', display: 'flex', gap: 10,
           animation: 'fadeSlide 0.4s ease-out'
         }}>
           <span style={{ fontSize: '1.2rem' }}>💡</span>
           <div style={{ fontSize: '0.8rem', color: '#92400E', lineHeight: 1.45 }}>
-            <strong style={{ display: 'block', marginBottom: 2 }}>Aviso de Configuración:</strong> 
+            <strong style={{ display: 'block', marginBottom: 2 }}>Aviso de Configuración:</strong>
             El botón de Google no aparece porque falta el Link de Reseñas en los ajustes de esta sucursal.
           </div>
         </div>
@@ -571,12 +572,12 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
             </p>
           </div>
         ) : (
-          <div style={{ 
-            padding: '20px', 
-            borderRadius: 14, 
-            background: 'rgba(255,255,255,0.03)', 
-            border: `1px dashed ${S.border}`, 
-            textAlign: 'center', 
+          <div style={{
+            padding: '20px',
+            borderRadius: 14,
+            background: 'rgba(255,255,255,0.03)',
+            border: `1px dashed ${S.border}`,
+            textAlign: 'center',
             marginBottom: 16,
             display: 'flex',
             flexDirection: 'column',
@@ -592,27 +593,59 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
         )
       )}
 
-      {/* Loyalty phone capture — only if no coupon configured */}
-      {!loyaltyCouponCode && (
-        <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16 }}>
-          {loyaltyDone ? (
-            <p style={{ fontSize: '0.9rem', color: S.teal, fontWeight: 600, textAlign: 'center' }}>✓ ¡Listo! Te avisaremos de las mejores ofertas</p>
-          ) : !showPhone ? (
-            <button className="rf-btn rf-btn-ghost" onClick={() => setShowPhone(true)}
+      {/* Contact capture — always shown */}
+      <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16 }}>
+        {contactDone ? (
+          <p style={{ fontSize: '0.9rem', color: S.teal, fontWeight: 600, textAlign: 'center' }}>
+            ¡Listo! Te avisaremos de las mejores ofertas
+          </p>
+        ) : !contactShown ? (
+          <div style={{ textAlign: 'center' }}>
+            <button className="rf-btn rf-btn-ghost" onClick={() => setContactShown(true)}
               style={{ color: S.ink, fontSize: '0.9rem' }}>
-              🎁 Recibir ofertas exclusivas
+              Recibir ofertas y beneficios exclusivos
             </button>
-          ) : (
-            <div style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: '0.85rem', fontWeight: 600, color: S.ink, marginBottom: 10 }}>Tu teléfono para ofertas exclusivas</p>
-              <input type="tel" className="rf-input" placeholder="55 1234 5678" value={phone} onChange={e => setPhone(e.target.value)} autoFocus />
-              <button className="rf-btn rf-btn-primary" disabled={!phone.trim()} onClick={handleLoyalty}>
-                Recibir ofertas →
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'left' }}>
+            <p style={{ fontSize: '0.85rem', fontWeight: 700, color: S.ink, marginBottom: 4 }}>
+              ¿Quieres recibir beneficios exclusivos?
+            </p>
+            <p style={{ fontSize: '0.78rem', color: S.muted, marginBottom: 14 }}>
+              Déjanos tu correo o WhatsApp — ambos son opcionales
+            </p>
+            <input
+              type="email"
+              className="rf-input"
+              placeholder="tu@correo.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={{ marginBottom: 10 }}
+            />
+            <input
+              type="tel"
+              className="rf-input"
+              placeholder="55 1234 5678 (WhatsApp)"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+            />
+            <button
+              className="rf-btn rf-btn-primary"
+              disabled={!phone.trim() && !email.trim()}
+              onClick={handleSaveContact}
+            >
+              Guardar
+            </button>
+            <button
+              className="rf-btn rf-btn-ghost"
+              onClick={() => setContactShown(false)}
+              style={{ color: S.muted, fontSize: '0.82rem', marginTop: 4 }}
+            >
+              No, gracias
+            </button>
+          </div>
+        )}
+      </div>
 
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
@@ -666,6 +699,7 @@ export default function FeedbackPublic() {
   const [loyaltyCouponCode, setLoyaltyCouponCode] = useState(null);
   const [feedbackId, setFeedbackId] = useState(null);
   const [contactPhone, setContactPhone] = useState(null);
+  const [contactEmail, setContactEmail] = useState(null);
 
   // screen: 'score' | 'reason' | 'contact' | 'done-bad' | 'done-neutral' | 'done-happy'
   const [screen, setScreen] = useState('score');
@@ -836,6 +870,7 @@ export default function FeedbackPublic() {
         ip_hash:          getDeviceHash(),
         is_test:          testMode || qr.tenant?.test_mode || false,
         contact_phone:    phone || null,
+        contact_email:    null,
       }).select('id').single();
 
       if (insertError) {
@@ -908,7 +943,7 @@ export default function FeedbackPublic() {
       googleUrl={location?.google_review_url} 
       loyaltyCouponCode={loyaltyCouponCode} 
       loyaltyConfig={loyalty} 
-      onLoyalty={(ph) => updateFeedback({ contact_phone: ph })} 
+      onLoyalty={({ phone: ph, email: em }) => updateFeedback({ contact_phone: ph || null, contact_email: em || null })}
       onGoogleClick={() => updateFeedback({ google_click_at: new Date().toISOString() })}
       testMode={testMode}
     />);

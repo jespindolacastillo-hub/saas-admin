@@ -98,29 +98,23 @@ export default function CouponValidation({ userEmail }) {
     if (!cfg || !autoDiscount) {
       const { data: r } = await supabase.from('recovery_config').select('*').eq('tenant_id', tenant.id).maybeSingle();
       if (r) {
-        // Only override cfg if we don't have one from Step 1
+        // Coupon prefix is the reliable discriminator — recovery_sent is true for loyalty coupons too
+        const isLoyaltyCoupon = fb.coupon_code?.startsWith('LOYAL');
+
         if (!cfg) {
-          if (fb.recovery_sent) {
-            cfg = { name: 'Recuperación', offer_description: r.offer_description, validity_days: r.validity_days };
-          } else if (fb.coupon_code && fb.coupon_code.startsWith('LOYAL')) {
+          if (isLoyaltyCoupon) {
             cfg = { name: 'Lealtad', offer_description: r.loyalty_offer_description, validity_days: r.loyalty_validity_days };
+          } else if (fb.recovery_sent) {
+            cfg = { name: 'Recuperación', offer_description: r.offer_description, validity_days: r.validity_days };
           }
         }
-        
-        // Grab values from global if available and appropriate
-        if (fb.recovery_sent) {
-          autoDiscount = autoDiscount || r.offer_value || parseDiscount(r.offer_description);
-        } else if (fb.coupon_code && fb.coupon_code.startsWith('LOYAL')) {
+
+        if (isLoyaltyCoupon) {
           autoDiscount = autoDiscount || r.loyalty_offer_value || parseDiscount(r.loyalty_offer_description);
+        } else if (fb.recovery_sent) {
+          autoDiscount = autoDiscount || r.offer_value || parseDiscount(r.offer_description);
         }
 
-        // Final safety check: ensure autoDiscount is never lost if we have a description showing it
-        if (!autoDiscount && cfg?.offer_description) {
-          const parsed = parseDiscount(cfg.offer_description);
-          if (parsed) autoDiscount = parsed;
-        }
-
-        // Final safety check: if we have a config description but no autoDiscount yet, parse it
         if (!autoDiscount && cfg?.offer_description) {
           autoDiscount = parseDiscount(cfg.offer_description);
         }

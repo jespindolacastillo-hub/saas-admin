@@ -926,7 +926,7 @@ export default function IssueManagement({ tenantOverride } = {}) {
     try {
       const isTest = !!tenant.test_mode;
       const [feedbacks, stores, areas, recoveryConfigRes, qrCodesRes] = await Promise.all([
-        dataService.fetchFeedbacks(tenant.id, isTest),
+        dataService.fetchFeedbacks(tenant.id, isTest, { ignoreTestFilter: true }),
         dataService.fetchStores(tenant.id),
         dataService.fetchAreas(tenant.id),
         supabase.from('recovery_config').select('*').eq('tenant_id', tenant.id),

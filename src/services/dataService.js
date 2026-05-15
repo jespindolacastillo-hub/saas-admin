@@ -11,16 +11,19 @@ export const dataService = {
   /**
    * Fetches feedbacks from the modern `feedbacks` table only.
    */
-  async fetchFeedbacks(tenantId, isTest = false) {
+  async fetchFeedbacks(tenantId, isTest = false, { ignoreTestFilter = false } = {}) {
     if (!tenantId) return [];
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('feedbacks')
         .select('id, location_id, qr_id, score, comment, followup_answer, contact_phone, created_at, recovery_status, recovery_at, recovery_actor, recovery_resolved_at, coupon_code, coupon_redeemed, coupon_redeemed_at, coupon_redeemed_by, coupon_not_returned, recovery_sent, is_test, redeemed_amount, applied_discount_pct, coupon_config_id, routed_to_google, google_click_at')
         .eq('tenant_id', tenantId)
-        .eq('is_test', isTest)
         .order('created_at', { ascending: false });
+
+      if (!ignoreTestFilter) query = query.eq('is_test', isTest);
+
+      const { data, error } = await query;
 
       if (error) throw error;
 

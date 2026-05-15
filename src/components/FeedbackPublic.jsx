@@ -205,8 +205,9 @@ const css = `
     100% { transform: rotateY(0deg)  scale(1);    opacity: 1; }
   }
   @keyframes rf-confetti {
-    0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
-    100% { transform: translateY(100px) rotate(540deg); opacity: 0; }
+    0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translate(var(--tx, 30px), var(--ty, -60px)) scale(0.5) rotate(480deg); opacity: 0; }
   }
 `;
 
@@ -532,29 +533,34 @@ function DoneNeutral({ onSuggest }) {
 // ─── Confetti burst ───────────────────────────────────────────────────────────
 function Confetti() {
   const pieces = [
-    { x: -52, color: '#FF5C3A', delay: 0,    size: 8, round: true  },
-    { x: -32, color: '#00C9A7', delay: 0.07, size: 6, round: false },
-    { x: -14, color: '#7C3AED', delay: 0.03, size: 7, round: true  },
-    { x:   6, color: '#FF5C3A', delay: 0.13, size: 5, round: false },
-    { x:  24, color: '#00C9A7', delay: 0.05, size: 8, round: true  },
-    { x:  44, color: '#F59E0B', delay: 0.17, size: 6, round: false },
-    { x:  64, color: '#7C3AED', delay: 0.10, size: 5, round: true  },
-    { x: -64, color: '#FF5C3A', delay: 0.20, size: 7, round: false },
-    { x: -42, color: '#F59E0B', delay: 0.09, size: 5, round: true  },
-    { x:  14, color: '#7C3AED', delay: 0.15, size: 6, round: false },
-    { x:  34, color: '#FF5C3A', delay: 0.22, size: 8, round: true  },
-    { x: -22, color: '#00C9A7', delay: 0.02, size: 5, round: false },
+    { tx: -70, ty: -90, color: '#FF5C3A', delay: 0,    size: 11, round: true  },
+    { tx:  50, ty:-110, color: '#00C9A7', delay: 0.06, size:  9, round: false },
+    { tx: -30, ty:-130, color: '#7C3AED', delay: 0.03, size: 10, round: true  },
+    { tx:  80, ty: -80, color: '#FF5C3A', delay: 0.12, size:  8, round: false },
+    { tx: -90, ty: -70, color: '#F59E0B', delay: 0.08, size: 11, round: true  },
+    { tx:  20, ty:-140, color: '#00C9A7', delay: 0.15, size:  9, round: false },
+    { tx: -55, ty:-120, color: '#7C3AED', delay: 0.05, size: 10, round: true  },
+    { tx: 100, ty: -90, color: '#FF5C3A', delay: 0.18, size:  8, round: false },
+    { tx: -15, ty:-105, color: '#F59E0B', delay: 0.10, size:  9, round: true  },
+    { tx:  65, ty:-125, color: '#00C9A7', delay: 0.14, size: 11, round: false },
+    { tx: -80, ty: -95, color: '#FF5C3A', delay: 0.02, size:  8, round: true  },
+    { tx:  35, ty:-115, color: '#7C3AED', delay: 0.20, size: 10, round: false },
+    { tx: -45, ty: -85, color: '#F59E0B', delay: 0.07, size:  9, round: true  },
+    { tx:  90, ty:-100, color: '#FF5C3A', delay: 0.16, size: 11, round: false },
+    { tx: -60, ty:-135, color: '#00C9A7', delay: 0.11, size:  8, round: true  },
   ];
   return (
-    <div style={{ position: 'absolute', top: 0, left: '50%', pointerEvents: 'none', zIndex: 20 }}>
+    <div style={{ position: 'fixed', top: '40%', left: '50%', pointerEvents: 'none', zIndex: 9999 }}>
       {pieces.map((p, i) => (
         <div key={i} style={{
           position: 'absolute',
           width: p.size, height: p.size,
           borderRadius: p.round ? '50%' : 2,
           background: p.color,
-          left: p.x, top: -8,
-          animation: `rf-confetti 1.4s ease-out ${p.delay}s forwards`,
+          left: 0, top: 0,
+          '--tx': `${p.tx}px`,
+          '--ty': `${p.ty}px`,
+          animation: `rf-confetti 1.6s ease-out ${p.delay}s forwards`,
         }} />
       ))}
     </div>
@@ -562,7 +568,7 @@ function Confetti() {
 }
 
 // ─── Done: happy ──────────────────────────────────────────────────────────────
-function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick, testMode }) {
+function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick, testMode, businessName }) {
   const [googleClicked, setGoogleClicked] = useState(false);
   const [justUnlocked, setJustUnlocked]   = useState(false);
   const [showConfetti, setShowConfetti]   = useState(false);
@@ -691,10 +697,11 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
           ) : (
             <div style={{ textAlign: 'left', animation: justUnlocked ? 'fadeSlide 0.4s ease-out 0.5s both' : 'none' }}>
               <p style={{ fontSize: '0.85rem', fontWeight: 700, color: S.ink, marginBottom: 4 }}>
-                ¿Quieres recibir más beneficios?
+                Te lo guardamos para ti
               </p>
               <p style={{ fontSize: '0.78rem', color: S.muted, marginBottom: 14 }}>
-                Déjanos tu correo o WhatsApp — ambos son opcionales
+                Envíate el cupón al correo o WhatsApp para tenerlo listo al pagar
+                {businessName ? `. Y como cliente frecuente de ${businessName}, te avisaremos cuando haya algo especial para ti.` : '. También recibirás ofertas exclusivas solo para ti.'}
               </p>
               <input type="email" className="rf-input" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} style={{ marginBottom: 10 }} />
               <input type="tel" className="rf-input" placeholder="55 1234 5678 (WhatsApp)" value={phone} onChange={e => setPhone(e.target.value)} />
@@ -1008,6 +1015,7 @@ export default function FeedbackPublic() {
       onLoyalty={({ phone: ph, email: em }) => updateFeedback({ contact_phone: ph || null, contact_email: em || null })}
       onGoogleClick={() => updateFeedback({ google_click_at: new Date().toISOString() })}
       testMode={testMode}
+      businessName={location?.name}
     />);
 
   return null;

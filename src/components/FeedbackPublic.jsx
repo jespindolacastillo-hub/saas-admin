@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 
@@ -190,6 +190,24 @@ const css = `
     to   { opacity: 1; transform: translateY(0); }
   }
   .rf-card { animation: fadeSlide .25s ease; }
+
+  @keyframes rf-shimmer {
+    0%   { background-position: -220% center; }
+    100% { background-position:  220% center; }
+  }
+  @keyframes rf-glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,201,167,0),    0 4px 20px rgba(0,0,0,0.14); }
+    50%       { box-shadow: 0 0 0 6px rgba(0,201,167,0.22), 0 4px 20px rgba(0,0,0,0.14); }
+  }
+  @keyframes rf-flip {
+    0%   { transform: rotateY(90deg) scale(0.96); opacity: 0; }
+    65%  { transform: rotateY(-5deg) scale(1.02); opacity: 1; }
+    100% { transform: rotateY(0deg)  scale(1);    opacity: 1; }
+  }
+  @keyframes rf-confetti {
+    0%   { transform: translateY(0)     rotate(0deg);   opacity: 1; }
+    100% { transform: translateY(100px) rotate(540deg); opacity: 0; }
+  }
 `;
 
 const EMOJIS = [
@@ -511,18 +529,63 @@ function DoneNeutral({ onSuggest }) {
   );
 }
 
+// ─── Confetti burst ───────────────────────────────────────────────────────────
+function Confetti() {
+  const pieces = [
+    { x: -52, color: '#FF5C3A', delay: 0,    size: 8, round: true  },
+    { x: -32, color: '#00C9A7', delay: 0.07, size: 6, round: false },
+    { x: -14, color: '#7C3AED', delay: 0.03, size: 7, round: true  },
+    { x:   6, color: '#FF5C3A', delay: 0.13, size: 5, round: false },
+    { x:  24, color: '#00C9A7', delay: 0.05, size: 8, round: true  },
+    { x:  44, color: '#F59E0B', delay: 0.17, size: 6, round: false },
+    { x:  64, color: '#7C3AED', delay: 0.10, size: 5, round: true  },
+    { x: -64, color: '#FF5C3A', delay: 0.20, size: 7, round: false },
+    { x: -42, color: '#F59E0B', delay: 0.09, size: 5, round: true  },
+    { x:  14, color: '#7C3AED', delay: 0.15, size: 6, round: false },
+    { x:  34, color: '#FF5C3A', delay: 0.22, size: 8, round: true  },
+    { x: -22, color: '#00C9A7', delay: 0.02, size: 5, round: false },
+  ];
+  return (
+    <div style={{ position: 'absolute', top: 0, left: '50%', pointerEvents: 'none', zIndex: 20 }}>
+      {pieces.map((p, i) => (
+        <div key={i} style={{
+          position: 'absolute',
+          width: p.size, height: p.size,
+          borderRadius: p.round ? '50%' : 2,
+          background: p.color,
+          left: p.x, top: -8,
+          animation: `rf-confetti 1.4s ease-out ${p.delay}s forwards`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
 // ─── Done: happy ──────────────────────────────────────────────────────────────
 function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onGoogleClick, testMode }) {
   const [googleClicked, setGoogleClicked] = useState(false);
+  const [justUnlocked, setJustUnlocked]   = useState(false);
+  const [showConfetti, setShowConfetti]   = useState(false);
   const [contactShown, setContactShown]   = useState(true);
   const [contactDone, setContactDone]     = useState(false);
   const [phone, setPhone]                 = useState('');
   const [email, setEmail]                 = useState('');
+  const prevClicked = useRef(false);
 
   const handleGoogleClick = () => {
     setGoogleClicked(true);
     if (onGoogleClick) onGoogleClick();
   };
+
+  useEffect(() => {
+    if (googleClicked && !prevClicked.current && loyaltyCouponCode) {
+      setJustUnlocked(true);
+      setShowConfetti(true);
+      setTimeout(() => setJustUnlocked(false), 2200);
+      setTimeout(() => setShowConfetti(false), 1600);
+    }
+    prevClicked.current = googleClicked;
+  }, [googleClicked, loyaltyCouponCode]);
 
   const handleSaveContact = () => {
     if (!phone.trim() && !email.trim()) return;
@@ -560,34 +623,74 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
         </div>
       )}
 
-      {/* Loyalty coupon — shown if configured AND (no google URL or google was clicked) */}
+      {/* Loyalty coupon — locked until Google review clicked */}
       {loyaltyCouponCode && loyaltyConfig && (
         (!googleUrl || googleClicked) ? (
-          <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
-            <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
-            <p className="rf-coupon-code notranslate" translate="no">{loyaltyCouponCode}</p>
-            <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
-            <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
-              Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar
-            </p>
+          <div style={{ position: 'relative', marginBottom: 16 }}>
+            {showConfetti && <Confetti />}
+            {justUnlocked && (
+              <p style={{
+                textAlign: 'center', fontSize: '0.88rem', fontWeight: 700,
+                color: S.teal, marginBottom: 10,
+                animation: 'fadeSlide 0.3s ease-out',
+              }}>
+                ¡Desbloqueaste tu recompensa! 🎉
+              </p>
+            )}
+            <div
+              className="rf-coupon"
+              style={{
+                textAlign: 'left',
+                animation: justUnlocked ? 'rf-flip 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none',
+                transformOrigin: 'center',
+              }}
+            >
+              <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
+              <p className="rf-coupon-code notranslate" translate="no">{loyaltyCouponCode}</p>
+              <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
+              <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
+                Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar
+              </p>
+            </div>
           </div>
         ) : (
+          /* ── Locked gift card with shimmer + glow pulse ── */
           <div style={{
-            padding: '20px',
-            borderRadius: 14,
-            background: 'rgba(255,255,255,0.03)',
-            border: `1px dashed ${S.border}`,
-            textAlign: 'center',
+            borderRadius: 16,
+            padding: '22px 20px',
             marginBottom: 16,
+            background: 'linear-gradient(110deg, #12121f 25%, #1c1c38 50%, #12121f 75%)',
+            backgroundSize: '220% auto',
+            animation: 'rf-shimmer 2.4s linear infinite, rf-glow-pulse 2.8s ease-in-out infinite',
+            border: '1.5px solid rgba(0,201,167,0.25)',
+            textAlign: 'center',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 10
+            gap: 10,
           }}>
-            <div style={{ fontSize: '1.5rem', opacity: 0.5 }}>🔒</div>
-            <p style={{ fontSize: '0.85rem', color: S.muted, margin: 0 }}>
-              Calculando tu recompensa... <br/>
-              <span style={{ fontWeight: 600, color: S.ink }}>Deja una reseña para desbloquear</span>
+            <div style={{ fontSize: '2rem' }}>🎁</div>
+            <p style={{ fontSize: '0.92rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+              Tu recompensa está lista
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'rgba(0,201,167,0.9)', margin: 0, fontWeight: 600 }}>
+              {loyaltyConfig.loyalty_offer_description}
+            </p>
+            <div style={{
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: 10,
+              padding: '8px 20px',
+              border: '1px dashed rgba(255,255,255,0.12)',
+              letterSpacing: '0.3em',
+              fontSize: '1.2rem',
+              color: 'rgba(255,255,255,0.2)',
+              fontFamily: 'monospace',
+              userSelect: 'none',
+            }}>
+              ● ● ● ● ● ●
+            </div>
+            <p style={{ fontSize: '0.73rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>
+              Escribe una reseña en Google para desbloquearlo ↑
             </p>
           </div>
         )

@@ -390,40 +390,78 @@ function StepReason({ config, onNext, onSkip }) {
 }
 
 // ─── Step 3: Contact (bad scores only) ───────────────────────────────────────
-function StepContact({ submitting, onSubmit, onSkip }) {
+function StepContact({ submitting, onSubmit, onSkip, businessName }) {
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
+  const canSubmit = phone.trim() || email.trim();
 
   return (
     <div className="rf-card">
       <Logo />
       <Progress total={3} current={1} />
       <p className="rf-step-label">Paso 2 de 2</p>
-      <div style={{ background: '#FFF3F0', border: '1.5px solid #FFCFC4', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '1.3rem', lineHeight: 1 }}>🚨</span>
+
+      <div style={{ background: '#EFF6FF', border: '1.5px solid #BFDBFE', borderRadius: 12, padding: '12px 16px', marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>⏱️</span>
         <div>
-          <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#B91C1C', marginBottom: 2 }}>Ya notificamos al gerente</p>
-          <p style={{ fontSize: '0.78rem', color: S.muted, lineHeight: 1.45 }}>Tu caso está en revisión. ¿Quieres que te contacten para resolverlo hoy?</p>
+          <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1E40AF', marginBottom: 2 }}>Queremos resolverlo hoy mismo</p>
+          <p style={{ fontSize: '0.78rem', color: S.muted, lineHeight: 1.45 }}>
+            Te contactamos en menos de 2 horas por WhatsApp o correo.
+          </p>
         </div>
       </div>
-      <h2 className="rf-step-title">¿Te llamamos para resolverlo?</h2>
+
+      <h2 className="rf-step-title">¿Cómo te contactamos?</h2>
+
       <input
         type="tel"
         className="rf-input"
-        placeholder="55 1234 5678"
+        placeholder="📱 WhatsApp  55 1234 5678"
         value={phone}
         onChange={e => setPhone(e.target.value)}
         autoFocus
       />
+      <input
+        type="email"
+        className="rf-input"
+        placeholder="📧 tu@correo.com"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+      />
+
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginTop: 4, marginBottom: 16 }}>
+        <input
+          type="checkbox"
+          checked={marketingConsent}
+          onChange={e => setMarketingConsent(e.target.checked)}
+          style={{ marginTop: 2, accentColor: S.teal, width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }}
+        />
+        <span style={{ fontSize: '0.74rem', color: S.muted, lineHeight: 1.5 }}>
+          Deseo recibir comunicaciones y ofertas{businessName ? ` de ${businessName}` : ''} en el futuro
+        </span>
+      </label>
+
       <button
         className="rf-btn rf-btn-primary"
-        disabled={!phone.trim() || submitting}
-        onClick={() => onSubmit(phone.trim())}
-        style={{ marginBottom: 8 }}
+        disabled={!canSubmit || submitting}
+        onClick={() => onSubmit({ phone: phone.trim() || null, email: email.trim() || null, marketingConsent })}
+        style={{ marginBottom: 6 }}
       >
-        {submitting ? 'Enviando…' : 'Sí, que me llamen'}
+        {submitting ? 'Enviando…' : 'Quiero que me contacten'}
       </button>
+
+      <p style={{ fontSize: '0.67rem', color: S.muted, textAlign: 'center', marginBottom: 4, lineHeight: 1.55 }}>
+        Al continuar aceptas nuestro{' '}
+        <a href="https://retelio.com.mx/privacidad" target="_blank" rel="noreferrer"
+          style={{ color: S.teal, textDecoration: 'none', fontWeight: 600 }}>
+          Aviso de Privacidad
+        </a>
+      </p>
+
       <button className="rf-btn rf-btn-ghost" disabled={submitting} onClick={onSkip}>
-        No, gracias
+        No, solo quería dejar mi opinión
       </button>
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
@@ -431,32 +469,34 @@ function StepContact({ submitting, onSubmit, onSkip }) {
 }
 
 // ─── Done: bad score ──────────────────────────────────────────────────────────
-function DoneBad({ couponCode, couponConfig, hasPhone, category, comment }) {
-  let title = 'Notificamos al equipo';
-  let desc = 'Un manager revisará tu caso hoy y tomará acción para mejorar tu experiencia.';
+function DoneBad({ couponCode, couponConfig, hasPhone, hasEmail, category, comment }) {
+  const hasContact = hasPhone || hasEmail;
+  const channel = hasPhone ? 'WhatsApp' : 'correo';
 
-  if (hasPhone) {
+  let title = 'Recibimos tu reporte';
+  let desc = 'El equipo revisará tu caso hoy y tomará acción para que no vuelva a pasar.';
+
+  if (hasContact) {
     title = '¡Listo! Te contactamos pronto';
-    desc = 'Un manager te contactará en menos de 2 horas para resolver tu caso personalmente.';
+    desc = `Alguien del equipo te escribirá en menos de 2 horas por ${channel} para resolver esto personalmente.`;
   }
 
-  // Empathetic adjustments depending on what went wrong
   if (category && category !== 'Comentario' && category !== 'Otro') {
-    title = `Lamentamos el inconveniente`;
-    desc = hasPhone 
-      ? `Un manager te contactará en breve para atender personalmente tu reporte sobre ${category.toLowerCase()}.`
-      : `Hemos canalizado tu reporte sobre ${category.toLowerCase()} con el equipo para solucionarlo cuanto antes.`;
+    title = 'Gracias por decirnos';
+    desc = hasContact
+      ? `Te contactamos en menos de 2 horas por ${channel} para atender tu reporte sobre ${category.toLowerCase()}.`
+      : `Tu reporte sobre ${category.toLowerCase()} ya está con el equipo para que lo solucionen hoy.`;
   } else if (comment && comment.length > 5) {
-    title = 'Lamentamos tu mala experiencia';
-    desc = hasPhone 
-      ? 'Un supervisor te llamará para escuchar tus comentarios y resolver esta situación.'
-      : 'Tus comentarios han sido enviados directamente a la administración para tomar medidas.';
+    title = 'Gracias por contarnos';
+    desc = hasContact
+      ? `Te escribimos en menos de 2 horas por ${channel} para escucharte y resolver esto juntos.`
+      : 'Tus comentarios llegaron directo al equipo. Los usaremos para mejorar.';
   }
 
   return (
     <div className="rf-card rf-state">
       <Logo />
-      <div className="rf-state-icon">{hasPhone ? '📞' : '⚡'}</div>
+      <div className="rf-state-icon">{hasContact ? (hasPhone ? '💬' : '📧') : '⚡'}</div>
       <h2 className="rf-state-title" style={{ fontSize: '1.4rem', fontWeight: 800, color: S.ink, marginBottom: '12px' }}>{title}</h2>
       <p className="rf-state-desc" style={{ fontSize: '0.95rem', color: S.muted, lineHeight: 1.6, marginBottom: '24px' }}>{desc}</p>
       
@@ -907,9 +947,10 @@ export default function FeedbackPublic() {
     }
   };
 
-  const handleContactSubmit = (phone) => {
+  const handleContactSubmit = ({ phone, email, marketingConsent }) => {
     setContactPhone(phone);
-    submitFeedback({ score, category, comment, phone });
+    setContactEmail(email);
+    submitFeedback({ score, category, comment, phone, email, marketingConsent });
   };
 
   const handleContactSkip = () => {
@@ -922,7 +963,7 @@ export default function FeedbackPublic() {
   };
 
   // ── Single INSERT ─────────────────────────────────────────────────────────────
-  const submitFeedback = async ({ score: s, category: cat, comment: cmt, phone }) => {
+  const submitFeedback = async ({ score: s, category: cat, comment: cmt, phone, email, marketingConsent }) => {
     if (!qr) return;
     setSubmitting(true);
 
@@ -967,8 +1008,11 @@ export default function FeedbackPublic() {
         area_id:          qr.area_id || null,
         ip_hash:          getDeviceHash(),
         is_test:          testMode || qr.tenant?.test_mode || false,
-        contact_phone:    phone || null,
-        contact_email:    null,
+        contact_phone:     phone || null,
+        contact_email:     email || null,
+        marketing_consent: marketingConsent ?? false,
+        consent_at:        (phone || email) ? new Date().toISOString() : null,
+        consent_version:   (phone || email) ? '1.0' : null,
       }).select('id').single();
 
       if (insertError) {
@@ -1028,10 +1072,10 @@ export default function FeedbackPublic() {
     return wrap(<StepReason config={questionConfig} onNext={handleReasonNext} onSkip={handleReasonSkip} />);
 
   if (screen === 'contact')
-    return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} />);
+    return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} businessName={location?.name} />);
 
   if (screen === 'done-bad')
-    return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} hasPhone={!!contactPhone} category={category} comment={comment} />);
+    return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} hasPhone={!!contactPhone} hasEmail={!!contactEmail} category={category} comment={comment} />);
 
   if (screen === 'done-neutral')
     return wrap(<DoneNeutral onSuggest={(cmt) => updateFeedback({ comment: cmt })} />);

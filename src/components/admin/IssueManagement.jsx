@@ -909,6 +909,15 @@ export default function IssueManagement() {
     if (tenant?.id) loadData();
   }, [tenant?.id]);
 
+  // Auto-refresh every 2 minutes — recovery is time-sensitive
+  useEffect(() => {
+    if (!tenant?.id) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') loadData();
+    }, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [tenant?.id]);
+
   const loadData = async () => {
     if (!tenant?.id) return;
     setLoading(true);

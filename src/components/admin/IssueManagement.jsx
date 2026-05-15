@@ -1017,14 +1017,14 @@ export default function IssueManagement({ tenantOverride } = {}) {
   };
 
   const queueRows = useMemo(() => {
-    let rows = [...hot, ...warm];
-    if (filter === 'hot')  rows = hot;
-    if (filter === 'warm') rows = warm;
-    if (filter === 'cold') rows = expired;
+    let rows = [...hotAll, ...warmAll];
+    if (filter === 'hot')  rows = hotAll;
+    if (filter === 'warm') rows = warmAll;
+    if (filter === 'cold') rows = expiredAll;
     return rows;
   }, [feedbacks, filter]);
 
-  const totalActionable = hot.length + warm.length;
+  const totalActionable = hotAll.length + warmAll.length;
   const pendingCoupons  = feedbacks.filter(f => f.coupon_code && !f.coupon_redeemed && !f.coupon_not_returned).length;
 
   return (
@@ -1044,7 +1044,7 @@ export default function IssueManagement({ tenantOverride } = {}) {
         <div>
           <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: T.ink, marginBottom: 2 }}>Recuperación</h2>
           <p style={{ fontSize: '0.82rem', color: T.muted }}>
-            {loading ? 'Cargando…' : `${totalActionable} por contactar · ${followupRows.length} en seguimiento · ${expired.length} vencidos`}
+            {loading ? 'Cargando…' : `${totalActionable} por atender · ${followupRows.length} en seguimiento · ${expiredAll.length} vencidos`}
           </p>
         </div>
         <button onClick={loadData} disabled={loading} style={{ padding: '8px 14px', borderRadius: 10, border: `1.5px solid ${T.border}`, background: T.card, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: font, fontSize: '0.8rem', fontWeight: 600, color: T.muted }}>
@@ -1120,7 +1120,7 @@ export default function IssueManagement({ tenantOverride } = {}) {
 
           {/* Urgency panel */}
           <UrgencyPanel
-            hot={hot.length} warm={warm.length} cold={expired.length}
+            hot={hotAll.length} warm={warmAll.length} cold={expiredAll.length}
             activeFilter={filter} onFilter={setFilter}
           />
         </>
@@ -1129,7 +1129,7 @@ export default function IssueManagement({ tenantOverride } = {}) {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: T.bg, borderRadius: 12, padding: 4, width: 'fit-content', flexWrap: 'wrap' }}>
         {[
-          { key: 'queue',      label: 'Sin atender',     badge: totalActionable + expired.length, badgeColor: totalActionable > 0 ? T.red : T.muted },
+          { key: 'queue',      label: 'Sin atender',     badge: allPending.length, badgeColor: totalActionable > 0 ? T.red : T.muted },
           { key: 'followup',   label: 'En seguimiento',  badge: followupRows.length, badgeColor: '#3B82F6' },
           { key: 'validation', label: 'Validar cupones', badge: pendingCoupons,      badgeColor: T.amber },
           { key: 'history',    label: 'Historial',       badge: 0,                  badgeColor: T.muted },
@@ -1156,7 +1156,7 @@ export default function IssueManagement({ tenantOverride } = {}) {
           </div>
         ) : (
           <>
-            {queueRows.length === 0 && !expired.length ? (
+            {queueRows.length === 0 && !expiredAll.length ? (
               <div style={{ textAlign: 'center', padding: '64px 24px' }}>
                 <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏆</div>
                 <div style={{ fontWeight: 800, color: T.ink, fontSize: '1.1rem', marginBottom: 8 }}>Sin clientes por atender</div>
@@ -1179,12 +1179,12 @@ export default function IssueManagement({ tenantOverride } = {}) {
             )}
 
             {/* Vencidos section */}
-            {expired.length > 0 && !filter && (
+            {expiredAll.length > 0 && !filter && (
               <div style={{ marginTop: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <div style={{ flex: 1, height: 1, background: T.border }} />
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '.08em', whiteSpace: 'nowrap' }}>
-                    ⚠️ Vencidos sin contactar ({expired.length}) — ventana de recuperación cerrada
+                    ⚠️ Vencidos sin contactar ({expiredAll.length}) — ventana de recuperación cerrada
                   </span>
                   <div style={{ flex: 1, height: 1, background: T.border }} />
                 </div>
@@ -1192,7 +1192,7 @@ export default function IssueManagement({ tenantOverride } = {}) {
                   💡 La probabilidad de recuperar baja a ~15%, pero aún vale el intento. Un mensaje tardío es mejor que ninguno.
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {expired.map(fb => (
+                  {expiredAll.map(fb => (
                     <QueueCard key={fb.id} fb={fb}
                       locationName={locations.find(l => l.id === fb.location_id)?.name}
                       qrLabel={qrLabels[fb.qr_id] || null}
@@ -1204,12 +1204,6 @@ export default function IssueManagement({ tenantOverride } = {}) {
                     />
                   ))}
                 </div>
-              </div>
-            )}
-
-            {noPhone.length > 0 && !filter && (
-              <div style={{ marginTop: 12, padding: '12px 16px', borderRadius: 12, background: T.bg, border: `1px solid ${T.border}`, fontSize: '0.78rem', color: T.muted }}>
-                <strong style={{ color: T.ink }}>{noPhone.length} sin teléfono</strong> — El formulario ahora pide contacto; esto mejorará con el tiempo.
               </div>
             )}
           </>

@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,7 +18,9 @@ serve(async (req) => {
       email,
       subject,
       message,
+      from_name,
       actor_email,
+      campaign_id,
     } = await req.json();
 
     if (!feedback_id || !tenant_id || !email || !message) {
@@ -29,26 +30,21 @@ serve(async (req) => {
       );
     }
 
-    const smtpHost = Deno.env.get("SMTP_HOST");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASS");
-    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") ?? "465");
-
-    if (!smtpHost || !smtpUser || !smtpPass) {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) {
       return new Response(
-        JSON.stringify({ error: "SMTP no configurado. Agrega SMTP_HOST, SMTP_USER, SMTP_PASS a los secrets." }),
+        JSON.stringify({ error: "RESEND_API_KEY no configurado en secrets." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // HTML body
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
         <div style="background: #f7f8fc; border-radius: 12px; padding: 24px 28px;">
           ${message
             .split("\n")
-            .filter(l => l.trim())
-            .map(l => `<p style="margin: 0 0 14px; color: #0D0D12; font-size: 15px; line-height: 1.6;">${l}</p>`)
+            .filter((l: string) => l.trim())
+            .map((l: string) => `<p style="margin: 0 0 14px; color: #0D0D12; font-size: 15px; line-height: 1.6;">${l}</p>`)
             .join("")}
         </div>
         <p style="font-size: 11px; color: #9CA3AF; margin-top: 20px; text-align: center;">
@@ -57,26 +53,31 @@ serve(async (req) => {
       </div>
     `;
 
-    // Send via SMTP (port 465 = SSL)
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpHost,
-        port:     smtpPort,
-        tls:      true,
-        auth: { username: smtpUser, password: smtpPass },
+    const fromLabel = from_name ? `${from_name} via Retelio` : "Retelio";
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        from: `${fromLabel} <noreply@retelio.com.mx>`,
+        to:      [email],
+        subject: subject || "Tienes un mensaje de nosotros",
+        html:    htmlBody,
+      }),
     });
 
-    await client.send({
-      from:    `Retelio <${smtpUser}>`,
-      to:      email,
-      subject: subject || "Tienes un mensaje de nosotros",
-      html:    htmlBody,
-    });
+    if (!resendRes.ok) {
+      const err = await resendRes.json();
+      console.error("Resend error:", err);
+      return new Response(
+        JSON.stringify({ error: err.message || "Error al enviar email" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    await client.close();
-
-    // Update feedback record
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

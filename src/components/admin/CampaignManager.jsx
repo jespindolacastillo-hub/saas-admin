@@ -79,7 +79,7 @@ const DATE_RANGES = [
 
 // ─── Audience counter ─────────────────────────────────────────────────────────
 function countAudience(feedbacks, config) {
-  const { min_score, max_score, location_ids, date_range_days, channel, recovery_status, routed_to_google } = config;
+  const { min_score, max_score, location_ids, date_range_days, channel, recovery_status, routed_to_google, only_unredeemed } = config;
   const since = subDays(new Date(), date_range_days || 30);
   return feedbacks.filter(f => {
     if (f.score < min_score || f.score > max_score) return false;
@@ -89,7 +89,8 @@ function countAudience(feedbacks, config) {
     if (channel === 'email'    && !f.contact_email) return false;
     if (recovery_status === 'pending' && f.recovery_status && f.recovery_status !== 'pending') return false;
     if (routed_to_google === false && f.routed_to_google) return false;
-    // Deduplicate by contact
+    if (only_unredeemed && !f.recovery_sent) return false;
+    if (only_unredeemed && f.coupon_redeemed === true) return false;
     return true;
   });
 }
@@ -199,6 +200,7 @@ export default function CampaignManager() {
   const [channel,    setChannel]    = useState('whatsapp');
   const [locationIds, setLocationIds] = useState([]);
   const [dateRange,  setDateRange]  = useState(30);
+  const [onlyUnredeemed, setOnlyUnredeemed] = useState(false);
   const [message,    setMessage]    = useState('');
   const [camName,    setCamName]    = useState('');
   const [sending,    setSending]    = useState(false);
@@ -215,7 +217,7 @@ export default function CampaignManager() {
   const loadData = async () => {
     setLoading(true);
     const [locRes, campRes] = await Promise.all([
-      supabase.from('Tiendas_Catalogo').select('id, name:nombre').eq('tenant_id', tenant.id),
+      supabase.from('locations').select('id, name').eq('tenant_id', tenant.id).order('name'),
       supabase.from('campaigns').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending: false }),
     ]);
     if (locRes.data)  setLocations(locRes.data);
@@ -226,7 +228,7 @@ export default function CampaignManager() {
     if (storeIds.length > 0) {
       const { data: fbData } = await supabase
         .from('feedbacks')
-        .select('id, location_id, score, contact_phone, contact_email, recovery_status, routed_to_google, coupon_redeemed, created_at')
+        .select('id, location_id, score, contact_phone, contact_email, recovery_status, recovery_sent, routed_to_google, coupon_redeemed, created_at')
         .in('location_id', storeIds)
         .gte('created_at', subDays(new Date(), 90).toISOString());
       if (fbData) setFeedbacks(fbData);
@@ -238,7 +240,7 @@ export default function CampaignManager() {
   const audienceConfig = useMemo(() => {
     if (!camType) return null;
     const type = CAMPAIGN_TYPES.find(t => t.value === camType);
-    return { ...type.segment, location_ids: locationIds, date_range_days: dateRange, channel };
+    return { ...type.segment, location_ids: locationIds, date_range_days: dateRange, channel, only_unredeemed: onlyUnredeemed };
   }, [camType, locationIds, dateRange, channel]);
 
   const audienceFeedbacks = useMemo(() => {
@@ -256,6 +258,7 @@ export default function CampaignManager() {
   const selectType = (typeVal) => {
     const type = CAMPAIGN_TYPES.find(t => t.value === typeVal);
     setCamType(typeVal);
+    setOnlyUnredeemed(false);
     const locName = locationIds.length === 1
       ? locations.find(l => l.id === locationIds[0])?.name
       : null;
@@ -400,7 +403,7 @@ export default function CampaignManager() {
 
   const resetWizard = () => {
     setStep(0); setCamType(null); setChannel('whatsapp');
-    setLocationIds([]); setDateRange(30); setMessage(''); setCamName('');
+    setLocationIds([]); setDateRange(30); setOnlyUnredeemed(false); setMessage(''); setCamName('');
     setSendProgress({ done: 0, total: 0, errors: 0 });
   };
 
@@ -695,6 +698,30 @@ export default function CampaignManager() {
                     }}>{r.label}</button>
                   ))}
                 </div>
+              </div>
+
+              {/* Coupon filter */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                  <div
+                    onClick={() => setOnlyUnredeemed(v => !v)}
+                    style={{
+                      width: 40, height: 22, borderRadius: 999, cursor: 'pointer',
+                      background: onlyUnredeemed ? T.coral : T.border,
+                      position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute', top: 3, left: onlyUnredeemed ? 21 : 3,
+                      width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                      transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>Solo con cupón sin canjear</div>
+                    <div style={{ fontSize: '0.7rem', color: T.muted }}>Filtra clientes que recibieron cupón pero no regresaron a usarlo</div>
+                  </div>
+                </label>
               </div>
 
               {/* Audience preview */}

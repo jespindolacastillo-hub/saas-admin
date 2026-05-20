@@ -885,7 +885,7 @@ function ValidationTab({ feedbacks, locations, tenant, userEmail, onUpdate }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function IssueManagement({ tenantOverride } = {}) {
+export default function IssueManagement({ tenantOverride, userRole, userLocationIds = [] } = {}) {
   const { tenant: tenantFromHook } = useTenant();
   const tenant = tenantOverride || tenantFromHook;
   const [feedbacks, setFeedbacks]       = useState([]);
@@ -938,8 +938,13 @@ export default function IssueManagement({ tenantOverride } = {}) {
       // Since dataService already handles normalization and test filtering, we just calculate the threshold.
       const maxScore = Math.max(...feedbacks.map(f => f.score ?? 0), 0);
       const unhappyThreshold = maxScore > 5 ? 6 : 2;
+      const isGerenteScoped = userRole?.toLowerCase() === 'gerente' && userLocationIds.length > 0;
       // Include BOTH unhappy customers AND anyone with a coupon (for validation/stats)
-      setFeedbacks(feedbacks.filter(f => f.score <= unhappyThreshold || f.coupon_code));
+      // Gerentes only see their assigned locations
+      setFeedbacks(feedbacks.filter(f =>
+        (f.score <= unhappyThreshold || f.coupon_code) &&
+        (!isGerenteScoped || userLocationIds.includes(f.location_id))
+      ));
       setRecoveryConfig(recoveryConfigRes.data?.[0] || null);
       setQrLabels(Object.fromEntries((qrCodesRes.data || []).map(q => [q.id, q.label])));
 

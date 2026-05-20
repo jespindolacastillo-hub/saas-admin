@@ -26,35 +26,38 @@ const ROLES = [
 ];
 const ROLE_COLORS = { owner: T.purple, admin: T.red, gerente: T.amber, caja: T.teal };
 
-const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'gerente', activo: true, flow: 'platform' };
+const initForm = { nombre: '', apellido: '', email: '', password: '', rol: 'gerente', activo: true, flow: 'platform', location_ids: [] };
 
 export default function UserManagement({ session }) {
   const { tenant } = useTenant();
-  const [users, setUsers]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal]   = useState(null); // null | { type: 'add'|'edit', user? }
-  const [form, setForm]     = useState(initForm);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(null);
-  const [message, setMessage] = useState(null);
+  const [users, setUsers]         = useState([]);
+  const [allLocations, setAllLocations] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [modal, setModal]         = useState(null); // null | { type: 'add'|'edit', user? }
+  const [form, setForm]           = useState(initForm);
+  const [saving, setSaving]       = useState(false);
+  const [deleting, setDeleting]   = useState(null);
+  const [message, setMessage]     = useState(null);
 
   useEffect(() => {
-    if (tenant?.id) loadUsers();
+    if (tenant?.id) loadAll();
   }, [tenant?.id]);
 
-  const loadUsers = async () => {
+  const loadAll = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('Usuarios')
-      .select('id, nombre, apellido, email, rol, activo, created_at')
-      .eq('tenant_id', tenant.id)
-      .order('created_at', { ascending: false });
-    setUsers(data || []);
+    const [usersRes, locsRes] = await Promise.all([
+      supabase.from('Usuarios').select('id, nombre, apellido, email, rol, activo, created_at, location_ids').eq('tenant_id', tenant.id).order('created_at', { ascending: false }),
+      supabase.from('locations').select('id, name').eq('tenant_id', tenant.id).order('name'),
+    ]);
+    setUsers(usersRes.data || []);
+    setAllLocations(locsRes.data || []);
     setLoading(false);
   };
 
+  const loadUsers = loadAll;
+
   const openAdd = () => { setForm(initForm); setModal({ type: 'add' }); };
-  const openEdit = (u) => { setForm({ nombre: u.nombre || '', apellido: u.apellido || '', email: u.email || '', password: '', rol: u.rol?.toLowerCase() || 'gerente', activo: u.activo ?? true, id: u.id }); setModal({ type: 'edit', user: u }); };
+  const openEdit = (u) => { setForm({ nombre: u.nombre || '', apellido: u.apellido || '', email: u.email || '', password: '', rol: u.rol?.toLowerCase() || 'gerente', activo: u.activo ?? true, id: u.id, location_ids: u.location_ids || [] }); setModal({ type: 'edit', user: u }); };
 
   const showMsg = (type, text) => { 
     setMessage({ type, text }); 
@@ -97,9 +100,13 @@ export default function UserManagement({ session }) {
           throw new Error(fnData.error || 'Error desconocido al crear usuario');
         }
 
+        // Set location_ids after user is created
+        if (form.location_ids?.length > 0) {
+          await supabase.from('Usuarios').update({ location_ids: form.location_ids }).eq('email', form.email).eq('tenant_id', tenant.id);
+        }
         showMsg('success', 'Usuario creado correctamente.');
       } else {
-        const updates = { nombre: form.nombre, apellido: form.apellido, rol: form.rol, activo: form.activo, updated_at: new Date().toISOString() };
+        const updates = { nombre: form.nombre, apellido: form.apellido, rol: form.rol, activo: form.activo, location_ids: form.location_ids || [], updated_at: new Date().toISOString() };
         const { error } = await supabase.from('Usuarios').update(updates).eq('id', form.id).eq('tenant_id', tenant.id);
         if (error) throw error;
         showMsg('success', 'Usuario actualizado.');
@@ -337,6 +344,31 @@ export default function UserManagement({ session }) {
                   </div>
                 )}
               </div>
+              {form.rol === 'gerente' && allLocations.length > 0 && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: T.amber, marginBottom: 8, display: 'block' }}>
+                    Sucursales asignadas <span style={{ fontWeight: 400, color: T.muted }}>(vacío = sin restricción)</span>
+                  </label>
+                  <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 10, padding: '8px 12px', maxHeight: 160, overflowY: 'auto', background: '#fff' }}>
+                    {allLocations.map(loc => (
+                      <label key={loc.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', cursor: 'pointer', fontSize: '0.85rem', color: T.ink }}>
+                        <input
+                          type="checkbox"
+                          checked={form.location_ids.includes(loc.id)}
+                          onChange={e => {
+                            const ids = e.target.checked
+                              ? [...form.location_ids, loc.id]
+                              : form.location_ids.filter(id => id !== loc.id);
+                            setForm(f => ({ ...f, location_ids: ids }));
+                          }}
+                          style={{ accentColor: T.amber, width: 15, height: 15, flexShrink: 0 }}
+                        />
+                        {loc.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               {modal.type === 'edit' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 20 }}>
                   <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} id="activo-check" style={{ accentColor: T.coral, width: 16, height: 16 }} />

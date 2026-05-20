@@ -9,6 +9,7 @@ import { getTenantId } from '../config/tenant';
 export const useTenant = () => {
   const [tenant, setTenant] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [userLocationIds, setUserLocationIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,7 +28,7 @@ export const useTenant = () => {
       // 2. Resolve tenant_id from database (Usuarios Table)
       let { data: userData, error: userError } = await supabase
         .from('Usuarios')
-        .select('tenant_id, rol')
+        .select('tenant_id, rol, location_ids')
         .eq('email', user.email)
         .maybeSingle();
 
@@ -70,6 +71,7 @@ export const useTenant = () => {
 
       setTenant(finalTenant);
       setUserRole(userData?.rol || 'admin');
+      setUserLocationIds(userData?.location_ids || []);
       localStorage.setItem('saas_tenant_config', JSON.stringify(finalTenant));
     } catch (err) {
       console.error('Identity sync error:', err);
@@ -83,5 +85,5 @@ export const useTenant = () => {
     sync();
   }, []);
 
-  return { tenant, userRole, loading, error, refresh: sync };
+  return { tenant, userRole, userLocationIds, loading, error, refresh: sync };
 };

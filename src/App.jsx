@@ -1987,7 +1987,7 @@ const ROLE_PERMS = {
   caja:    ['validar'],
 };
 
-function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use 'tenant' directly from props
+function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRefresh }) { // Use 'tenant' directly from props
   const { t, i18n } = useTranslation();
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -2943,7 +2943,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
           {activeTab === 'leaderboard' && <RetellioLeaderboard />}
           {activeTab === 'cupones' && <CouponManagement />}
           {activeTab === 'validar' && <CouponValidation userEmail={session?.user?.email} />}
-          {activeTab === 'issues' && <IssueManagement tenantOverride={tenant} />}
+          {activeTab === 'issues' && <IssueManagement tenantOverride={tenant} userRole={userRole} userLocationIds={userLocationIds || []} />}
           {activeTab === 'qr' && <QRStudio />}
           {activeTab === 'users' && <UserManagement session={session} />}
           {activeTab === 'email' && <CampaignManager />}
@@ -2964,7 +2964,7 @@ function AdminPanel({ tenant, userRole, tenantLoading, tenantRefresh }) { // Use
 }
 
 export default function App() {
-  const { tenant, userRole, loading: tenantLoading, refresh: tenantRefresh } = useTenant();
+  const { tenant, userRole, userLocationIds, loading: tenantLoading, refresh: tenantRefresh } = useTenant();
 
   return (
     <Routes>
@@ -2972,7 +2972,7 @@ export default function App() {
       <Route path="/feedback" element={<Feedback />} />
       <Route path="/quiero-ser-distribuidor" element={<DistributorApplication />} />
       <Route path="/partners/:codigo" element={<PartnerLanding />} />
-      <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
+      <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} userLocationIds={userLocationIds} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
     </Routes>
   );
 }

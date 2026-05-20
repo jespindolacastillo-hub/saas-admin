@@ -10,6 +10,13 @@ const T = {
 };
 const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
+const REWARD_TYPES = [
+  { value: 'discount',    emoji: '🏷️', label: 'Descuento' },
+  { value: 'merchandise', emoji: '🎁', label: 'Mercancía' },
+  { value: 'event',       emoji: '🎫', label: 'Evento' },
+  { value: 'experience',  emoji: '✨', label: 'Experiencia' },
+];
+
 const DEFAULT = {
   enabled:               true,
   trigger_score:         2,
@@ -18,6 +25,8 @@ const DEFAULT = {
   offer_description:     '20% de descuento en tu próxima visita',
   coupon_prefix:         'RECOVERY',
   validity_days:         30,
+  reward_type:           'discount',
+  reward_value:          0,
   terms:                 '',
   message_template:      'Hola, lamentamos tu experiencia. Como muestra de aprecio: {{oferta}}. Código: {{codigo}} · válido {{dias}} días. — {{negocio}}',
   loyalty_enabled:       false,
@@ -82,17 +91,41 @@ function CouponCard({ title, emoji, subtitle, accentColor, fields, config, onCha
       {/* Body */}
       <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+        {/* Reward type selector */}
+        {fields.reward_type && (
+          <div>
+            <label style={labelStyle}>Tipo de incentivo</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {REWARD_TYPES.map(rt => (
+                <button key={rt.value} onClick={() => onChange(fields.reward_type, rt.value)} style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${config[fields.reward_type] === rt.value ? accentColor : T.border}`, background: config[fields.reward_type] === rt.value ? accentColor + '10' : '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: config[fields.reward_type] === rt.value ? accentColor : T.muted, fontFamily: font }}>
+                  {rt.emoji} {rt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Offer description — most important field */}
         <div>
-          <label style={labelStyle}>Descripción de la oferta</label>
+          <label style={labelStyle}>
+            {fields.reward_type && config[fields.reward_type] !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}
+          </label>
           <input
             type="text"
             value={config[fields.offer_description]}
             onChange={e => onChange(fields.offer_description, e.target.value)}
-            placeholder="ej. 20% de descuento en tu próxima visita"
+            placeholder={fields.reward_type && config[fields.reward_type] !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 20% de descuento en tu próxima visita'}
             style={inputStyle}
           />
         </div>
+
+        {/* Reward value (for non-discount types, for ROI tracking) */}
+        {fields.reward_value && config[fields.reward_type] !== 'discount' && (
+          <div>
+            <label style={labelStyle}>Valor estimado ($) — para calcular ROI</label>
+            <input type="number" min={0} value={config[fields.reward_value] || 0} onChange={e => onChange(fields.reward_value, parseFloat(e.target.value) || 0)} style={inputStyle} />
+          </div>
+        )}
 
         {/* Prefix + validity */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -301,15 +334,19 @@ export default function RecoverySettings() {
     coupon_prefix:     'coupon_prefix',
     validity_days:     'validity_days',
     message_template:  'message_template',
+    reward_type:       'reward_type',
+    reward_value:      'reward_value',
   };
 
   const loyaltyFields = {
     enabled:           'loyalty_enabled',
-    trigger_score:     null, // auto on happy score, no trigger needed
+    trigger_score:     null,
     offer_description: 'loyalty_offer_description',
     coupon_prefix:     'loyalty_coupon_prefix',
     validity_days:     'loyalty_validity_days',
     message_template:  null,
+    reward_type:       null,
+    reward_value:      null,
   };
 
   return (

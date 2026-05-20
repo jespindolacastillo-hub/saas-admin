@@ -541,21 +541,27 @@ function DoneBad({ couponCode, couponConfig, hasPhone, hasEmail, category, comme
       <h2 className="rf-state-title" style={{ fontSize: '1.4rem', fontWeight: 800, color: S.ink, marginBottom: '12px' }}>{title}</h2>
       <p className="rf-state-desc" style={{ fontSize: '0.95rem', color: S.muted, lineHeight: 1.6, marginBottom: '24px' }}>{desc}</p>
       
-      {couponCode && couponConfig && (
-        <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
-          <p className="rf-coupon-label">🎁 Tu cupón de recuperación</p>
-          <p className="rf-coupon-code notranslate" translate="no">{couponCode}</p>
-          <p className="rf-coupon-desc">{couponConfig.offer_description}</p>
-          {category && category !== 'Otro' && category !== 'Comentario' && (
-            <p style={{ fontSize: '0.75rem', color: S.teal, marginTop: 6, fontWeight: 700 }}>
-              ✓ Compensación por reporte en: {category}
-            </p>
-          )}
-          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 8 }}>
-            Válido {couponConfig.validity_days || 30} días · Presenta al pagar
-          </p>
-        </div>
-      )}
+      {couponCode && couponConfig && (() => {
+        const rType = couponConfig.reward_type || 'discount';
+        const isDiscount = rType === 'discount';
+        const label = isDiscount ? '🎁 Tu cupón de recuperación' : '🎁 Tu recompensa';
+        const footer = isDiscount
+          ? `Válido ${couponConfig.validity_days || 30} días · Presenta al pagar`
+          : `Código de canje · Válido ${couponConfig.validity_days || 30} días`;
+        return (
+          <div className="rf-coupon" style={{ textAlign: 'left', marginBottom: 16, animation: 'rf-bounce 0.4s ease-out' }}>
+            <p className="rf-coupon-label">{label}</p>
+            <p className="rf-coupon-code notranslate" translate="no">{couponCode}</p>
+            <p className="rf-coupon-desc">{couponConfig.offer_description}</p>
+            {category && category !== 'Otro' && category !== 'Comentario' && (
+              <p style={{ fontSize: '0.75rem', color: S.teal, marginTop: 6, fontWeight: 700 }}>
+                ✓ Compensación por reporte en: {category}
+              </p>
+            )}
+            <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 8 }}>{footer}</p>
+          </div>
+        );
+      })()}
       <p className="rf-powered">Powered by retelio.com.mx</p>
     </div>
   );
@@ -732,11 +738,13 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
               </p>
             )}
             <div className="rf-coupon" style={{ textAlign: 'left', animation: justUnlocked ? 'rf-flip 0.55s cubic-bezier(0.34,1.56,0.64,1) forwards' : 'none', transformOrigin: 'center' }}>
-              <p className="rf-coupon-label">🎁 Tu cupón de cliente frecuente</p>
+              <p className="rf-coupon-label">{(loyaltyConfig.reward_type && loyaltyConfig.reward_type !== 'discount') ? '🎁 Tu recompensa' : '🎁 Tu cupón de cliente frecuente'}</p>
               <p className="rf-coupon-code notranslate" translate="no">{loyaltyCouponCode}</p>
               <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
               <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
-                Válido {loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar
+                {(loyaltyConfig.reward_type && loyaltyConfig.reward_type !== 'discount')
+                  ? `Código de canje · Válido ${loyaltyConfig.loyalty_validity_days || 30} días`
+                  : `Válido ${loyaltyConfig.loyalty_validity_days || 30} días · Presenta al pagar`}
               </p>
             </div>
           </div>
@@ -898,7 +906,7 @@ export default function FeedbackPublic() {
     setLoading(true);
     const { data: qrData, error: qrErr } = await supabase
       .from('qr_codes')
-      .select('*, locations(name, google_review_url, whatsapp_number), qr_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type))')
+      .select('*, locations(name, google_review_url, whatsapp_number), qr_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type,reward_type,reward_value), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type,reward_type,reward_value))')
       .eq('id', qrId)
       .eq('active', true)
       .single();
@@ -1029,10 +1037,10 @@ export default function FeedbackPublic() {
 
     // Update configs used for copy rendering
     if (qrCouponCfg && code) {
-      setRecovery({ ...recovery, offer_description: qrCouponCfg.offer_description, validity_days: qrCouponCfg.validity_days });
+      setRecovery({ ...recovery, offer_description: qrCouponCfg.offer_description, validity_days: qrCouponCfg.validity_days, reward_type: qrCouponCfg.reward_type || 'discount', reward_value: qrCouponCfg.reward_value || 0 });
     }
     if (qrCouponCfg && loyaltyCode) {
-      setLoyalty({ ...loyalty, loyalty_offer_description: qrCouponCfg.offer_description, loyalty_validity_days: qrCouponCfg.validity_days, loyalty_enabled: true });
+      setLoyalty({ ...loyalty, loyalty_offer_description: qrCouponCfg.offer_description, loyalty_validity_days: qrCouponCfg.validity_days, loyalty_enabled: true, reward_type: qrCouponCfg.reward_type || 'discount', reward_value: qrCouponCfg.reward_value || 0 });
     }
 
     try {
@@ -1071,7 +1079,7 @@ export default function FeedbackPublic() {
       const threshold = questionConfig?.negative_threshold ?? 2;
       if (getIsUnhappy(s, questionConfig?.rating_style, threshold) && qr.tenant_id && location?.whatsapp_number) {
         supabase.functions.invoke('send-whatsapp-alert', {
-          body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, recovery_code: code, client_phone: phone || null },
+          body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, recovery_code: code, client_phone: phone || null, reward_type: recovery?.reward_type || 'discount' },
         }).catch(() => {});
       }
 

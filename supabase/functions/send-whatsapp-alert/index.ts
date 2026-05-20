@@ -20,6 +20,7 @@ serve(async (req) => {
       whatsapp_number,
       client_phone,
       recovery_code,
+      reward_type,
     } = await req.json();
 
     // ── Validations ────────────────────────────────────────────────────────
@@ -114,7 +115,8 @@ serve(async (req) => {
     } else {
       // Fallback a texto libre (Solo funciona si el usuario escribió en las últimas 24h)
       const clientLink = client_phone ? `\n📱 Cliente: https://wa.me/${client_phone.replace(/\D/g, "")}` : "\n📱 Cliente no dejó su número";
-      const recoveryMsg = recovery_code ? `\n🎁 Código: ${recovery_code}` : "";
+      const rewardLabel = (reward_type && reward_type !== 'discount') ? '🎁 Recompensa' : '🎁 Cupón';
+      const recoveryMsg = recovery_code ? `\n${rewardLabel}: ${recovery_code}` : "";
       const msg = `Retelio: ¡Nuevo feedback crítico! 🚨\nSucursal: ${locationName}\nQR: ${qr_label}\nPuntuación: ${score}★\nComentario: ${comment || "Sin comentario"}${clientLink}${recoveryMsg}`;
       bodyParams = new URLSearchParams({
         From: twilioFrom,

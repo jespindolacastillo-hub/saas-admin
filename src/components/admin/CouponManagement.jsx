@@ -13,10 +13,18 @@ const font = "'Plus Jakarta Sans', system-ui, sans-serif";
 
 const genPreview = (prefix) => `${prefix || 'CODE'}-X3K9A`;
 
+const REWARD_TYPES = [
+  { value: 'discount',    emoji: '🏷️', label: 'Descuento' },
+  { value: 'merchandise', emoji: '🎁', label: 'Mercancía' },
+  { value: 'event',       emoji: '🎫', label: 'Evento' },
+  { value: 'experience',  emoji: '✨', label: 'Experiencia' },
+];
+
 const DEFAULT_AUTO = {
   enabled: true, trigger_score: 2,
   offer_description: '20% de descuento en tu próxima visita',
   coupon_prefix: 'RECOVERY', validity_days: 30,
+  reward_type: 'discount', reward_value: 0,
   terms: '', message_template: 'Hola, lamentamos tu experiencia. Como muestra de aprecio: {{oferta}}. Código: {{codigo}} · válido {{dias}} días. — {{negocio}}',
   loyalty_enabled: false,
   loyalty_offer_description: '10% de descuento en tu próxima visita',
@@ -58,10 +66,28 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
         </div>
       </div>
       <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {fields.reward_type && (
+          <div>
+            <label style={labelSt}>Tipo de incentivo</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {REWARD_TYPES.map(rt => (
+                <button key={rt.value} onClick={() => onChange(fields.reward_type, rt.value)} style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${cfg[fields.reward_type] === rt.value ? accentColor : T.border}`, background: cfg[fields.reward_type] === rt.value ? accentColor + '10' : '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, color: cfg[fields.reward_type] === rt.value ? accentColor : T.muted, fontFamily: font }}>
+                  {rt.emoji} {rt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div>
-          <label style={labelSt}>Descripción de la oferta</label>
-          <input type="text" value={cfg[fields.offer_description]} onChange={e => onChange(fields.offer_description, e.target.value)} placeholder="ej. 20% de descuento en tu próxima visita" style={inputSt} />
+          <label style={labelSt}>{fields.reward_type && cfg[fields.reward_type] !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}</label>
+          <input type="text" value={cfg[fields.offer_description]} onChange={e => onChange(fields.offer_description, e.target.value)} placeholder={fields.reward_type && cfg[fields.reward_type] !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 20% de descuento en tu próxima visita'} style={inputSt} />
         </div>
+        {fields.reward_value && cfg[fields.reward_type] !== 'discount' && (
+          <div>
+            <label style={labelSt}>Valor estimado ($) — ROI</label>
+            <input type="number" min={0} value={cfg[fields.reward_value] || 0} onChange={e => onChange(fields.reward_value, parseFloat(e.target.value) || 0)} style={inputSt} />
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={labelSt}>Prefijo del código</label>
@@ -141,7 +167,7 @@ const tdSt = { padding: '12px 14px', verticalAlign: 'middle' };
 
 // ─── Coupon form modal ────────────────────────────────────────────────────────
 function CouponFormModal({ initial, onSave, onClose }) {
-  const EMPTY = { name: '', offer_description: '', coupon_prefix: '', validity_days: 30, trigger_type: 'manual', enabled: true };
+  const EMPTY = { name: '', offer_description: '', coupon_prefix: '', validity_days: 30, trigger_type: 'manual', enabled: true, reward_type: 'discount', reward_value: 0 };
   const [form, setForm] = useState(initial || EMPTY);
   const [saving, setSaving] = useState(false);
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -184,9 +210,27 @@ function CouponFormModal({ initial, onSave, onClose }) {
         </div>
 
         <div>
-          <label style={labelSt}>Descripción de la oferta</label>
-          <input type="text" value={form.offer_description} onChange={e => upd('offer_description', e.target.value)} placeholder="ej. 20% de descuento en tu próxima visita" style={inputSt} />
+          <label style={labelSt}>Tipo de incentivo</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {REWARD_TYPES.map(rt => (
+              <button key={rt.value} onClick={() => upd('reward_type', rt.value)} style={{ padding: '6px 12px', borderRadius: 8, border: `2px solid ${form.reward_type === rt.value ? T.coral : T.border}`, background: form.reward_type === rt.value ? T.coral + '08' : '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: form.reward_type === rt.value ? T.coral : T.muted, fontFamily: font }}>
+                {rt.emoji} {rt.label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <div>
+          <label style={labelSt}>{form.reward_type !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}</label>
+          <input type="text" value={form.offer_description} onChange={e => upd('offer_description', e.target.value)} placeholder={form.reward_type !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 20% de descuento en tu próxima visita'} style={inputSt} />
+        </div>
+
+        {form.reward_type !== 'discount' && (
+          <div>
+            <label style={labelSt}>Valor estimado ($) — para calcular ROI</label>
+            <input type="number" min={0} value={form.reward_value || 0} onChange={e => upd('reward_value', parseFloat(e.target.value) || 0)} style={inputSt} />
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
@@ -307,8 +351,8 @@ export default function CouponManagement() {
     if (form.id) {
       ({ error } = await supabase.from('coupon_configs').update(form).eq('id', form.id));
     } else {
-      const { name, offer_description, coupon_prefix, validity_days, trigger_type, enabled } = form;
-      ({ error } = await supabase.from('coupon_configs').insert({ name, offer_description, coupon_prefix, validity_days, trigger_type, enabled, tenant_id: tenant.id }));
+      const { name, offer_description, coupon_prefix, validity_days, trigger_type, enabled, reward_type, reward_value } = form;
+      ({ error } = await supabase.from('coupon_configs').insert({ name, offer_description, coupon_prefix, validity_days, trigger_type, enabled, reward_type: reward_type || 'discount', reward_value: reward_value || 0, tenant_id: tenant.id }));
     }
     if (error) { alert('Error al guardar: ' + error.message); return; }
     setModal(null);
@@ -329,7 +373,7 @@ export default function CouponManagement() {
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 10, color: T.muted, fontFamily: font }}><Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
 
-  const recoveryFields = { enabled:'enabled', trigger_score:'trigger_score', offer_description:'offer_description', coupon_prefix:'coupon_prefix', validity_days:'validity_days', message_template:'message_template' };
+  const recoveryFields = { enabled:'enabled', trigger_score:'trigger_score', offer_description:'offer_description', coupon_prefix:'coupon_prefix', validity_days:'validity_days', message_template:'message_template', reward_type:'reward_type', reward_value:'reward_value' };
   const loyaltyFields  = { enabled:'loyalty_enabled', trigger_score:null, offer_description:'loyalty_offer_description', coupon_prefix:'loyalty_coupon_prefix', validity_days:'loyalty_validity_days', message_template:null };
 
   return (

@@ -1009,13 +1009,13 @@ export default function FeedbackPublic() {
     const triggerScore  = recovery?.trigger_score ?? 2;
     const isRecoveryTriggered = questionConfig?.rating_style === 'nps' ? s <= 6 : s <= triggerScore;
     
-    const needsRecovery = isRecoveryTriggered && (qrCouponCfg || recovery?.enabled);
+    const needsRecovery = isRecoveryTriggered && !!(qrCouponCfg || recovery?.enabled);
     const recoveryPrefix = qrCouponCfg?.coupon_prefix || recovery?.coupon_prefix || 'RECOVERY';
     const code = needsRecovery ? genCode(recoveryPrefix) : null;
     if (code) setCouponCode(code);
 
     const isLoyaltyTriggered = getIsHappy(s, questionConfig?.rating_style);
-    const needsLoyalty = isLoyaltyTriggered && (qrCouponCfg || loyalty?.loyalty_enabled);
+    const needsLoyalty = isLoyaltyTriggered && !!(qrCouponCfg || loyalty?.loyalty_enabled);
     const loyaltyPrefix = qrCouponCfg?.coupon_prefix || loyalty?.loyalty_coupon_prefix || 'LOYAL';
     const loyaltyCode = needsLoyalty ? genCode(loyaltyPrefix) : null;
     if (loyaltyCode) setLoyaltyCouponCode(loyaltyCode);

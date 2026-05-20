@@ -123,7 +123,7 @@ function CouponCard({ title, emoji, subtitle, accentColor, fields, config, onCha
         {fields.reward_value && config[fields.reward_type] !== 'discount' && (
           <div>
             <label style={labelStyle}>Valor estimado ($) — para calcular ROI</label>
-            <input type="number" min={0} value={config[fields.reward_value] || 0} onChange={e => onChange(fields.reward_value, parseFloat(e.target.value) || 0)} style={inputStyle} />
+            <input type="number" min={0} value={config[fields.reward_value] ?? ''} onChange={e => onChange(fields.reward_value, e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!config[fields.reward_value]) e.target.select(); }} style={inputStyle} />
           </div>
         )}
 

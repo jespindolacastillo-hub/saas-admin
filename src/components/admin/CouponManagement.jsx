@@ -85,7 +85,7 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
         {fields.reward_value && cfg[fields.reward_type] !== 'discount' && (
           <div>
             <label style={labelSt}>Valor estimado ($) — ROI</label>
-            <input type="number" min={0} value={cfg[fields.reward_value] || 0} onChange={e => onChange(fields.reward_value, parseFloat(e.target.value) || 0)} style={inputSt} />
+            <input type="number" min={0} value={cfg[fields.reward_value] ?? ''} onChange={e => onChange(fields.reward_value, e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!cfg[fields.reward_value]) e.target.select(); }} style={inputSt} />
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -228,7 +228,7 @@ function CouponFormModal({ initial, onSave, onClose }) {
         {form.reward_type !== 'discount' && (
           <div>
             <label style={labelSt}>Valor estimado ($) — para calcular ROI</label>
-            <input type="number" min={0} value={form.reward_value || 0} onChange={e => upd('reward_value', parseFloat(e.target.value) || 0)} style={inputSt} />
+            <input type="number" min={0} value={form.reward_value ?? ''} onChange={e => upd('reward_value', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!form.reward_value) e.target.select(); }} style={inputSt} />
           </div>
         )}
 

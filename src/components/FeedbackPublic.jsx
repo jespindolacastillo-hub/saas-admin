@@ -425,7 +425,7 @@ function StepReason({ config, onNext }) {
 }
 
 // ─── Step 3: Contact (bad scores only) ───────────────────────────────────────
-function StepContact({ submitting, onSubmit, onSkip, businessName }) {
+function StepContact({ submitting, submitError, onSubmit, onSkip, businessName }) {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
@@ -477,6 +477,12 @@ function StepContact({ submitting, onSubmit, onSkip, businessName }) {
           Deseo recibir comunicaciones y ofertas{businessName ? ` de ${businessName}` : ''} en el futuro
         </span>
       </label>
+
+      {submitError && (
+        <div style={{ background: '#FEE2E2', border: '1.5px solid #FECACA', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.8rem', color: '#B91C1C', textAlign: 'center' }}>
+          {submitError}
+        </div>
+      )}
 
       <button
         className="rf-btn rf-btn-primary"
@@ -863,6 +869,7 @@ export default function FeedbackPublic() {
   const [cooldown, setCooldown]       = useState(false);
   const [error, setError]             = useState(null);
   const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   // Collected data across steps
   const [score, setScore]           = useState(null);
@@ -1052,7 +1059,7 @@ export default function FeedbackPublic() {
 
       if (insertError) {
         console.error('Insert error:', insertError);
-        alert('Error al guardar: ' + insertError.message);
+        setSubmitError('No pudimos guardar tu opinión. Por favor intenta de nuevo.');
         setSubmitting(false);
         return;
       }
@@ -1074,7 +1081,7 @@ export default function FeedbackPublic() {
 
     } catch (err) {
       console.error('Feedback submit error:', err);
-      alert('Error al enviar. Por favor intenta de nuevo.');
+      setSubmitError('Error al enviar. Por favor intenta de nuevo.');
     } finally {
       setSubmitting(false);
     }
@@ -1107,7 +1114,7 @@ export default function FeedbackPublic() {
     return wrap(<StepReason config={questionConfig} onNext={handleReasonNext} />);
 
   if (screen === 'contact')
-    return wrap(<StepContact submitting={submitting} onSubmit={handleContactSubmit} onSkip={handleContactSkip} businessName={location?.name} />);
+    return wrap(<StepContact submitting={submitting} submitError={submitError} onSubmit={(v) => { setSubmitError(null); handleContactSubmit(v); }} onSkip={() => { setSubmitError(null); handleContactSkip(); }} businessName={location?.name} />);
 
   if (screen === 'done-bad')
     return wrap(<DoneBad couponCode={couponCode} couponConfig={recovery} hasPhone={!!contactPhone} hasEmail={!!contactEmail} category={category} comment={comment} />);

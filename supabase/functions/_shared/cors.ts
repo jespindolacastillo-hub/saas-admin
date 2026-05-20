@@ -1,5 +1,6 @@
 const ALLOWED_ORIGINS = [
   "https://admin.retelio.app",
+  "https://retelio.app",
   "https://ian-feedback.netlify.app",
   "http://localhost:5173",
   "http://localhost:3000",

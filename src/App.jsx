@@ -2027,7 +2027,7 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [masterMode, setMasterMode] = useState(localStorage.getItem('ps_master_mode') === 'active');
+  const masterMode = userRole?.toLowerCase() === 'owner';
   const [showOnboarding, setShowOnboarding] = useState(() => {
     const config = localStorage.getItem('saas_tenant_config');
     const tenantId = config ? JSON.parse(config)?.id : null;
@@ -2222,26 +2222,6 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
     setFilters({ ...filters, store: newStore, area: newArea });
   };
 
-  const handleMasterBypass = () => {
-    if (masterMode) {
-      // Desactivar modo maestro
-      if (window.confirm(t('admin.master_mode_deactivate_confirm'))) {
-        localStorage.removeItem('ps_master_mode');
-        setMasterMode(false);
-        alert(t('admin.master_mode_deactivated'));
-      }
-    } else {
-      // Activar modo maestro
-      const pass = prompt(t('admin.master_mode_password_prompt'));
-      if (pass === '1972') {
-        localStorage.setItem('ps_master_mode', 'active');
-        setMasterMode(true);
-        alert(t('admin.master_mode_activated'));
-      } else if (pass !== null) {
-        alert(t('admin.master_mode_incorrect_password'));
-      }
-    }
-  };
 
 
   useEffect(() => {
@@ -2842,24 +2822,23 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
             </button>
 
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                onClick={handleMasterBypass}
-                style={{
-                  color: masterMode ? '#10b981' : '#ef4444',
-                  background: 'transparent',
-                  border: 'none',
-                  padding: '8px',
-                  borderRadius: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  zIndex: 9999
-                }}
-                title={masterMode ? t('admin.master_mode_active_tooltip') : t('admin.master_mode_inactive_tooltip')}
-              >
-                <Fingerprint size={24} />
-              </button>
+              {masterMode && (
+                <div
+                  style={{
+                    color: '#10b981',
+                    background: 'transparent',
+                    border: 'none',
+                    padding: '8px',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  title="Modo Owner activo"
+                >
+                  <Fingerprint size={24} />
+                </div>
+              )}
 
               <div style={{ position: 'relative' }}>
                 <button

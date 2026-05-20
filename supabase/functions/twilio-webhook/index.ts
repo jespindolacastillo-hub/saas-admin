@@ -2,6 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
+async function verifyTwilioSignature(authToken: string, signature: string, url: string, params: Record<string, string>): Promise<boolean> {
+  // Twilio spec: sort params alphabetically, append key+value to URL, sign with HMAC-SHA1
+  const str = url + Object.keys(params).sort().map(k => k + (params[k] ?? '')).join('');
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', encoder.encode(authToken), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(str));
+  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
+  return expected === signature;
+}
+
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   // Handle CORS
@@ -12,15 +22,30 @@ serve(async (req) => {
   try {
     // Twilio sends data as application/x-www-form-urlencoded
     const formData = await req.formData();
-    const from = formData.get("From") as string; // e.g. "whatsapp:+52155..."
-    const body = formData.get("Body") as string;
-    const to = formData.get("To") as string;     // Our business number
+    const params: Record<string, string> = {};
+    for (const [k, v] of formData.entries()) params[k] = v as string;
+
+    // ── Verify request is genuinely from Twilio ──────────────────────────────
+    const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+    if (authToken) {
+      const signature = req.headers.get("X-Twilio-Signature") ?? "";
+      const valid = await verifyTwilioSignature(authToken, signature, req.url, params);
+      if (!valid) {
+        console.warn("twilio-webhook: invalid signature — request rejected");
+        return new Response("Forbidden", { status: 403 });
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const from = params["From"]; // e.g. "whatsapp:+52155..."
+    const body = params["Body"];
+    const to   = params["To"];   // Our business number
 
     if (!from || !body) {
       return new Response("Invalid request", { status: 400 });
     }
 
-    const customerPhone = from.replace("whatsapp:+", "").replace("+", "");
+    const customerPhone = from.replace(/^whatsapp:\+?/, "").replace("+", "");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

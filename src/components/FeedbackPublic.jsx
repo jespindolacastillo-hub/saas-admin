@@ -1064,7 +1064,7 @@ export default function FeedbackPublic() {
       const threshold = questionConfig?.negative_threshold ?? 2;
       if (getIsUnhappy(s, questionConfig?.rating_style, threshold) && qr.tenant_id && location?.whatsapp_number) {
         supabase.functions.invoke('send-whatsapp-alert', {
-          body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, recovery_code: code, client_phone: contactPhone || null },
+          body: { tenant_id: qr.tenant_id, location_id: qr.location_id, qr_label: qr.label, score: s, comment: cmt, whatsapp_number: location.whatsapp_number, recovery_code: code, client_phone: phone || null },
         }).catch(() => {});
       }
 

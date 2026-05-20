@@ -110,13 +110,13 @@ serve(async (req) => {
           "2": qr_label,
           "3": score.toString(),
           "4": comment || "Sin comentario",
-          "5": client_phone ? client_phone.replace(/\D/g, "") : "",
+          "5": client_phone ? client_phone.replace(/\D/g, "") : "No dejó número",
           "6": recovery_code || "N/A",
         }),
       });
     } else {
       // Fallback a texto libre (Solo funciona si el usuario escribió en las últimas 24h)
-      const clientLink = client_phone ? `\n📱 Cliente: https://wa.me/${client_phone.replace(/\D/g, "")}` : "";
+      const clientLink = client_phone ? `\n📱 Cliente: https://wa.me/${client_phone.replace(/\D/g, "")}` : "\n📱 Cliente no dejó su número";
       const recoveryMsg = recovery_code ? `\n🎁 Código: ${recovery_code}` : "";
       const msg = `Retelio: ¡Nuevo feedback crítico! 🚨\nSucursal: ${locationName}\nQR: ${qr_label}\nPuntuación: ${score}★\nComentario: ${comment || "Sin comentario"}${clientLink}${recoveryMsg}`;
       bodyParams = new URLSearchParams({

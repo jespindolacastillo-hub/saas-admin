@@ -15,7 +15,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    
+    const anonKey   = Deno.env.get('SUPABASE_ANON_KEY') || '';
+
     // SMTP Config (Same as campaign-email, likely Resend)
     const smtpHost = Deno.env.get("SMTP_HOST");
     const smtpUser = Deno.env.get("SMTP_USER");
@@ -23,7 +24,24 @@ serve(async (req) => {
     const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465");
 
     try {
+        // ── Auth check ────────────────────────────────────────────────────────
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const callerClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authHeader } } });
+        const { data: { user: caller }, error: callerErr } = await callerClient.auth.getUser();
+        if (callerErr || !caller) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
         const supabase = createClient(supabaseUrl, serviceKey);
+        const { data: callerData } = await supabase.from('Usuarios').select('rol').eq('email', caller.email).maybeSingle();
+        const callerRole = callerData?.rol?.toLowerCase();
+        if (callerRole !== 'owner' && callerRole !== 'admin') {
+            return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         const { action, email, nombre, apellido, id, tenant_id, rol, flow, redirectTo } = await req.json();
 
         // 1. Helper: Database Synchronization for App User

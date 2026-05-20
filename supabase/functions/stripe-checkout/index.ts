@@ -29,8 +29,8 @@ Deno.serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `https://ianps.netlify.app/ajustes?session_id={CHECKOUT_SESSION_ID}&success=true`,
-      cancel_url: `https://ianps.netlify.app/ajustes?canceled=true`,
+      success_url: `https://admin.retelio.app/ajustes?session_id={CHECKOUT_SESSION_ID}&success=true`,
+      cancel_url: `https://admin.retelio.app/ajustes?canceled=true`,
       metadata: {
         tenant_id: tenant_id,
         plan: plan || 'growth'

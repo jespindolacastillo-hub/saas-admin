@@ -171,7 +171,7 @@ function CouponFormModal({ initial, onSave, onClose }) {
   const [form, setForm] = useState(initial || EMPTY);
   const [saving, setSaving] = useState(false);
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
-  const valid = form.name.trim() && form.offer_description.trim() && form.coupon_prefix.trim();
+  const valid = (form.name || '').trim() && (form.offer_description || '').trim() && (form.coupon_prefix || '').trim();
 
   const handleSave = async () => {
     setSaving(true);

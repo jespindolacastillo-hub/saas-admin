@@ -7,7 +7,7 @@ import { getPlanLimits, withinLimit } from '../../config/planLimits';
 import {
   Plus, Download, Printer, Zap, MapPin, Lock, QrCode,
   Copy, Check, Pause, Play, ChevronRight, X, Search,
-  MoreVertical, Eye, Edit2, Trash2, Loader,
+  MoreVertical, Eye, Edit2, Trash2, Loader, CopyPlus,
 } from 'lucide-react';
 import QuestionConfigForm from './QuestionConfigForm';
 
@@ -239,7 +239,7 @@ function CopyBtn({ text, label = 'Copiar URL' }) {
 }
 
 // ─── QR Drawer ────────────────────────────────────────────────────────────────
-function QRDrawer({ qr, location, onClose, onToggle, onSaveQuestions, testMode, couponConfigs = [], areas = [] }) {
+function QRDrawer({ qr, location, onClose, onToggle, onSaveQuestions, onDuplicate, testMode, couponConfigs = [], areas = [] }) {
   const [localQC, setLocalQC] = useState(null);
   const [qcSaving, setQcSaving] = useState(false);
   const [qcSaved, setQcSaved] = useState(false);
@@ -427,6 +427,14 @@ function QRDrawer({ qr, location, onClose, onToggle, onSaveQuestions, testMode, 
               </button>
             </div>
             <CopyBtn text={url} label="Copiar URL del QR" />
+            <button onClick={() => onDuplicate(qr)} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '10px', borderRadius: 10, border: `1px solid ${T.teal}40`,
+              background: T.teal + '08', cursor: 'pointer', fontFamily: font,
+              fontWeight: 700, fontSize: '0.82rem', color: T.teal,
+            }}>
+              <CopyPlus size={14} /> Duplicar QR
+            </button>
             <button onClick={() => onToggle(qr)} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               padding: '10px', borderRadius: 10, border: `1px solid ${qr.active ? '#FECACA' : '#BBF7D0'}`,
@@ -790,6 +798,24 @@ export default function QRStudio() {
     const patch = { questions_config: questionsConfig };
     setQrCodes(prev => prev.map(q => q.id === qrId ? { ...q, ...patch } : q));
     if (selectedQR?.id === qrId) setSelectedQR(prev => ({ ...prev, ...patch }));
+  };
+
+  const handleDuplicateQR = async (qr) => {
+    setSaving(true);
+    await supabase.from('qr_codes').insert({
+      tenant_id:        tenant.id,
+      location_id:      qr.location_id,
+      type:             qr.type,
+      label:            `${qr.label} (copia)`,
+      area_id:          qr.area_id          || null,
+      coupon_config_id: qr.coupon_config_id || null,
+      questions_config: qr.questions_config || null,
+      active:           true,
+    });
+    await loadData();
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3000);
+    setSaving(false);
   };
 
   const openNewArea = () => {
@@ -1335,6 +1361,14 @@ export default function QRStudio() {
                                 }}>
                                   <Edit2 size={13} />
                                 </button>
+                                <button onClick={() => handleDuplicateQR(qr)} title="Duplicar QR" style={{
+                                  display: 'flex', alignItems: 'center', gap: 5,
+                                  padding: '6px 10px', borderRadius: 8,
+                                  border: `1px solid ${T.border}`, background: '#fff',
+                                  cursor: 'pointer', color: T.muted,
+                                }}>
+                                  <CopyPlus size={13} />
+                                </button>
                                 <button onClick={() => setSelectedQR(qr)} style={{
                                   display: 'flex', alignItems: 'center', gap: 5,
                                   padding: '6px 12px', borderRadius: 8,
@@ -1376,6 +1410,7 @@ export default function QRStudio() {
         onClose={() => setSelectedQR(null)}
         onToggle={handleToggleActive}
         onSaveQuestions={handleSaveQuestions}
+        onDuplicate={handleDuplicateQR}
         testMode={tenant?.test_mode}
         couponConfigs={couponConfigs}
         areas={areas}

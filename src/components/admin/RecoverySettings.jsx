@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
 import { CheckCircle2, Loader, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+// v2 — loyalty reward type + trigger threshold
 
 const T = {
   coral:  '#FF5C3A', teal: '#00C9A7', purple: '#7C3AED', ink: '#0D0D12',

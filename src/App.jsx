@@ -2029,6 +2029,7 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
   const [showNotifications, setShowNotifications] = useState(false);
   const masterMode = userRole?.toLowerCase() === 'owner';
   const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (localStorage.getItem('wizard_permanently_skipped')) return false;
     const config = localStorage.getItem('saas_tenant_config');
     const tenantId = config ? JSON.parse(config)?.id : null;
     return !localStorage.getItem('onboarding_complete') || tenantId === '00000000-0000-0000-0000-000000000000';
@@ -2164,7 +2165,7 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
   };
 
   useEffect(() => {
-    if (tenant?.id === '00000000-0000-0000-0000-000000000000') {
+    if (tenant?.id === '00000000-0000-0000-0000-000000000000' && !localStorage.getItem('wizard_permanently_skipped')) {
       setShowOnboarding(true);
       setLoading(false);
     } else if (tenant?.id) {
@@ -2646,6 +2647,25 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
                 <ShieldCheck size={16} /> Auditoría
               </button>
             </li>}
+
+            {/* Retomar wizard — visible solo si fue saltado */}
+            {localStorage.getItem('wizard_permanently_skipped') && !localStorage.getItem('onboarding_complete_full') && (
+              <li style={{ paddingTop: '0.5rem', borderTop: '1px solid var(--border)', marginTop: '0.5rem' }}>
+                <button
+                  className="nav-item"
+                  onClick={() => {
+                    localStorage.removeItem('wizard_permanently_skipped');
+                    localStorage.removeItem('onboarding_complete');
+                    setShowOnboarding(true);
+                    setWizardStep(0);
+                    setIsSidebarOpen(false);
+                  }}
+                  style={{ color: '#FF5C3A', fontWeight: 700 }}
+                >
+                  🚀 Retomar configuración
+                </button>
+              </li>
+            )}
           </ul>
         </nav>
 

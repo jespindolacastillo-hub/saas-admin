@@ -479,6 +479,7 @@ const OnboardingWizard = ({
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
   const [isCustomColonia, setIsCustomColonia] = useState(false);
+  const [skipConfirm, setSkipConfirm] = useState(false);
 
   // ── Helpers ──
   const transition = (newStep, direction = 1) => {
@@ -828,6 +829,7 @@ const OnboardingWizard = ({
 
   const handleSkip = () => {
     localStorage.setItem('onboarding_complete', 'true');
+    localStorage.setItem('wizard_permanently_skipped', 'true');
     onComplete();
   };
 
@@ -939,11 +941,23 @@ const OnboardingWizard = ({
             ))}
           </div>
 
-          <button onClick={handleSkip} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700', padding: '6px 12px', borderRadius: '8px' }}
-            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-            onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-            <X size={14} /> Saltar
-          </button>
+          {skipConfirm ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: '10px', padding: '6px 12px' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#92400E' }}>¿Saltar? Podrás retomarlo desde Configuración</span>
+              <button onClick={handleSkip} style={{ background: '#FF5C3A', border: 'none', color: '#fff', borderRadius: '6px', padding: '4px 10px', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer' }}>
+                Sí, saltar
+              </button>
+              <button onClick={() => setSkipConfirm(false)} style={{ background: 'none', border: 'none', color: '#6B7280', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setSkipConfirm(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1.5px solid #E5E7EB', color: '#6B7280', cursor: 'pointer', fontSize: '0.78rem', fontWeight: '700', padding: '6px 14px', borderRadius: '8px' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#FF5C3A'; e.currentTarget.style.color = '#FF5C3A'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.color = '#6B7280'; }}>
+              <X size={14} /> Saltar configuración
+            </button>
+          )}
         </div>
 
         {/* Form content */}

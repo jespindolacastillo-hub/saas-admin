@@ -29,6 +29,7 @@ const DEFAULT_AUTO = {
   loyalty_enabled: false,
   loyalty_offer_description: '10% de descuento en tu próxima visita',
   loyalty_coupon_prefix: 'LOYAL', loyalty_validity_days: 30,
+  loyalty_reward_type: 'discount', loyalty_reward_value: 0, loyalty_trigger_min: 4,
 };
 
 // ─── Toggle ───────────────────────────────────────────────────────────────────
@@ -128,6 +129,81 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
             <textarea value={cfg[fields.message_template]} onChange={e => onChange(fields.message_template, e.target.value)} rows={3} style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Loyalty auto card — hardcoded keys so bundler can't eliminate them ───────
+function LoyaltyAutoCard({ cfg, onChange }) {
+  const enabled   = cfg['loyalty_enabled'];
+  const rewardType = cfg['loyalty_reward_type'] || 'discount';
+  return (
+    <div style={{ background: T.card, borderRadius: 20, border: `1.5px solid ${enabled ? T.teal + '40' : T.border}`, overflow: 'hidden', opacity: enabled ? 1 : 0.75 }}>
+      <div style={{ padding: '16px 20px', background: enabled ? T.teal + '08' : T.bg, borderBottom: `1px solid ${enabled ? T.teal + '20' : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: '1.4rem' }}>🌟</span>
+          <div>
+            <div style={{ fontWeight: 800, color: T.ink, fontSize: '0.9rem' }}>Lealtad</div>
+            <div style={{ fontSize: '0.7rem', color: T.muted, marginTop: 1 }}>Se activa con buena calificación</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: enabled ? T.teal : T.muted }}>{enabled ? 'Activo' : 'Inactivo'}</span>
+          <Toggle on={enabled} onChange={v => onChange('loyalty_enabled', v)} />
+        </div>
+      </div>
+      <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Reward type */}
+        <div>
+          <label style={labelSt}>Tipo de incentivo</label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {REWARD_TYPES.map(rt => (
+              <button key={rt.value} onClick={() => onChange('loyalty_reward_type', rt.value)} style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${rewardType === rt.value ? T.teal : T.border}`, background: rewardType === rt.value ? T.teal + '10' : '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, color: rewardType === rt.value ? T.teal : T.muted, fontFamily: font }}>
+                {rt.emoji} {rt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Offer description */}
+        <div>
+          <label style={labelSt}>{rewardType !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}</label>
+          <input type="text" value={cfg['loyalty_offer_description']} onChange={e => onChange('loyalty_offer_description', e.target.value)} placeholder={rewardType !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 10% de descuento en tu próxima visita'} style={inputSt} />
+        </div>
+        {/* Reward value — non-discount */}
+        {rewardType !== 'discount' && (
+          <div>
+            <label style={labelSt}>Valor estimado ($) — ROI</label>
+            <input type="number" min={0} value={cfg['loyalty_reward_value'] ?? ''} onChange={e => onChange('loyalty_reward_value', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!cfg['loyalty_reward_value']) e.target.select(); }} style={inputSt} />
+          </div>
+        )}
+        {/* Prefix + validity */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelSt}>Prefijo del código</label>
+            <input type="text" value={cfg['loyalty_coupon_prefix']} onChange={e => onChange('loyalty_coupon_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))} style={{ ...inputSt, fontWeight: 700, letterSpacing: '0.05em' }} />
+          </div>
+          <div>
+            <label style={labelSt}>Validez (días)</label>
+            <input type="number" min={1} value={cfg['loyalty_validity_days']} onChange={e => onChange('loyalty_validity_days', parseInt(e.target.value) || 1)} style={inputSt} />
+          </div>
+        </div>
+        {/* Preview */}
+        <div style={{ background: '#0D0D12', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontFamily: 'monospace', fontWeight: 900, color: '#fff', letterSpacing: '0.08em' }}>{genPreview(cfg['loyalty_coupon_prefix'])}</span>
+          <span style={{ fontSize: '0.72rem', color: T.teal, fontWeight: 700 }}>{cfg['loyalty_offer_description']?.slice(0, 24) || '—'}{cfg['loyalty_offer_description']?.length > 24 ? '…' : ''}</span>
+        </div>
+        {/* Trigger — loyalty: ≥ 3, 4, or 5 stars */}
+        <div>
+          <label style={labelSt}>Activar cuando calificación ≥</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[3, 4, 5].map(s => (
+              <button key={s} onClick={() => onChange('loyalty_trigger_min', s)} style={{ padding: '6px 16px', borderRadius: 10, fontFamily: font, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', border: `2px solid ${cfg['loyalty_trigger_min'] === s ? T.teal : T.border}`, background: cfg['loyalty_trigger_min'] === s ? T.teal + '10' : '#fff', color: cfg['loyalty_trigger_min'] === s ? T.teal : T.muted }}>
+                {'★'.repeat(s)} {s}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -374,7 +450,6 @@ export default function CouponManagement() {
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 10, color: T.muted, fontFamily: font }}><Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
 
   const recoveryFields = { enabled:'enabled', trigger_score:'trigger_score', offer_description:'offer_description', coupon_prefix:'coupon_prefix', validity_days:'validity_days', message_template:'message_template', reward_type:'reward_type', reward_value:'reward_value' };
-  const loyaltyFields  = { enabled:'loyalty_enabled', trigger_score:null, offer_description:'loyalty_offer_description', coupon_prefix:'loyalty_coupon_prefix', validity_days:'loyalty_validity_days', message_template:null };
 
   return (
     <div style={{ fontFamily: font, padding: '28px 32px', maxWidth: 900, margin: '0 auto' }}>
@@ -429,7 +504,7 @@ export default function CouponManagement() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
             <AutoCard title="Recovery" emoji="😔" subtitle="Se activa con mala calificación" accentColor={T.coral} fields={recoveryFields} cfg={autoCfg} onChange={updAuto} />
-            <AutoCard title="Lealtad"  emoji="🌟" subtitle="Se activa con buena calificación" accentColor={T.teal}  fields={loyaltyFields}  cfg={autoCfg} onChange={updAuto} />
+            <LoyaltyAutoCard cfg={autoCfg} onChange={updAuto} />
           </div>
           <Stats tenantId={tenant?.id} />
         </>

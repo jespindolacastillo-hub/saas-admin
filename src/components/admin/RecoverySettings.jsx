@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
 import { CheckCircle2, Loader, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-// v2 — loyalty reward type + trigger threshold
 
 const T = {
   coral:  '#FF5C3A', teal: '#00C9A7', purple: '#7C3AED', ink: '#0D0D12',
@@ -43,6 +42,16 @@ const DEFAULT = {
 
 const genPreview = (prefix) => `${prefix || 'CODE'}-X3K9A`;
 
+const labelStyle = {
+  display: 'block', fontSize: '0.72rem', fontWeight: 700, color: T.muted,
+  textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6,
+};
+const inputStyle = {
+  width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`,
+  fontFamily: font, fontSize: '0.88rem', color: T.ink, outline: 'none',
+  boxSizing: 'border-box', transition: 'border-color .15s',
+};
+
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 function Toggle({ on, onChange }) {
   return (
@@ -59,18 +68,14 @@ function Toggle({ on, onChange }) {
   );
 }
 
-// ─── Coupon card ──────────────────────────────────────────────────────────────
-function CouponCard({ title, emoji, subtitle, accentColor, fields, config, onChange }) {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const enabled = config[fields.enabled];
-
+// ─── Shared card shell ────────────────────────────────────────────────────────
+function CardShell({ title, emoji, subtitle, accentColor, enabled, onToggle, children }) {
   return (
     <div style={{
       background: T.card, borderRadius: 20, border: `1.5px solid ${enabled ? accentColor + '40' : T.border}`,
       overflow: 'hidden', transition: 'border-color .2s',
       opacity: enabled ? 1 : 0.75,
     }}>
-      {/* Header */}
       <div style={{
         padding: '18px 22px',
         background: enabled ? accentColor + '08' : T.bg,
@@ -88,172 +93,307 @@ function CouponCard({ title, emoji, subtitle, accentColor, fields, config, onCha
           <span style={{ fontSize: '0.72rem', fontWeight: 700, color: enabled ? accentColor : T.muted }}>
             {enabled ? 'Activo' : 'Inactivo'}
           </span>
-          <Toggle on={enabled} onChange={v => onChange(fields.enabled, v)} />
+          <Toggle on={enabled} onChange={onToggle} />
         </div>
       </div>
-
-      {/* Body */}
       <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-        {/* Reward type selector */}
-        {fields.reward_type && (
-          <div>
-            <label style={labelStyle}>Tipo de incentivo</label>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {REWARD_TYPES.map(rt => (
-                <button key={rt.value} onClick={() => onChange(fields.reward_type, rt.value)} style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${config[fields.reward_type] === rt.value ? accentColor : T.border}`, background: config[fields.reward_type] === rt.value ? accentColor + '10' : '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: config[fields.reward_type] === rt.value ? accentColor : T.muted, fontFamily: font }}>
-                  {rt.emoji} {rt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Offer description — most important field */}
-        <div>
-          <label style={labelStyle}>
-            {fields.reward_type && config[fields.reward_type] !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}
-          </label>
-          <input
-            type="text"
-            value={config[fields.offer_description]}
-            onChange={e => onChange(fields.offer_description, e.target.value)}
-            placeholder={fields.reward_type && config[fields.reward_type] !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 20% de descuento en tu próxima visita'}
-            style={inputStyle}
-          />
-        </div>
-
-        {/* Reward value (for non-discount types, for ROI tracking) */}
-        {fields.reward_value && config[fields.reward_type] !== 'discount' && (
-          <div>
-            <label style={labelStyle}>Valor estimado ($) — para calcular ROI</label>
-            <input type="number" min={0} value={config[fields.reward_value] ?? ''} onChange={e => onChange(fields.reward_value, e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!config[fields.reward_value]) e.target.select(); }} style={inputStyle} />
-          </div>
-        )}
-
-        {/* Prefix + validity */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Prefijo del código</label>
-            <input
-              type="text"
-              value={config[fields.coupon_prefix]}
-              onChange={e => onChange(fields.coupon_prefix, e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="RECOVERY"
-              style={{ ...inputStyle, fontWeight: 700, letterSpacing: '0.05em' }}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Validez (días)</label>
-            <input
-              type="number" min={1}
-              value={config[fields.validity_days]}
-              onChange={e => onChange(fields.validity_days, parseInt(e.target.value) || 1)}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-
-        {/* Coupon preview */}
-        <div style={{
-          background: '#0D0D12', borderRadius: 12, padding: '12px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div>
-            <div style={{ fontSize: '0.6rem', color: T.teal, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 3 }}>
-              Vista previa
-            </div>
-            <div style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '1.1rem', color: '#fff', letterSpacing: '0.08em' }}>
-              {genPreview(config[fields.coupon_prefix])}
-            </div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
-              válido {config[fields.validity_days]} días
-            </div>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: accentColor, marginTop: 2 }}>
-              {config[fields.offer_description]?.slice(0, 28) || '—'}{config[fields.offer_description]?.length > 28 ? '…' : ''}
-            </div>
-          </div>
-        </div>
-
-        {/* Score trigger */}
-        {fields.trigger_score && (
-          <div>
-            <label style={labelStyle}>
-              Activar cuando calificación sea {fields.trigger_direction || '≤'}
-            </label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {(fields.trigger_options || [1, 2, 3]).map(s => (
-                <button key={s} onClick={() => onChange(fields.trigger_score, s)} style={{
-                  padding: '7px 18px', borderRadius: 10, fontFamily: font, fontWeight: 700,
-                  fontSize: '0.82rem', cursor: 'pointer',
-                  border: `2px solid ${config[fields.trigger_score] === s ? accentColor : T.border}`,
-                  background: config[fields.trigger_score] === s ? accentColor + '10' : '#fff',
-                  color: config[fields.trigger_score] === s ? accentColor : T.muted,
-                }}>
-                  {'★'.repeat(s)} {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Advanced toggle */}
-        {fields.message_template && (
-          <div>
-            <button onClick={() => setShowAdvanced(v => !v)} style={{
-              background: 'none', border: 'none', cursor: 'pointer', fontFamily: font,
-              fontSize: '0.75rem', color: T.muted, display: 'flex', alignItems: 'center', gap: 4, padding: 0,
-            }}>
-              {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              Configuración avanzada (mensaje y términos)
-            </button>
-            {showAdvanced && (
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div>
-                  <label style={labelStyle}>Plantilla de mensaje WhatsApp</label>
-                  <div style={{ fontSize: '0.68rem', color: T.muted, marginBottom: 6 }}>
-                    Variables:{' '}
-                    {['{{oferta}}', '{{codigo}}', '{{dias}}', '{{negocio}}'].map(v => (
-                      <code key={v} style={{ background: T.purple + '12', color: T.purple, borderRadius: 4, padding: '1px 5px', marginRight: 4, fontFamily: 'monospace', fontSize: '0.72rem' }}>{v}</code>
-                    ))}
-                  </div>
-                  <textarea
-                    value={config[fields.message_template]}
-                    onChange={e => onChange(fields.message_template, e.target.value)}
-                    rows={3}
-                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>Términos y condiciones (opcional)</label>
-                  <textarea
-                    value={config.terms || ''}
-                    onChange={e => onChange('terms', e.target.value)}
-                    rows={2}
-                    placeholder="Válido una vez por cliente. No acumulable."
-                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {children}
       </div>
     </div>
   );
 }
 
-const labelStyle = {
-  display: 'block', fontSize: '0.72rem', fontWeight: 700, color: T.muted,
-  textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6,
-};
-const inputStyle = {
-  width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${T.border}`,
-  fontFamily: font, fontSize: '0.88rem', color: T.ink, outline: 'none',
-  boxSizing: 'border-box', transition: 'border-color .15s',
-};
+// ─── Coupon preview strip ──────────────────────────────────────────────────────
+function CouponPreview({ prefix, validityDays, description, accentColor }) {
+  return (
+    <div style={{
+      background: '#0D0D12', borderRadius: 12, padding: '12px 16px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    }}>
+      <div>
+        <div style={{ fontSize: '0.6rem', color: T.teal, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 3 }}>
+          Vista previa
+        </div>
+        <div style={{ fontFamily: 'monospace', fontWeight: 900, fontSize: '1.1rem', color: '#fff', letterSpacing: '0.08em' }}>
+          {genPreview(prefix)}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
+          válido {validityDays} días
+        </div>
+        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: accentColor, marginTop: 2 }}>
+          {description?.slice(0, 28) || '—'}{description?.length > 28 ? '…' : ''}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Recovery coupon card (all fields hardcoded — no fields object) ────────────
+function RecoveryCouponCard({ config, onChange }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const enabled = config['enabled'];
+  const rewardType = config['reward_type'] || 'discount';
+
+  return (
+    <CardShell
+      title="Recovery"
+      emoji="😔"
+      subtitle="Se activa cuando el cliente da una mala calificación"
+      accentColor={T.coral}
+      enabled={enabled}
+      onToggle={v => onChange('enabled', v)}
+    >
+      {/* Reward type */}
+      <div>
+        <label style={labelStyle}>Tipo de incentivo</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {REWARD_TYPES.map(rt => (
+            <button key={rt.value} onClick={() => onChange('reward_type', rt.value)} style={{
+              padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              border: `1.5px solid ${rewardType === rt.value ? T.coral : T.border}`,
+              background: rewardType === rt.value ? T.coral + '10' : '#fff',
+              fontSize: '0.78rem', fontWeight: 700, fontFamily: font,
+              color: rewardType === rt.value ? T.coral : T.muted,
+            }}>
+              {rt.emoji} {rt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Offer description */}
+      <div>
+        <label style={labelStyle}>
+          {rewardType !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}
+        </label>
+        <input
+          type="text"
+          value={config['offer_description']}
+          onChange={e => onChange('offer_description', e.target.value)}
+          placeholder={rewardType !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 20% de descuento en tu próxima visita'}
+          style={inputStyle}
+        />
+      </div>
+
+      {/* Reward value — only for non-discount */}
+      {rewardType !== 'discount' && (
+        <div>
+          <label style={labelStyle}>Valor estimado ($) — para calcular ROI</label>
+          <input
+            type="number" min={0}
+            value={config['reward_value'] ?? ''}
+            onChange={e => onChange('reward_value', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+            onFocus={e => { if (!config['reward_value']) e.target.select(); }}
+            style={inputStyle}
+          />
+        </div>
+      )}
+
+      {/* Prefix + validity */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Prefijo del código</label>
+          <input
+            type="text"
+            value={config['coupon_prefix']}
+            onChange={e => onChange('coupon_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="RECOVERY"
+            style={{ ...inputStyle, fontWeight: 700, letterSpacing: '0.05em' }}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Validez (días)</label>
+          <input
+            type="number" min={1}
+            value={config['validity_days']}
+            onChange={e => onChange('validity_days', parseInt(e.target.value) || 1)}
+            style={inputStyle}
+          />
+        </div>
+      </div>
+
+      {/* Preview */}
+      <CouponPreview
+        prefix={config['coupon_prefix']}
+        validityDays={config['validity_days']}
+        description={config['offer_description']}
+        accentColor={T.coral}
+      />
+
+      {/* Trigger score — recovery: ≤ 1, 2, or 3 stars */}
+      <div>
+        <label style={labelStyle}>Activar cuando calificación sea ≤</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[1, 2, 3].map(s => (
+            <button key={s} onClick={() => onChange('trigger_score', s)} style={{
+              padding: '7px 18px', borderRadius: 10, fontFamily: font, fontWeight: 700,
+              fontSize: '0.82rem', cursor: 'pointer',
+              border: `2px solid ${config['trigger_score'] === s ? T.coral : T.border}`,
+              background: config['trigger_score'] === s ? T.coral + '10' : '#fff',
+              color: config['trigger_score'] === s ? T.coral : T.muted,
+            }}>
+              {'★'.repeat(s)} {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Advanced: message template */}
+      <div>
+        <button onClick={() => setShowAdvanced(v => !v)} style={{
+          background: 'none', border: 'none', cursor: 'pointer', fontFamily: font,
+          fontSize: '0.75rem', color: T.muted, display: 'flex', alignItems: 'center', gap: 4, padding: 0,
+        }}>
+          {showAdvanced ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          Configuración avanzada (mensaje y términos)
+        </button>
+        {showAdvanced && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>Plantilla de mensaje WhatsApp</label>
+              <div style={{ fontSize: '0.68rem', color: T.muted, marginBottom: 6 }}>
+                Variables:{' '}
+                {['{{oferta}}', '{{codigo}}', '{{dias}}', '{{negocio}}'].map(v => (
+                  <code key={v} style={{ background: T.purple + '12', color: T.purple, borderRadius: 4, padding: '1px 5px', marginRight: 4, fontFamily: 'monospace', fontSize: '0.72rem' }}>{v}</code>
+                ))}
+              </div>
+              <textarea
+                value={config['message_template']}
+                onChange={e => onChange('message_template', e.target.value)}
+                rows={3}
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Términos y condiciones (opcional)</label>
+              <textarea
+                value={config['terms'] || ''}
+                onChange={e => onChange('terms', e.target.value)}
+                rows={2}
+                placeholder="Válido una vez por cliente. No acumulable."
+                style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </CardShell>
+  );
+}
+
+// ─── Loyalty coupon card (hardcoded keys — no fields object) ───────────────────
+function LoyaltyCouponCard({ config, onChange }) {
+  const enabled = config['loyalty_enabled'];
+  const rewardType = config['loyalty_reward_type'] || 'discount';
+
+  return (
+    <CardShell
+      title="Lealtad"
+      emoji="🌟"
+      subtitle="Se activa cuando el cliente da una buena calificación"
+      accentColor={T.teal}
+      enabled={enabled}
+      onToggle={v => onChange('loyalty_enabled', v)}
+    >
+      {/* Reward type */}
+      <div>
+        <label style={labelStyle}>Tipo de incentivo</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {REWARD_TYPES.map(rt => (
+            <button key={rt.value} onClick={() => onChange('loyalty_reward_type', rt.value)} style={{
+              padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+              border: `1.5px solid ${rewardType === rt.value ? T.teal : T.border}`,
+              background: rewardType === rt.value ? T.teal + '10' : '#fff',
+              fontSize: '0.78rem', fontWeight: 700, fontFamily: font,
+              color: rewardType === rt.value ? T.teal : T.muted,
+            }}>
+              {rt.emoji} {rt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Offer description */}
+      <div>
+        <label style={labelStyle}>
+          {rewardType !== 'discount' ? 'Descripción del premio' : 'Descripción de la oferta'}
+        </label>
+        <input
+          type="text"
+          value={config['loyalty_offer_description']}
+          onChange={e => onChange('loyalty_offer_description', e.target.value)}
+          placeholder={rewardType !== 'discount' ? 'ej. Gorra exclusiva BMW' : 'ej. 10% de descuento en tu próxima visita'}
+          style={inputStyle}
+        />
+      </div>
+
+      {/* Reward value — only for non-discount */}
+      {rewardType !== 'discount' && (
+        <div>
+          <label style={labelStyle}>Valor estimado ($) — para calcular ROI</label>
+          <input
+            type="number" min={0}
+            value={config['loyalty_reward_value'] ?? ''}
+            onChange={e => onChange('loyalty_reward_value', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+            onFocus={e => { if (!config['loyalty_reward_value']) e.target.select(); }}
+            style={inputStyle}
+          />
+        </div>
+      )}
+
+      {/* Prefix + validity */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Prefijo del código</label>
+          <input
+            type="text"
+            value={config['loyalty_coupon_prefix']}
+            onChange={e => onChange('loyalty_coupon_prefix', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="LOYAL"
+            style={{ ...inputStyle, fontWeight: 700, letterSpacing: '0.05em' }}
+          />
+        </div>
+        <div>
+          <label style={labelStyle}>Validez (días)</label>
+          <input
+            type="number" min={1}
+            value={config['loyalty_validity_days']}
+            onChange={e => onChange('loyalty_validity_days', parseInt(e.target.value) || 1)}
+            style={inputStyle}
+          />
+        </div>
+      </div>
+
+      {/* Preview */}
+      <CouponPreview
+        prefix={config['loyalty_coupon_prefix']}
+        validityDays={config['loyalty_validity_days']}
+        description={config['loyalty_offer_description']}
+        accentColor={T.teal}
+      />
+
+      {/* Trigger score — loyalty: ≥ 3, 4, or 5 stars */}
+      <div>
+        <label style={labelStyle}>Activar cuando calificación sea ≥</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[3, 4, 5].map(s => (
+            <button key={s} onClick={() => onChange('loyalty_trigger_min', s)} style={{
+              padding: '7px 18px', borderRadius: 10, fontFamily: font, fontWeight: 700,
+              fontSize: '0.82rem', cursor: 'pointer',
+              border: `2px solid ${config['loyalty_trigger_min'] === s ? T.teal : T.border}`,
+              background: config['loyalty_trigger_min'] === s ? T.teal + '10' : '#fff',
+              color: config['loyalty_trigger_min'] === s ? T.teal : T.muted,
+            }}>
+              {'★'.repeat(s)} {s}
+            </button>
+          ))}
+        </div>
+      </div>
+    </CardShell>
+  );
+}
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
 function Stats({ tenantId }) {
@@ -265,11 +405,10 @@ function Stats({ tenantId }) {
       .eq('tenant_id', tenantId).gte('created_at', since.toISOString())
       .then(({ data }) => {
         if (!data) return;
-        const unhappy   = data.filter(f => f.score <= 2).length;
         const sent      = data.filter(f => f.recovery_sent).length;
         const redeemed  = data.filter(f => f.coupon_redeemed).length;
         const happy     = data.filter(f => f.score >= 4 && f.recovery_sent).length;
-        setStats({ unhappy, sent, redeemed, happy });
+        setStats({ sent, redeemed, happy });
       });
   }, [tenantId]);
 
@@ -333,30 +472,6 @@ export default function RecoverySettings() {
     </div>
   );
 
-  const recoveryFields = {
-    enabled:           'enabled',
-    trigger_score:     'trigger_score',
-    offer_description: 'offer_description',
-    coupon_prefix:     'coupon_prefix',
-    validity_days:     'validity_days',
-    message_template:  'message_template',
-    reward_type:       'reward_type',
-    reward_value:      'reward_value',
-  };
-
-  const loyaltyFields = {
-    enabled:           'loyalty_enabled',
-    trigger_score:     'loyalty_trigger_min',
-    trigger_direction: '≥',
-    trigger_options:   [3, 4, 5],
-    offer_description: 'loyalty_offer_description',
-    coupon_prefix:     'loyalty_coupon_prefix',
-    validity_days:     'loyalty_validity_days',
-    message_template:  null,
-    reward_type:       'loyalty_reward_type',
-    reward_value:      'loyalty_reward_value',
-  };
-
   return (
     <div style={{ fontFamily: font, padding: '28px 32px', maxWidth: 860, margin: '0 auto' }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -387,26 +502,10 @@ export default function RecoverySettings() {
         </div>
       )}
 
-      {/* Two coupon cards */}
+      {/* Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-        <CouponCard
-          title="Recovery"
-          emoji="😔"
-          subtitle="Se activa cuando el cliente da una mala calificación"
-          accentColor={T.coral}
-          fields={recoveryFields}
-          config={config}
-          onChange={update}
-        />
-        <CouponCard
-          title="Lealtad"
-          emoji="🌟"
-          subtitle="Se activa cuando el cliente da una buena calificación"
-          accentColor={T.teal}
-          fields={loyaltyFields}
-          config={config}
-          onChange={update}
-        />
+        <RecoveryCouponCard config={config} onChange={update} />
+        <LoyaltyCouponCard  config={config} onChange={update} />
       </div>
 
       {/* Stats */}

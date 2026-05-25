@@ -917,22 +917,33 @@ export default function FeedbackPublic() {
     setLocation(qrData.locations || null);
 
     if (qrData.type) {
-      const { data: qcData } = await supabase
-        .from('qr_type_config')
-        .select('*')
-        .eq('tenant_id', qrData.tenant_id)
-        .eq('qr_type', qrData.type)
-        .maybeSingle();
       const baseDefault = { ...DEFAULT_CONFIG, ...(TYPE_DEFAULTS[qrData.type] || {}) };
 
-      if (qcData) {
-        // Parse options if stringified
-        if (typeof qcData.followup_options === 'string') {
-          try { qcData.followup_options = JSON.parse(qcData.followup_options); } catch { qcData.followup_options = baseDefault.followup_options; }
+      if (qrData.questions_config) {
+        // Per-QR config takes highest priority
+        const qc = { ...qrData.questions_config };
+        if (typeof qc.followup_options === 'string') {
+          try { qc.followup_options = JSON.parse(qc.followup_options); } catch { qc.followup_options = baseDefault.followup_options; }
         }
-        setQuestionConfig({ ...baseDefault, ...qcData });
+        if (!Array.isArray(qc.followup_options)) qc.followup_options = baseDefault.followup_options;
+        setQuestionConfig({ ...baseDefault, ...qc });
       } else {
-        setQuestionConfig(baseDefault);
+        // Fall back to type-level config
+        const { data: qcData } = await supabase
+          .from('qr_type_config')
+          .select('*')
+          .eq('tenant_id', qrData.tenant_id)
+          .eq('qr_type', qrData.type)
+          .maybeSingle();
+
+        if (qcData) {
+          if (typeof qcData.followup_options === 'string') {
+            try { qcData.followup_options = JSON.parse(qcData.followup_options); } catch { qcData.followup_options = baseDefault.followup_options; }
+          }
+          setQuestionConfig({ ...baseDefault, ...qcData });
+        } else {
+          setQuestionConfig(baseDefault);
+        }
       }
     }
 

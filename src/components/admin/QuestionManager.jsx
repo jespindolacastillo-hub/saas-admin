@@ -233,8 +233,8 @@ export default function QuestionManager() {
 
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>Preguntas por tipo de QR</h1>
-        <p style={{ fontSize: '0.85rem', color: T.muted }}>Cada tipo de QR puede tener su propia pregunta, estilo de calificación y seguimiento</p>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: T.ink, letterSpacing: '-0.02em', marginBottom: 4 }}>Plantillas de preguntas (defaults por tipo)</h1>
+        <p style={{ fontSize: '0.85rem', color: T.muted }}>Configuración base para cada tipo de QR. Cada QR individual puede sobreescribir estas preguntas de forma independiente desde QR Studio.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr auto', gap: 20 }}>

@@ -9,6 +9,7 @@ import {
   Copy, Check, Pause, Play, ChevronRight, X, Search,
   MoreVertical, Eye, Edit2, Trash2, Loader,
 } from 'lucide-react';
+import QuestionConfigForm from './QuestionConfigForm';
 
 const T = {
   coral:  '#FF5C3A', teal:  '#00C9A7', purple: '#7C3AED',
@@ -542,10 +543,10 @@ export default function QRStudio() {
   const [showAreaModal, setShowAreaModal] = useState(false);
   const [editingArea,   setEditingArea]   = useState(null); // null = new, obj = editing
   const [areaForm,      setAreaForm]      = useState({ nombre: '', coupon_config_id: '' });
-  const [qrForm,         setQrForm]         = useState({ location_id: '', type: 'area', label: '', area_id: '', coupon_config_id: '' });
+  const [qrForm,         setQrForm]         = useState({ location_id: '', type: 'area', label: '', area_id: '', coupon_config_id: '', questions_config: null });
   const [showEditQRModal, setShowEditQRModal] = useState(false);
   const [editingQR,       setEditingQR]       = useState(null);
-  const [editQRForm,      setEditQRForm]      = useState({ label: '', type: 'area', area_id: '', coupon_config_id: '' });
+  const [editQRForm,      setEditQRForm]      = useState({ label: '', type: 'area', area_id: '', coupon_config_id: '', questions_config: null });
   const [locForm,        setLocForm]        = useState({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '' });
   const [cpStatus,       setCpStatus]       = useState('idle'); // idle | loading | found | error
   const [coloniaOptions, setColoniaOptions] = useState([]);
@@ -589,8 +590,9 @@ export default function QRStudio() {
       type: qrForm.type, label: qrForm.label.trim(),
       area_id: qrForm.area_id || null,
       coupon_config_id: qrForm.coupon_config_id || null,
+      questions_config: qrForm.questions_config || null,
     });
-    setQrForm({ location_id: '', type: 'area', label: '', area_id: '', coupon_config_id: '' });
+    setQrForm({ location_id: '', type: 'area', label: '', area_id: '', coupon_config_id: '', questions_config: null });
     setShowQRModal(false);
     await loadData();
     setShowConfetti(true);
@@ -702,7 +704,7 @@ export default function QRStudio() {
 
   const openEditQR = (qr) => {
     setEditingQR(qr);
-    setEditQRForm({ label: qr.label, type: qr.type, area_id: qr.area_id || '', coupon_config_id: qr.coupon_config_id || '' });
+    setEditQRForm({ label: qr.label, type: qr.type, area_id: qr.area_id || '', coupon_config_id: qr.coupon_config_id || '', questions_config: qr.questions_config || null });
     setShowEditQRModal(true);
   };
 
@@ -714,6 +716,7 @@ export default function QRStudio() {
       type:             editQRForm.type,
       area_id:          editQRForm.area_id          || null,
       coupon_config_id: editQRForm.coupon_config_id || null,
+      questions_config: editQRForm.questions_config || null,
     };
     await supabase.from('qr_codes').update(update).eq('id', editingQR.id);
     setQrCodes(prev => prev.map(q => q.id === editingQR.id ? { ...q, ...update } : q));
@@ -1320,7 +1323,7 @@ export default function QRStudio() {
 
       {/* ── Edit QR Modal ── */}
       {showEditQRModal && editingQR && (
-        <Modal title="Editar QR" onClose={() => { setShowEditQRModal(false); setEditingQR(null); }}>
+        <Modal title="Editar QR" onClose={() => { setShowEditQRModal(false); setEditingQR(null); }} width={520}>
           <FieldRow label="Etiqueta">
             <input
               style={inputSt}
@@ -1390,6 +1393,13 @@ export default function QRStudio() {
               </>
             )}
           </FieldRow>
+          <FieldRow label="Preguntas de feedback">
+            <QuestionConfigForm
+              value={editQRForm.questions_config}
+              qrType={editQRForm.type}
+              onChange={qc => setEditQRForm(f => ({ ...f, questions_config: qc }))}
+            />
+          </FieldRow>
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button
               onClick={handleUpdateQR}
@@ -1413,7 +1423,7 @@ export default function QRStudio() {
 
       {/* ── New QR Modal ── */}
       {showQRModal && (
-        <Modal title="Nuevo QR" onClose={() => setShowQRModal(false)}>
+        <Modal title="Nuevo QR" onClose={() => setShowQRModal(false)} width={520}>
           <FieldRow label="Sucursal">
             <select style={inputSt} value={qrForm.location_id || selectedLoc}
               onChange={e => setQrForm(f => ({ ...f, location_id: e.target.value }))}>
@@ -1489,6 +1499,13 @@ export default function QRStudio() {
                 </div>
               </>
             )}
+          </FieldRow>
+          <FieldRow label="Preguntas de feedback">
+            <QuestionConfigForm
+              value={qrForm.questions_config}
+              qrType={qrForm.type}
+              onChange={qc => setQrForm(f => ({ ...f, questions_config: qc }))}
+            />
           </FieldRow>
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button onClick={handleAddQR}

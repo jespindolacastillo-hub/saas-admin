@@ -605,7 +605,7 @@ const OnboardingWizard = ({
         }, { onConflict: 'email' });
         if (userUpdateErr) throw userUpdateErr;
       } else {
-        // Update existing tenant with new info
+        // Update existing tenant with new info — do NOT wipe existing data
         await supabase.from('tenants').update({
           name: orgName.trim() || undefined,
         }).eq('id', validTid);
@@ -632,14 +632,17 @@ const OnboardingWizard = ({
         } catch (_) { /* logo is non-critical */ }
       }
 
-      // ── Wipe any previous onboarding data for this tenant ──────────────────
-      // Guarantees a clean slate even if the reset button failed (e.g. RLS blocked it)
-      await supabase.from('qr_codes').delete().eq('tenant_id', validTid);
-      await supabase.from('Area_Preguntas').delete().eq('tenant_id', validTid);
-      await supabase.from('Tienda_Areas').delete().eq('tenant_id', validTid);
-      await supabase.from('Areas_Catalogo').delete().eq('tenant_id', validTid);
-      await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', validTid);
-      await supabase.from('locations').delete().eq('tenant_id', validTid);
+      // ── Wipe only on brand-new tenant creation (zero UUID → new UUID path) ──
+      // Never wipe an existing tenant with real data
+      const isNewTenant = (tid === '00000000-0000-0000-0000-000000000000' || !tid || !uuidRegex.test(tid));
+      if (isNewTenant) {
+        await supabase.from('qr_codes').delete().eq('tenant_id', validTid);
+        await supabase.from('Area_Preguntas').delete().eq('tenant_id', validTid);
+        await supabase.from('Tienda_Areas').delete().eq('tenant_id', validTid);
+        await supabase.from('Areas_Catalogo').delete().eq('tenant_id', validTid);
+        await supabase.from('Tiendas_Catalogo').delete().eq('tenant_id', validTid);
+        await supabase.from('locations').delete().eq('tenant_id', validTid);
+      }
       // Reset local state (async — don't read these state vars below this point)
       setSavedStoreId(null);
       setSavedLocationId(null);

@@ -8,9 +8,9 @@ const getIsUnhappy = (s, style = 'emoji', threshold = 2) => {
   return s <= threshold;
 };
 
-const getIsHappy   = (s, style = 'emoji') => {
+const getIsHappy = (s, style = 'emoji', triggerMin = 4) => {
   if (style === 'nps') return s >= 9;
-  return s >= 4;
+  return s >= triggerMin;
 };
 
 // ─── Device fingerprint for cooldown ─────────────────────────────────────────
@@ -954,7 +954,11 @@ export default function FeedbackPublic() {
       .maybeSingle();
     if (rcData) {
       if (rcData.enabled) setRecovery(rcData);
-      if (rcData.loyalty_enabled) setLoyalty(rcData);
+      if (rcData.loyalty_enabled) setLoyalty({
+        ...rcData,
+        // normalize loyalty_reward_type → reward_type for DoneHappy rendering
+        reward_type: rcData.loyalty_reward_type || 'discount',
+      });
     }
 
     const cooldownKey = `rf_sent_${qrId}`;
@@ -1040,7 +1044,8 @@ export default function FeedbackPublic() {
     const code = needsRecovery ? genCode(recoveryPrefix) : null;
     if (code) setCouponCode(code);
 
-    const isLoyaltyTriggered = getIsHappy(s, questionConfig?.rating_style);
+    const loyaltyTriggerMin  = loyalty?.loyalty_trigger_min ?? 4;
+    const isLoyaltyTriggered = getIsHappy(s, questionConfig?.rating_style, loyaltyTriggerMin);
     const needsLoyalty = isLoyaltyTriggered && !!(qrCouponCfg || loyalty?.loyalty_enabled);
     const loyaltyPrefix = qrCouponCfg?.coupon_prefix || loyalty?.loyalty_coupon_prefix || 'LOYAL';
     const loyaltyCode = needsLoyalty ? genCode(loyaltyPrefix) : null;

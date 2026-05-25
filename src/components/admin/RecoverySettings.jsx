@@ -29,12 +29,15 @@ const DEFAULT = {
   reward_value:          0,
   terms:                 '',
   message_template:      'Hola, lamentamos tu experiencia. Como muestra de aprecio: {{oferta}}. Código: {{codigo}} · válido {{dias}} días. — {{negocio}}',
-  loyalty_enabled:       false,
-  loyalty_offer_type:    'percentage',
-  loyalty_offer_value:   10,
+  loyalty_enabled:        false,
+  loyalty_offer_type:     'percentage',
+  loyalty_offer_value:    10,
   loyalty_offer_description: '10% de descuento en tu próxima visita',
-  loyalty_coupon_prefix: 'LOYAL',
-  loyalty_validity_days: 30,
+  loyalty_coupon_prefix:  'LOYAL',
+  loyalty_validity_days:  30,
+  loyalty_reward_type:    'discount',
+  loyalty_reward_value:   0,
+  loyalty_trigger_min:    4,
 };
 
 const genPreview = (prefix) => `${prefix || 'CODE'}-X3K9A`;
@@ -176,9 +179,11 @@ function CouponCard({ title, emoji, subtitle, accentColor, fields, config, onCha
         {/* Score trigger */}
         {fields.trigger_score && (
           <div>
-            <label style={labelStyle}>Activar cuando calificación sea ≤</label>
+            <label style={labelStyle}>
+              Activar cuando calificación sea {fields.trigger_direction || '≤'}
+            </label>
             <div style={{ display: 'flex', gap: 8 }}>
-              {[1, 2, 3].map(s => (
+              {(fields.trigger_options || [1, 2, 3]).map(s => (
                 <button key={s} onClick={() => onChange(fields.trigger_score, s)} style={{
                   padding: '7px 18px', borderRadius: 10, fontFamily: font, fontWeight: 700,
                   fontSize: '0.82rem', cursor: 'pointer',
@@ -340,13 +345,15 @@ export default function RecoverySettings() {
 
   const loyaltyFields = {
     enabled:           'loyalty_enabled',
-    trigger_score:     null,
+    trigger_score:     'loyalty_trigger_min',
+    trigger_direction: '≥',
+    trigger_options:   [3, 4, 5],
     offer_description: 'loyalty_offer_description',
     coupon_prefix:     'loyalty_coupon_prefix',
     validity_days:     'loyalty_validity_days',
     message_template:  null,
-    reward_type:       null,
-    reward_value:      null,
+    reward_type:       'loyalty_reward_type',
+    reward_value:      'loyalty_reward_value',
   };
 
   return (

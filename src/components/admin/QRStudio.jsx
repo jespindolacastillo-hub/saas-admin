@@ -239,7 +239,17 @@ function CopyBtn({ text, label = 'Copiar URL' }) {
 }
 
 // ─── QR Drawer ────────────────────────────────────────────────────────────────
-function QRDrawer({ qr, location, onClose, onToggle, testMode, couponConfigs = [], areas = [] }) {
+function QRDrawer({ qr, location, onClose, onToggle, onSaveQuestions, testMode, couponConfigs = [], areas = [] }) {
+  const [localQC, setLocalQC] = useState(null);
+  const [qcSaving, setQcSaving] = useState(false);
+  const [qcSaved, setQcSaved] = useState(false);
+
+  // Sync local state when a different QR is opened
+  useEffect(() => {
+    setLocalQC(qr?.questions_config ?? null);
+    setQcSaved(false);
+  }, [qr?.id]);
+
   if (!qr) return null;
   const testSuffix = testMode ? '?test=1' : '';
   const url      = `${window.location.origin}/f/${qr.id}${testSuffix}`;
@@ -252,6 +262,16 @@ function QRDrawer({ qr, location, onClose, onToggle, testMode, couponConfigs = [
       ? couponConfigs.find(c => c.id === assignedArea.coupon_config_id)
       : null;
   const couponIsInherited = !qr.coupon_config_id && !!assignedCoupon;
+
+  const handleSaveQC = async () => {
+    setQcSaving(true);
+    await onSaveQuestions(qr.id, localQC);
+    setQcSaving(false);
+    setQcSaved(true);
+    setTimeout(() => setQcSaved(false), 2500);
+  };
+
+  const qcDirty = JSON.stringify(localQC) !== JSON.stringify(qr.questions_config ?? null);
 
   return (
     <>
@@ -343,6 +363,38 @@ function QRDrawer({ qr, location, onClose, onToggle, testMode, couponConfigs = [
               🎟 Sin cupón específico — usa configuración global
             </div>
           )}
+
+          {/* Questions config */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: '0.68rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Preguntas de feedback</div>
+            <QuestionConfigForm
+              value={localQC}
+              qrType={qr.type}
+              onChange={setLocalQC}
+            />
+            {qcDirty && (
+              <button
+                onClick={handleSaveQC}
+                disabled={qcSaving}
+                style={{
+                  marginTop: 10, width: '100%', padding: '10px',
+                  borderRadius: 10, border: 'none',
+                  background: qcSaved ? T.teal : T.coral,
+                  color: '#fff', fontFamily: font, fontWeight: 700,
+                  fontSize: '0.84rem', cursor: qcSaving ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  opacity: qcSaving ? 0.7 : 1,
+                }}
+              >
+                {qcSaving ? <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> Guardando…</> : '💾 Guardar preguntas'}
+              </button>
+            )}
+            {qcSaved && !qcDirty && (
+              <div style={{ marginTop: 8, textAlign: 'center', fontSize: '0.78rem', color: T.teal, fontWeight: 700 }}>
+                ✓ Preguntas guardadas
+              </div>
+            )}
+          </div>
 
           {/* URL */}
           <div style={{ marginBottom: 20 }}>
@@ -731,6 +783,13 @@ export default function QRStudio() {
     setQrCodes(prev => prev.map(q => q.id === qr.id ? updated : q));
     if (selectedQR?.id === qr.id) setSelectedQR(updated);
     await supabase.from('qr_codes').update({ active: !qr.active }).eq('id', qr.id);
+  };
+
+  const handleSaveQuestions = async (qrId, questionsConfig) => {
+    await supabase.from('qr_codes').update({ questions_config: questionsConfig }).eq('id', qrId);
+    const patch = { questions_config: questionsConfig };
+    setQrCodes(prev => prev.map(q => q.id === qrId ? { ...q, ...patch } : q));
+    if (selectedQR?.id === qrId) setSelectedQR(prev => ({ ...prev, ...patch }));
   };
 
   const openNewArea = () => {
@@ -1316,6 +1375,7 @@ export default function QRStudio() {
         location={currentLocation}
         onClose={() => setSelectedQR(null)}
         onToggle={handleToggleActive}
+        onSaveQuestions={handleSaveQuestions}
         testMode={tenant?.test_mode}
         couponConfigs={couponConfigs}
         areas={areas}

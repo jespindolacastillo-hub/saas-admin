@@ -23,11 +23,13 @@ const REWARD_TYPES = [
 const DEFAULT_AUTO = {
   enabled: true, trigger_score: 2,
   offer_description: '20% de descuento en tu próxima visita',
+  offer_description_2: '', reward_type_2: 'discount',
   coupon_prefix: 'RECOVERY', validity_days: 30,
   reward_type: 'discount', reward_value: 0,
   terms: '', message_template: 'Hola, lamentamos tu experiencia. Como muestra de aprecio: {{oferta}}. Código: {{codigo}} · válido {{dias}} días. — {{negocio}}',
   loyalty_enabled: false,
   loyalty_offer_description: '10% de descuento en tu próxima visita',
+  loyalty_offer_description_2: '', loyalty_reward_type_2: 'discount',
   loyalty_coupon_prefix: 'LOYAL', loyalty_validity_days: 30,
   loyalty_reward_type: 'discount', loyalty_reward_value: 0, loyalty_trigger_min: 4,
 };
@@ -50,6 +52,7 @@ const inputSt = { width: '100%', padding: '9px 12px', borderRadius: 10, border: 
 // ─── Auto card (recovery or loyalty) ─────────────────────────────────────────
 function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }) {
   const [adv, setAdv] = useState(false);
+  const [dual, setDual] = useState(() => !!(cfg[fields.offer_description_2] || ''));
   const enabled = cfg[fields.enabled];
   return (
     <div style={{ background: T.card, borderRadius: 20, border: `1.5px solid ${enabled ? accentColor + '40' : T.border}`, overflow: 'hidden', opacity: enabled ? 1 : 0.75 }}>
@@ -89,6 +92,41 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
             <input type="number" min={0} value={cfg[fields.reward_value] ?? ''} onChange={e => onChange(fields.reward_value, e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!cfg[fields.reward_value]) e.target.select(); }} style={inputSt} />
           </div>
         )}
+        {/* Segunda oferta */}
+        {fields.offer_description_2 && (
+          <div>
+            <button
+              onClick={() => {
+                const next = !dual;
+                setDual(next);
+                if (!next) { onChange(fields.offer_description_2, ''); onChange(fields.reward_type_2, 'discount'); }
+              }}
+              style={{ background: 'none', border: `1.5px dashed ${dual ? accentColor : T.border}`, borderRadius: 8, cursor: 'pointer', padding: '5px 12px', fontFamily: font, fontSize: '0.72rem', fontWeight: 700, color: dual ? accentColor : T.muted, display: 'flex', alignItems: 'center', gap: 5 }}
+            >
+              {dual ? '✕ Quitar segunda oferta' : '+ Agregar segunda oferta (cupón doble)'}
+            </button>
+            {dual && (
+              <div style={{ marginTop: 10, padding: '14px 16px', borderRadius: 12, border: `1.5px solid ${accentColor}30`, background: accentColor + '05', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '.06em' }}>Segunda oferta</div>
+                <div>
+                  <label style={labelSt}>Tipo de incentivo</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {REWARD_TYPES.map(rt => (
+                      <button key={rt.value} onClick={() => onChange(fields.reward_type_2, rt.value)} style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${cfg[fields.reward_type_2] === rt.value ? accentColor : T.border}`, background: cfg[fields.reward_type_2] === rt.value ? accentColor + '10' : '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, color: cfg[fields.reward_type_2] === rt.value ? accentColor : T.muted, fontFamily: font }}>
+                        {rt.emoji} {rt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label style={labelSt}>Descripción de la segunda oferta</label>
+                  <input type="text" value={cfg[fields.offer_description_2] || ''} onChange={e => onChange(fields.offer_description_2, e.target.value)} placeholder="ej. 5% en compra de accesorios lifestyle" style={inputSt} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={labelSt}>Prefijo del código</label>
@@ -101,7 +139,10 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
         </div>
         <div style={{ background: '#0D0D12', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontFamily: 'monospace', fontWeight: 900, color: '#fff', letterSpacing: '0.08em' }}>{genPreview(cfg[fields.coupon_prefix])}</span>
-          <span style={{ fontSize: '0.72rem', color: accentColor, fontWeight: 700 }}>{cfg[fields.offer_description]?.slice(0, 24) || '—'}{cfg[fields.offer_description]?.length > 24 ? '…' : ''}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <span style={{ fontSize: '0.72rem', color: accentColor, fontWeight: 700 }}>{cfg[fields.offer_description]?.slice(0, 24) || '—'}{cfg[fields.offer_description]?.length > 24 ? '…' : ''}</span>
+            {cfg[fields.offer_description_2] && <span style={{ fontSize: '0.68rem', color: accentColor + 'aa', fontWeight: 600 }}>{cfg[fields.offer_description_2]?.slice(0, 24)}{cfg[fields.offer_description_2]?.length > 24 ? '…' : ''}</span>}
+          </div>
         </div>
         {fields.trigger_score && (
           <div>
@@ -136,8 +177,9 @@ function AutoCard({ title, emoji, subtitle, accentColor, fields, cfg, onChange }
 
 // ─── Loyalty auto card — hardcoded keys so bundler can't eliminate them ───────
 function LoyaltyAutoCard({ cfg, onChange }) {
-  const enabled   = cfg['loyalty_enabled'];
+  const enabled    = cfg['loyalty_enabled'];
   const rewardType = cfg['loyalty_reward_type'] || 'discount';
+  const [dual, setDual] = useState(() => !!(cfg['loyalty_offer_description_2'] || ''));
   return (
     <div style={{ background: T.card, borderRadius: 20, border: `1.5px solid ${enabled ? T.teal + '40' : T.border}`, overflow: 'hidden', opacity: enabled ? 1 : 0.75 }}>
       <div style={{ padding: '16px 20px', background: enabled ? T.teal + '08' : T.bg, borderBottom: `1px solid ${enabled ? T.teal + '20' : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -177,6 +219,39 @@ function LoyaltyAutoCard({ cfg, onChange }) {
             <input type="number" min={0} value={cfg['loyalty_reward_value'] ?? ''} onChange={e => onChange('loyalty_reward_value', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!cfg['loyalty_reward_value']) e.target.select(); }} style={inputSt} />
           </div>
         )}
+        {/* Segunda oferta */}
+        <div>
+          <button
+            onClick={() => {
+              const next = !dual;
+              setDual(next);
+              if (!next) { onChange('loyalty_offer_description_2', ''); onChange('loyalty_reward_type_2', 'discount'); }
+            }}
+            style={{ background: 'none', border: `1.5px dashed ${dual ? T.teal : T.border}`, borderRadius: 8, cursor: 'pointer', padding: '5px 12px', fontFamily: font, fontSize: '0.72rem', fontWeight: 700, color: dual ? T.teal : T.muted, display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            {dual ? '✕ Quitar segunda oferta' : '+ Agregar segunda oferta (cupón doble)'}
+          </button>
+          {dual && (
+            <div style={{ marginTop: 10, padding: '14px 16px', borderRadius: 12, border: `1.5px solid ${T.teal}30`, background: T.teal + '05', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: T.teal, textTransform: 'uppercase', letterSpacing: '.06em' }}>Segunda oferta</div>
+              <div>
+                <label style={labelSt}>Tipo de incentivo</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {REWARD_TYPES.map(rt => (
+                    <button key={rt.value} onClick={() => onChange('loyalty_reward_type_2', rt.value)} style={{ padding: '5px 10px', borderRadius: 8, border: `1.5px solid ${(cfg['loyalty_reward_type_2'] || 'discount') === rt.value ? T.teal : T.border}`, background: (cfg['loyalty_reward_type_2'] || 'discount') === rt.value ? T.teal + '10' : '#fff', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, color: (cfg['loyalty_reward_type_2'] || 'discount') === rt.value ? T.teal : T.muted, fontFamily: font }}>
+                      {rt.emoji} {rt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={labelSt}>Descripción de la segunda oferta</label>
+                <input type="text" value={cfg['loyalty_offer_description_2'] || ''} onChange={e => onChange('loyalty_offer_description_2', e.target.value)} placeholder="ej. 5% en compra de accesorios lifestyle" style={inputSt} />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Prefix + validity */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
@@ -191,7 +266,10 @@ function LoyaltyAutoCard({ cfg, onChange }) {
         {/* Preview */}
         <div style={{ background: '#0D0D12', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontFamily: 'monospace', fontWeight: 900, color: '#fff', letterSpacing: '0.08em' }}>{genPreview(cfg['loyalty_coupon_prefix'])}</span>
-          <span style={{ fontSize: '0.72rem', color: T.teal, fontWeight: 700 }}>{cfg['loyalty_offer_description']?.slice(0, 24) || '—'}{cfg['loyalty_offer_description']?.length > 24 ? '…' : ''}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <span style={{ fontSize: '0.72rem', color: T.teal, fontWeight: 700 }}>{cfg['loyalty_offer_description']?.slice(0, 24) || '—'}{cfg['loyalty_offer_description']?.length > 24 ? '…' : ''}</span>
+            {cfg['loyalty_offer_description_2'] && <span style={{ fontSize: '0.68rem', color: T.teal + 'aa', fontWeight: 600 }}>{cfg['loyalty_offer_description_2']?.slice(0, 24)}{cfg['loyalty_offer_description_2']?.length > 24 ? '…' : ''}</span>}
+          </div>
         </div>
         {/* Trigger — loyalty: ≥ 3, 4, or 5 stars */}
         <div>
@@ -219,6 +297,11 @@ function CatalogRow({ coupon, onEdit, onDelete, onToggle }) {
       <td style={tdSt}>
         <div style={{ fontWeight: 700, color: T.ink, fontSize: '0.88rem' }}>{coupon.name}</div>
         <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 2 }}>{coupon.offer_description}</div>
+        {coupon.offer_description_2 && (
+          <div style={{ fontSize: '0.68rem', color: T.muted, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ color: T.coral, fontWeight: 700 }}>+</span> {coupon.offer_description_2}
+          </div>
+        )}
       </td>
       <td style={tdSt}>
         <span style={{ fontSize: '0.72rem', fontWeight: 700, color: tc, background: tc+'15', borderRadius: 999, padding: '3px 10px' }}>
@@ -243,8 +326,9 @@ const tdSt = { padding: '12px 14px', verticalAlign: 'middle' };
 
 // ─── Coupon form modal ────────────────────────────────────────────────────────
 function CouponFormModal({ initial, onSave, onClose }) {
-  const EMPTY = { name: '', offer_description: '', coupon_prefix: '', validity_days: 30, trigger_type: 'manual', enabled: true, reward_type: 'discount', reward_value: 0 };
+  const EMPTY = { name: '', offer_description: '', offer_description_2: '', reward_type_2: 'discount', coupon_prefix: '', validity_days: 30, trigger_type: 'manual', enabled: true, reward_type: 'discount', reward_value: 0 };
   const [form, setForm] = useState(initial || EMPTY);
+  const [dual, setDual] = useState(() => !!(initial?.offer_description_2 || ''));
   const [saving, setSaving] = useState(false);
   const upd = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const valid = (form.name || '').trim() && (form.offer_description || '').trim() && (form.coupon_prefix || '').trim();
@@ -307,6 +391,40 @@ function CouponFormModal({ initial, onSave, onClose }) {
             <input type="number" min={0} value={form.reward_value ?? ''} onChange={e => upd('reward_value', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} onFocus={e => { if (!form.reward_value) e.target.select(); }} style={inputSt} />
           </div>
         )}
+
+        {/* Dual offer */}
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !dual;
+              setDual(next);
+              if (!next) { upd('offer_description_2', ''); upd('reward_type_2', 'discount'); }
+            }}
+            style={{ background: 'none', border: `1.5px dashed ${dual ? T.coral : T.border}`, borderRadius: 8, cursor: 'pointer', padding: '6px 12px', fontFamily: font, fontSize: '0.72rem', fontWeight: 700, color: dual ? T.coral : T.muted, display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            {dual ? '✕ Quitar segunda oferta' : '+ Agregar segunda oferta (cupón doble)'}
+          </button>
+          {dual && (
+            <div style={{ marginTop: 10, padding: '14px 16px', borderRadius: 12, border: `1.5px solid ${T.coral}25`, background: T.coral + '04', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: T.coral, textTransform: 'uppercase', letterSpacing: '.06em' }}>Segunda oferta</div>
+              <div>
+                <label style={labelSt}>Tipo de incentivo</label>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {REWARD_TYPES.map(rt => (
+                    <button key={rt.value} onClick={() => upd('reward_type_2', rt.value)} style={{ padding: '6px 12px', borderRadius: 8, border: `2px solid ${(form.reward_type_2 || 'discount') === rt.value ? T.coral : T.border}`, background: (form.reward_type_2 || 'discount') === rt.value ? T.coral + '08' : '#fff', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, color: (form.reward_type_2 || 'discount') === rt.value ? T.coral : T.muted, fontFamily: font }}>
+                      {rt.emoji} {rt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={labelSt}>Descripción de la segunda oferta</label>
+                <input type="text" value={form.offer_description_2 || ''} onChange={e => upd('offer_description_2', e.target.value)} placeholder="ej. 5% en compra de accesorios lifestyle" style={inputSt} />
+              </div>
+            </div>
+          )}
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
@@ -427,8 +545,8 @@ export default function CouponManagement() {
     if (form.id) {
       ({ error } = await supabase.from('coupon_configs').update(form).eq('id', form.id));
     } else {
-      const { name, offer_description, coupon_prefix, validity_days, trigger_type, enabled, reward_type, reward_value } = form;
-      ({ error } = await supabase.from('coupon_configs').insert({ name, offer_description, coupon_prefix, validity_days, trigger_type, enabled, reward_type: reward_type || 'discount', reward_value: reward_value || 0, tenant_id: tenant.id }));
+      const { name, offer_description, offer_description_2, reward_type_2, coupon_prefix, validity_days, trigger_type, enabled, reward_type, reward_value } = form;
+      ({ error } = await supabase.from('coupon_configs').insert({ name, offer_description, offer_description_2: offer_description_2 || null, reward_type_2: reward_type_2 || 'discount', coupon_prefix, validity_days, trigger_type, enabled, reward_type: reward_type || 'discount', reward_value: reward_value || 0, tenant_id: tenant.id }));
     }
     if (error) { alert('Error al guardar: ' + error.message); return; }
     setModal(null);
@@ -449,7 +567,7 @@ export default function CouponManagement() {
 
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300, gap: 10, color: T.muted, fontFamily: font }}><Loader size={20} style={{ animation: 'spin 1s linear infinite' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>;
 
-  const recoveryFields = { enabled:'enabled', trigger_score:'trigger_score', offer_description:'offer_description', coupon_prefix:'coupon_prefix', validity_days:'validity_days', message_template:'message_template', reward_type:'reward_type', reward_value:'reward_value' };
+  const recoveryFields = { enabled:'enabled', trigger_score:'trigger_score', offer_description:'offer_description', offer_description_2:'offer_description_2', reward_type_2:'reward_type_2', coupon_prefix:'coupon_prefix', validity_days:'validity_days', message_template:'message_template', reward_type:'reward_type', reward_value:'reward_value' };
 
   return (
     <div style={{ fontFamily: font, padding: '28px 32px', maxWidth: 900, margin: '0 auto' }}>

@@ -25,6 +25,7 @@ export default function CouponValidation({ userEmail }) {
   const [ticketId, setTicketId]         = useState('');
   const [discountPct, setDiscountPct]   = useState('');
   const [isAutoDiscount, setIsAutoDiscount] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState(null); // 1 | 2 | null
   const [errorMsg, setErrorMsg]         = useState(null);
 
   // List management
@@ -66,6 +67,7 @@ export default function CouponValidation({ userEmail }) {
     if (!overrideCode) setCode(trimmed);
     setResult(null);
     setStatus(null);
+    setSelectedOffer(null);
     setIsAutoDiscount(false);
 
     const { data: fb, error: fbError } = await supabase
@@ -87,7 +89,7 @@ export default function CouponValidation({ userEmail }) {
 
     // Step 1: Check specific coupon config
     if (fb.coupon_config_id) {
-      const { data: c } = await supabase.from('coupon_configs').select('name, offer_description, validity_days, offer_value').eq('id', fb.coupon_config_id).maybeSingle();
+      const { data: c } = await supabase.from('coupon_configs').select('name, offer_description, offer_description_2, validity_days, offer_value').eq('id', fb.coupon_config_id).maybeSingle();
       if (c) {
         cfg = c;
         autoDiscount = c.offer_value || parseDiscount(c.offer_description);
@@ -201,13 +203,14 @@ export default function CouponValidation({ userEmail }) {
     }
   };
 
-  const reset = () => { 
-    setCode(''); 
-    setResult(null); 
-    setStatus(null); 
+  const reset = () => {
+    setCode('');
+    setResult(null);
+    setStatus(null);
     setTicketAmount('');
     setTicketId('');
     setDiscountPct('');
+    setSelectedOffer(null);
     setErrorMsg(null);
   };
 
@@ -311,16 +314,68 @@ export default function CouponValidation({ userEmail }) {
               </div>
             </div>
 
-            {/* Offer description — what the customer gets */}
-            {result.coupon_configs?.offer_description && (
-              <div style={{ background: T.teal + '10', border: `1px solid ${T.teal}30`, borderRadius: 12, padding: '12px 16px' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: T.teal, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>🎁 Beneficio a aplicar</div>
-                <div style={{ fontWeight: 800, color: T.ink, fontSize: '1rem' }}>{result.coupon_configs.offer_description}</div>
-                {result.coupon_configs.validity_days && (
-                  <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 2 }}>Válido {result.coupon_configs.validity_days} días desde emisión</div>
-                )}
-              </div>
-            )}
+            {/* Offer — single or dual selectable */}
+            {result.coupon_configs?.offer_description && (() => {
+              const cfg = result.coupon_configs;
+              const isDual = !!(cfg.offer_description_2);
+
+              if (!isDual) {
+                return (
+                  <div style={{ background: T.teal + '10', border: `1px solid ${T.teal}30`, borderRadius: 12, padding: '12px 16px' }}>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: T.teal, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>🎁 Beneficio a aplicar</div>
+                    <div style={{ fontWeight: 800, color: T.ink, fontSize: '1rem' }}>{cfg.offer_description}</div>
+                    {cfg.validity_days && <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 4 }}>Válido {cfg.validity_days} días desde emisión</div>}
+                  </div>
+                );
+              }
+
+              const offers = [
+                { n: 1, desc: cfg.offer_description },
+                { n: 2, desc: cfg.offer_description_2 },
+              ];
+
+              return (
+                <div>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 800, color: T.teal, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>🎁 ¿Cuál beneficio aplica el cliente?</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {offers.map(({ n, desc }) => {
+                      const selected = selectedOffer === n;
+                      return (
+                        <button
+                          key={n}
+                          onClick={() => {
+                            setSelectedOffer(n);
+                            const pct = parseDiscount(desc);
+                            setDiscountPct(pct);
+                            setIsAutoDiscount(!!pct);
+                          }}
+                          style={{
+                            padding: '12px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'left',
+                            fontFamily: font, border: `2px solid ${selected ? T.teal : T.border}`,
+                            background: selected ? T.teal + '12' : '#fff',
+                            display: 'flex', alignItems: 'center', gap: 12, transition: 'all .15s',
+                          }}
+                        >
+                          <div style={{
+                            width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                            border: `2px solid ${selected ? T.teal : T.border}`,
+                            background: selected ? T.teal : '#fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {selected && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                          </div>
+                          <span style={{ fontWeight: selected ? 800 : 600, color: selected ? T.ink : T.muted, fontSize: '0.9rem' }}>{desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!selectedOffer && status === 'found' && (
+                    <div style={{ fontSize: '0.72rem', color: T.amber, fontWeight: 700, marginTop: 6 }}>Selecciona una opción para continuar</div>
+                  )}
+                  {cfg.validity_days && <div style={{ fontSize: '0.72rem', color: T.muted, marginTop: 8 }}>Válido {cfg.validity_days} días desde emisión</div>}
+                </div>
+              );
+            })()}
 
             {status === 'already' && result.coupon_redeemed_at && (
               <div style={{ background: T.amber + '10', border: `1px solid ${T.amber}30`, borderRadius: 10, padding: '10px 14px', fontSize: '0.78rem', color: '#92400E' }}>
@@ -404,12 +459,15 @@ export default function CouponValidation({ userEmail }) {
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                 <button
                   onClick={redeem}
-                  disabled={saving}
+                  disabled={saving || (!!result.coupon_configs?.offer_description_2 && !selectedOffer)}
                   style={{
                     flex: 1, padding: '14px', borderRadius: 12, border: 'none',
-                    background: T.green, color: '#fff', fontFamily: font,
-                    fontWeight: 800, fontSize: '1rem', cursor: 'pointer',
+                    background: (!!result.coupon_configs?.offer_description_2 && !selectedOffer) ? T.border : T.green,
+                    color: '#fff', fontFamily: font,
+                    fontWeight: 800, fontSize: '1rem',
+                    cursor: (!!result.coupon_configs?.offer_description_2 && !selectedOffer) ? 'not-allowed' : 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'background .2s',
                   }}
                 >
                   {saving

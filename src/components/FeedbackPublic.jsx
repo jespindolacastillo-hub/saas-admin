@@ -553,6 +553,11 @@ function DoneBad({ couponCode, couponConfig, hasPhone, hasEmail, category, comme
             <p className="rf-coupon-label">{label}</p>
             <p className="rf-coupon-code notranslate" translate="no">{couponCode}</p>
             <p className="rf-coupon-desc">{couponConfig.offer_description}</p>
+            {couponConfig.offer_description_2 && (
+              <p className="rf-coupon-desc" style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontWeight: 800, color: '#00C9A7' }}>+</span> {couponConfig.offer_description_2}
+              </p>
+            )}
             {category && category !== 'Otro' && category !== 'Comentario' && (
               <p style={{ fontSize: '0.75rem', color: S.teal, marginTop: 6, fontWeight: 700 }}>
                 ✓ Compensación por reporte en: {category}
@@ -741,6 +746,11 @@ function DoneHappy({ googleUrl, loyaltyCouponCode, loyaltyConfig, onLoyalty, onG
               <p className="rf-coupon-label">{(loyaltyConfig.reward_type && loyaltyConfig.reward_type !== 'discount') ? '🎁 Tu recompensa' : '🎁 Tu cupón de cliente frecuente'}</p>
               <p className="rf-coupon-code notranslate" translate="no">{loyaltyCouponCode}</p>
               <p className="rf-coupon-desc">{loyaltyConfig.loyalty_offer_description}</p>
+              {loyaltyConfig.loyalty_offer_description_2 && (
+                <p className="rf-coupon-desc" style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontWeight: 800, color: '#00C9A7' }}>+</span> {loyaltyConfig.loyalty_offer_description_2}
+                </p>
+              )}
               <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,.4)', marginTop: 6 }}>
                 {(loyaltyConfig.reward_type && loyaltyConfig.reward_type !== 'discount')
                   ? `Código de canje · Válido ${loyaltyConfig.loyalty_validity_days || 30} días`
@@ -906,7 +916,7 @@ export default function FeedbackPublic() {
     setLoading(true);
     const { data: qrData, error: qrErr } = await supabase
       .from('qr_codes')
-      .select('*, locations(name, google_review_url, whatsapp_number), qr_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type,reward_type,reward_value), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,coupon_prefix,validity_days,trigger_type,reward_type,reward_value))')
+      .select('*, locations(name, google_review_url, whatsapp_number), qr_coupon:coupon_configs(id,name,offer_description,offer_description_2,coupon_prefix,validity_days,trigger_type,reward_type,reward_value), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,offer_description_2,coupon_prefix,validity_days,trigger_type,reward_type,reward_value))')
       .eq('id', qrId)
       .eq('active', true)
       .single();
@@ -1053,10 +1063,10 @@ export default function FeedbackPublic() {
 
     // Update configs used for copy rendering
     if (qrCouponCfg && code) {
-      setRecovery({ ...recovery, offer_description: qrCouponCfg.offer_description, validity_days: qrCouponCfg.validity_days, reward_type: qrCouponCfg.reward_type || 'discount', reward_value: qrCouponCfg.reward_value || 0 });
+      setRecovery({ ...recovery, offer_description: qrCouponCfg.offer_description, offer_description_2: qrCouponCfg.offer_description_2 || null, validity_days: qrCouponCfg.validity_days, reward_type: qrCouponCfg.reward_type || 'discount', reward_value: qrCouponCfg.reward_value || 0 });
     }
     if (qrCouponCfg && loyaltyCode) {
-      setLoyalty({ ...loyalty, loyalty_offer_description: qrCouponCfg.offer_description, loyalty_validity_days: qrCouponCfg.validity_days, loyalty_enabled: true, reward_type: qrCouponCfg.reward_type || 'discount', reward_value: qrCouponCfg.reward_value || 0 });
+      setLoyalty({ ...loyalty, loyalty_offer_description: qrCouponCfg.offer_description, loyalty_offer_description_2: qrCouponCfg.offer_description_2 || null, loyalty_validity_days: qrCouponCfg.validity_days, loyalty_enabled: true, reward_type: qrCouponCfg.reward_type || 'discount', reward_value: qrCouponCfg.reward_value || 0 });
     }
 
     try {

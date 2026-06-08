@@ -614,6 +614,28 @@ export default function QRStudio() {
   const [locMenuOpen,    setLocMenuOpen]    = useState(null);
   const [isCustomColonia, setIsCustomColonia] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [grEnabled,    setGrEnabled]    = useState(false);
+  const [grMinRating,  setGrMinRating]  = useState(5);
+  const [grSaving,     setGrSaving]     = useState(false);
+  const [grSaved,      setGrSaved]      = useState(false);
+
+  useEffect(() => {
+    if (tenant) {
+      setGrEnabled(tenant.google_review_enabled ?? false);
+      setGrMinRating(tenant.google_review_min_rating ?? 5);
+    }
+  }, [tenant?.id]);
+
+  const saveGoogleGating = async (enabled, minRating) => {
+    setGrSaving(true);
+    await supabase.from('tenants').update({
+      google_review_enabled:    enabled,
+      google_review_min_rating: minRating,
+    }).eq('id', tenant.id);
+    setGrSaving(false);
+    setGrSaved(true);
+    setTimeout(() => setGrSaved(false), 2000);
+  };
 
   const planLimits       = getPlanLimits(tenant?.plan);
   const canAddLocation   = withinLimit(locations.length, planLimits.maxLocations);
@@ -926,6 +948,52 @@ export default function QRStudio() {
             cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,92,58,0.25)',
           }}>
             <Plus size={14} /> Nuevo QR
+          </button>
+        </div>
+      </div>
+
+      {/* ── Google Review Gating ── */}
+      <div style={{
+        padding: '12px 28px', background: T.card, borderBottom: `1px solid ${T.border}`,
+        display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220 }}>
+          <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" alt="Google" style={{ width: 18, height: 18 }} />
+          <div>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>Invitar a reseñar en Google</span>
+            <span style={{ fontSize: '0.72rem', color: T.muted, marginLeft: 8 }}>
+              {grEnabled ? `Solo clientes con ${grMinRating}+ ★ verán el botón` : 'Desactivado'}
+            </span>
+          </div>
+        </div>
+
+        {grEnabled && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[3, 4, 5].map(star => (
+              <button key={star} type="button" onClick={() => { setGrMinRating(star); saveGoogleGating(true, star); }} style={{
+                padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                fontFamily: font, fontSize: '0.78rem', fontWeight: 700,
+                background: grMinRating === star ? T.ink : T.border,
+                color: grMinRating === star ? '#fff' : T.muted,
+              }}>
+                {'★'.repeat(star)} {star}+
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {grSaved && <span style={{ fontSize: '0.72rem', color: T.teal, fontWeight: 700 }}>Guardado ✓</span>}
+          {grSaving && <span style={{ fontSize: '0.72rem', color: T.muted }}>Guardando…</span>}
+          <button type="button" onClick={() => { const next = !grEnabled; setGrEnabled(next); saveGoogleGating(next, grMinRating); }} style={{
+            width: 44, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: grEnabled ? '#4ADE80' : T.border, position: 'relative', transition: 'background 0.2s',
+          }}>
+            <span style={{
+              position: 'absolute', top: 3, left: grEnabled ? 22 : 3,
+              width: 18, height: 18, borderRadius: '50%', background: '#fff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
+            }} />
           </button>
         </div>
       </div>

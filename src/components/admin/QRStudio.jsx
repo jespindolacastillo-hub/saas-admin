@@ -607,35 +607,13 @@ export default function QRStudio() {
   const [showEditQRModal, setShowEditQRModal] = useState(false);
   const [editingQR,       setEditingQR]       = useState(null);
   const [editQRForm,      setEditQRForm]      = useState({ label: '', type: 'area', area_id: '', coupon_config_id: '', questions_config: null });
-  const [locForm,        setLocForm]        = useState({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '' });
+  const [locForm,        setLocForm]        = useState({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '', google_review_enabled: false, google_review_min_rating: 5 });
   const [cpStatus,       setCpStatus]       = useState('idle'); // idle | loading | found | error
   const [coloniaOptions, setColoniaOptions] = useState([]);
   const [editingLoc,     setEditingLoc]     = useState(null);
   const [locMenuOpen,    setLocMenuOpen]    = useState(null);
   const [isCustomColonia, setIsCustomColonia] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [grEnabled,    setGrEnabled]    = useState(false);
-  const [grMinRating,  setGrMinRating]  = useState(5);
-  const [grSaving,     setGrSaving]     = useState(false);
-  const [grSaved,      setGrSaved]      = useState(false);
-
-  useEffect(() => {
-    if (tenant) {
-      setGrEnabled(tenant.google_review_enabled ?? false);
-      setGrMinRating(tenant.google_review_min_rating ?? 5);
-    }
-  }, [tenant?.id]);
-
-  const saveGoogleGating = async (enabled, minRating) => {
-    setGrSaving(true);
-    await supabase.from('tenants').update({
-      google_review_enabled:    enabled,
-      google_review_min_rating: minRating,
-    }).eq('id', tenant.id);
-    setGrSaving(false);
-    setGrSaved(true);
-    setTimeout(() => setGrSaved(false), 2000);
-  };
 
   const planLimits       = getPlanLimits(tenant?.plan);
   const canAddLocation   = withinLimit(locations.length, planLimits.maxLocations);
@@ -719,8 +697,10 @@ export default function QRStudio() {
       colonia:           locForm.colonia   || null,
       municipio:         locForm.municipio || null,
       estado:            locForm.estado    || null,
-      google_review_url: locForm.google_review_url || null,
-      whatsapp_number:   locForm.whatsapp_number   || null,
+      google_review_url:        locForm.google_review_url        || null,
+      whatsapp_number:          locForm.whatsapp_number          || null,
+      google_review_enabled:    locForm.google_review_enabled    ?? false,
+      google_review_min_rating: locForm.google_review_min_rating ?? 5,
     };
 
     // Auto-geocoding con Nominatim (OSM)
@@ -746,7 +726,7 @@ export default function QRStudio() {
       if (!canAddLocation) { setSaving(false); return; }
       await supabase.from('locations').insert({ ...payload, tenant_id: tenant.id });
     }
-    const empty = { name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '' };
+    const empty = { name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '', google_review_enabled: false, google_review_min_rating: 5 };
     setLocForm(empty);
     setCpStatus('idle');
     setColoniaOptions([]);
@@ -765,8 +745,10 @@ export default function QRStudio() {
       colonia:           loc.colonia           || '',
       municipio:         loc.municipio         || '',
       estado:            loc.estado            || '',
-      google_review_url: loc.google_review_url || '',
-      whatsapp_number:   loc.whatsapp_number   || '',
+      google_review_url:        loc.google_review_url        || '',
+      whatsapp_number:          loc.whatsapp_number          || '',
+      google_review_enabled:    loc.google_review_enabled    ?? false,
+      google_review_min_rating: loc.google_review_min_rating ?? 5,
     });
     setCpStatus(loc.cp ? 'found' : 'idle');
     setColoniaOptions(loc.colonia ? [loc.colonia] : []);
@@ -948,52 +930,6 @@ export default function QRStudio() {
             cursor: 'pointer', boxShadow: '0 4px 12px rgba(255,92,58,0.25)',
           }}>
             <Plus size={14} /> Nuevo QR
-          </button>
-        </div>
-      </div>
-
-      {/* ── Google Review Gating ── */}
-      <div style={{
-        padding: '12px 28px', background: T.card, borderBottom: `1px solid ${T.border}`,
-        display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, flexWrap: 'wrap',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 220 }}>
-          <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" alt="Google" style={{ width: 18, height: 18 }} />
-          <div>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: T.ink }}>Invitar a reseñar en Google</span>
-            <span style={{ fontSize: '0.72rem', color: T.muted, marginLeft: 8 }}>
-              {grEnabled ? `Solo clientes con ${grMinRating}+ ★ verán el botón` : 'Desactivado'}
-            </span>
-          </div>
-        </div>
-
-        {grEnabled && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            {[3, 4, 5].map(star => (
-              <button key={star} type="button" onClick={() => { setGrMinRating(star); saveGoogleGating(true, star); }} style={{
-                padding: '4px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontFamily: font, fontSize: '0.78rem', fontWeight: 700,
-                background: grMinRating === star ? T.ink : T.border,
-                color: grMinRating === star ? '#fff' : T.muted,
-              }}>
-                {'★'.repeat(star)} {star}+
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {grSaved && <span style={{ fontSize: '0.72rem', color: T.teal, fontWeight: 700 }}>Guardado ✓</span>}
-          {grSaving && <span style={{ fontSize: '0.72rem', color: T.muted }}>Guardando…</span>}
-          <button type="button" onClick={() => { const next = !grEnabled; setGrEnabled(next); saveGoogleGating(next, grMinRating); }} style={{
-            width: 44, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer',
-            background: grEnabled ? '#4ADE80' : T.border, position: 'relative', transition: 'background 0.2s',
-          }}>
-            <span style={{
-              position: 'absolute', top: 3, left: grEnabled ? 22 : 3,
-              width: 18, height: 18, borderRadius: '50%', background: '#fff',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
-            }} />
           </button>
         </div>
       </div>
@@ -1756,7 +1692,7 @@ export default function QRStudio() {
         <Modal
           width={540}
           title={editingLoc ? 'Editar sucursal' : 'Nueva sucursal'}
-          onClose={() => { setShowLocModal(false); setEditingLoc(null); setCpStatus('idle'); setColoniaOptions([]); setLocForm({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '' }); }}
+          onClose={() => { setShowLocModal(false); setEditingLoc(null); setCpStatus('idle'); setColoniaOptions([]); setLocForm({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '', google_review_enabled: false, google_review_min_rating: 5 }); }}
         >
           {/* ── Step 1: CP ── */}
           <FieldRow label="Código Postal">
@@ -1905,6 +1841,45 @@ export default function QRStudio() {
 
             {/* Tutorial colapsable */}
             <GoogleReviewTutorial />
+
+            {/* Gating toggle */}
+            {locForm.google_review_url && (
+              <div style={{ marginTop: 12, background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: locForm.google_review_enabled ? 12 : 0 }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 700, color: '#166534' }}>Invitar a reseñar en Google</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: '#16a34a' }}>
+                      {locForm.google_review_enabled ? `Solo clientes con ${locForm.google_review_min_rating}+ ★` : 'Desactivado para esta sucursal'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setLocForm(f => ({ ...f, google_review_enabled: !f.google_review_enabled }))} style={{
+                    width: 44, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer', flexShrink: 0,
+                    background: locForm.google_review_enabled ? '#4ADE80' : '#D1D5DB', position: 'relative', transition: 'background 0.2s',
+                  }}>
+                    <span style={{
+                      position: 'absolute', top: 3, left: locForm.google_review_enabled ? 22 : 3,
+                      width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
+                    }} />
+                  </button>
+                </div>
+                {locForm.google_review_enabled && (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[3, 4, 5].map(star => (
+                      <button key={star} type="button" onClick={() => setLocForm(f => ({ ...f, google_review_min_rating: star }))} style={{
+                        flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                        fontFamily: font, fontSize: '0.78rem', fontWeight: 700,
+                        background: locForm.google_review_min_rating === star ? '#166534' : '#D1FAE5',
+                        color: locForm.google_review_min_rating === star ? '#fff' : '#166534',
+                      }}>
+                        {'★'.repeat(star)} {star}+
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
           </div>
 
           <FieldRow label="WhatsApp del encargado (opcional)">
@@ -1939,7 +1914,7 @@ export default function QRStudio() {
               {saving ? 'Guardando…' : editingLoc ? 'Guardar cambios' : 'Crear sucursal'}
             </button>
             <button
-              onClick={() => { setShowLocModal(false); setEditingLoc(null); setCpStatus('idle'); setColoniaOptions([]); setLocForm({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '' }); }}
+              onClick={() => { setShowLocModal(false); setEditingLoc(null); setCpStatus('idle'); setColoniaOptions([]); setLocForm({ name: '', cp: '', calle: '', colonia: '', municipio: '', estado: '', google_review_url: '', whatsapp_number: '', google_review_enabled: false, google_review_min_rating: 5 }); }}
               style={{ padding: '11px 18px', borderRadius: 10, border: `1px solid ${T.border}`, background: '#fff', color: T.muted, cursor: 'pointer', fontFamily: font, fontWeight: 600 }}
             >
               Cancelar

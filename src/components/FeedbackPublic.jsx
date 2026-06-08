@@ -916,7 +916,7 @@ export default function FeedbackPublic() {
     setLoading(true);
     const { data: qrData, error: qrErr } = await supabase
       .from('qr_codes')
-      .select('*, locations(name, google_review_url, whatsapp_number), qr_coupon:coupon_configs(id,name,offer_description,offer_description_2,coupon_prefix,validity_days,trigger_type,reward_type,reward_value), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,offer_description_2,coupon_prefix,validity_days,trigger_type,reward_type,reward_value))')
+      .select('*, locations(name, google_review_url, whatsapp_number, google_review_enabled, google_review_min_rating), qr_coupon:coupon_configs(id,name,offer_description,offer_description_2,coupon_prefix,validity_days,trigger_type,reward_type,reward_value), area:Areas_Catalogo!area_id(id,nombre,coupon_config_id, area_coupon:coupon_configs(id,name,offer_description,offer_description_2,coupon_prefix,validity_days,trigger_type,reward_type,reward_value))')
       .eq('id', qrId)
       .eq('active', true)
       .single();
@@ -1156,9 +1156,12 @@ export default function FeedbackPublic() {
   if (screen === 'done-neutral')
     return wrap(<DoneNeutral onSuggest={(cmt) => updateFeedback({ comment: cmt })} />);
 
-  if (screen === 'done-happy')
-    return wrap(<DoneHappy 
-      googleUrl={location?.google_review_url} 
+  if (screen === 'done-happy') {
+    const grEnabled   = location?.google_review_enabled   ?? false;
+    const grMinRating = location?.google_review_min_rating ?? 5;
+    const showGoogle  = grEnabled && location?.google_review_url && score >= grMinRating;
+    return wrap(<DoneHappy
+      googleUrl={showGoogle ? location.google_review_url : null}
       loyaltyCouponCode={loyaltyCouponCode} 
       loyaltyConfig={loyalty} 
       onLoyalty={({ phone: ph, email: em, marketingConsent: mc, consentAt: ca, consentVersion: cv }) =>
@@ -1168,6 +1171,7 @@ export default function FeedbackPublic() {
       testMode={testMode}
       businessName={location?.name}
     />);
+  }
 
   return null;
 }

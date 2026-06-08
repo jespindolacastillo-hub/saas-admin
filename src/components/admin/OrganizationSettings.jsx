@@ -53,14 +53,17 @@ export default function OrganizationSettings() {
   const [liveConfirm, setLiveConfirm]   = useState(false);
   const [form, setForm]         = useState({
     name: '', google_review_url: '', whatsapp_number: '',
+    google_review_enabled: false, google_review_min_rating: 5,
   });
 
   useEffect(() => {
     if (tenant) {
       setForm({
-        name:               tenant.name              || '',
-        google_review_url:  tenant.google_review_url || '',
-        whatsapp_number:    tenant.whatsapp_number   || '',
+        name:                     tenant.name                     || '',
+        google_review_url:        tenant.google_review_url        || '',
+        whatsapp_number:          tenant.whatsapp_number          || '',
+        google_review_enabled:    tenant.google_review_enabled    ?? false,
+        google_review_min_rating: tenant.google_review_min_rating ?? 5,
       });
     }
   }, [tenant?.id]);
@@ -70,9 +73,11 @@ export default function OrganizationSettings() {
     setSaving(true);
     const cleanNumber = form.whatsapp_number.replace(/\D/g, '');
     await supabase.from('tenants').update({
-      name:               form.name,
-      google_review_url:  form.google_review_url,
-      whatsapp_number:    cleanNumber,
+      name:                     form.name,
+      google_review_url:        form.google_review_url,
+      whatsapp_number:          cleanNumber,
+      google_review_enabled:    form.google_review_enabled,
+      google_review_min_rating: form.google_review_min_rating,
     }).eq('id', tenant.id);
 
     // Also update all locations with the same defaults
@@ -261,8 +266,68 @@ export default function OrganizationSettings() {
           'URL de Google Reviews',
           'google_review_url',
           'https://g.page/r/TU-LUGAR/review',
-          'Clientes con ≥4★ serán redirigidos aquí. Encuéntrala en Google Maps → Compartir → Copia el enlace de reseñas.'
+          'Encuéntrala en Google Maps → tu negocio → Compartir → Copia el enlace de reseñas.'
         )}
+
+        {/* Google Review Gating */}
+        <div style={{ marginBottom: 20, background: T.bg, borderRadius: 12, padding: 16, border: `1px solid ${T.border}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.google_review_enabled ? 16 : 0 }}>
+            <div>
+              <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: T.ink }}>Invitar a reseñar en Google</p>
+              <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: T.muted }}>
+                Solo clientes que superen el umbral verán el botón de reseña.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setForm(f => ({ ...f, google_review_enabled: !f.google_review_enabled }))}
+              disabled={!form.google_review_url}
+              title={!form.google_review_url ? 'Primero ingresa la URL de Google Reviews' : ''}
+              style={{
+                width: 44, height: 24, borderRadius: 999, border: 'none', cursor: form.google_review_url ? 'pointer' : 'not-allowed',
+                background: form.google_review_enabled ? '#4ADE80' : T.border,
+                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                opacity: form.google_review_url ? 1 : 0.5,
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 3, left: form.google_review_enabled ? 22 : 3,
+                width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
+              }} />
+            </button>
+          </div>
+
+          {form.google_review_enabled && (
+            <div>
+              <p style={{ margin: '0 0 8px', fontSize: '0.75rem', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Mostrar solo si calificación es ≥
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, google_review_min_rating: star }))}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                      fontFamily: font, fontSize: '0.88rem', fontWeight: 700,
+                      background: form.google_review_min_rating === star ? T.ink : T.border,
+                      color: form.google_review_min_rating === star ? '#fff' : T.muted,
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    {'★'.repeat(star)} {star}+
+                  </button>
+                ))}
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: T.muted }}>
+                Clientes que den {form.google_review_min_rating} o más estrellas verán el botón de Google.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700,
             color: T.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>

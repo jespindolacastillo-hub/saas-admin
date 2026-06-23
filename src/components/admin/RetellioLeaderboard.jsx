@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useTenant } from '../../hooks/useTenant';
 import { dataService } from '../../services/dataService';
 import { Trophy, Star, MessageSquare, Zap, TrendingUp, MapPin, User, Users } from 'lucide-react';
-import { subDays } from 'date-fns';
+import { subDays, parseISO } from 'date-fns';
 
 const T = {
   coral:  '#FF5C3A',
@@ -36,7 +36,7 @@ export default function RetellioLeaderboard() {
     
     try {
       const [feedbacks, stores, qrCodes] = await Promise.all([
-        dataService.fetchFeedbacks(tenant.id),
+        dataService.fetchFeedbacks(tenant.id, tenant.test_mode ?? false),
         dataService.fetchStores(tenant.id),
         supabase.from('qr_codes')
           .select('id, label, location_id, type')
@@ -58,9 +58,15 @@ export default function RetellioLeaderboard() {
     if (tenant?.id) loadData();
   }, [tenant?.id, range]);
 
+  const rangeStart = useMemo(() => subDays(new Date(), range), [range]);
+
+  const inRange = (f) => {
+    try { return parseISO(f.created_at) >= rangeStart; } catch { return false; }
+  };
+
   const rankings = useMemo(() => {
     return locations.map(loc => {
-      const fbs      = feedbacks.filter(f => f.location_id === loc.id || f.tienda_id === loc.id);
+      const fbs      = feedbacks.filter(f => (f.location_id === loc.id || f.tienda_id === loc.id) && inRange(f));
       const total    = fbs.length;
       const reviews  = fbs.filter(f => f.routed_to_google).length;
       const unhappy  = fbs.filter(f => (f.score ?? f.satisfaccion ?? 0) <= 2).length;
@@ -73,7 +79,7 @@ export default function RetellioLeaderboard() {
 
   const employeeRankings = useMemo(() => {
     return employeeQRs.map(qr => {
-      const fbs      = feedbacks.filter(f => f.qr_id === qr.id);
+      const fbs      = feedbacks.filter(f => f.qr_id === qr.id && inRange(f));
       const total    = fbs.length;
       const reviews  = fbs.filter(f => f.routed_to_google).length;
       const unhappy  = fbs.filter(f => (f.score ?? f.satisfaccion ?? 0) <= 2).length;

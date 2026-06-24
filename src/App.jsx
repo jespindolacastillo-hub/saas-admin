@@ -48,6 +48,8 @@ import DistributorsManager from './components/admin/DistributorsManager';
 import DistributorPortal from './components/admin/DistributorPortal';
 import DevValuationPanel from './components/admin/DevValuationPanel';
 import DistributorApplication from './components/DistributorApplication';
+import PosEmbed from './components/PosEmbed';
+import PosActivate from './components/PosActivate';
 import CouponValidation from './components/admin/CouponValidation';
 import CouponManagement from './components/admin/CouponManagement';
 import { useTenant } from './hooks/useTenant';
@@ -2969,6 +2971,8 @@ export default function App() {
     <Routes>
       <Route path="/f/:qrId" element={<FeedbackPublic />} />
       <Route path="/feedback" element={<Feedback />} />
+      <Route path="/embed" element={<PosEmbed />} />
+      <Route path="/activate" element={<PosActivate />} />
       <Route path="/quiero-ser-distribuidor" element={<DistributorApplication />} />
       <Route path="/partners/:codigo" element={<PartnerLanding />} />
       <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} userLocationIds={userLocationIds} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />

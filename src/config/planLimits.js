@@ -92,6 +92,13 @@ export const PLAN_LIMITS = {
     price_monthly: null, price_annual: null, whatsapp_limit: -1, users_limit: null,
     features: ['Todo Growth +', 'WhatsApp ilimitado', 'Onboarding dedicado', 'API + webhooks', 'SLA 99.9%'],
   },
+  'pos-embed': {
+    slug: 'pos-embed', name: 'POS Embed',
+    price_monthly: 0, price_annual: 0,
+    whatsapp_limit: 50, users_limit: 1,
+    maxStores: 3, maxAreas: 5,
+    features: ['Feedback QR por ticket', 'Google Review gating', 'Cupón de recuperación automático', 'Dashboard embebido en POS', 'WhatsApp 50 alertas/mes'],
+  },
 };
 
 export const getPlanLimits = (slug) => PLAN_LIMITS[slug] ?? PLAN_LIMITS.trial;

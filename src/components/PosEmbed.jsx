@@ -41,10 +41,10 @@ export default function PosEmbed() {
     const tenantId = tenant.id;
     const color    = tenant.primary_color || T.coral;
 
-    // Last 20 feedbacks
+    // Last 20 feedbacks (new feedbacks table)
     const { data: feedbacks } = await supabase
-      .from('Feedback')
-      .select('id, score, comentario, created_at, coupon_code, coupon_redeemed')
+      .from('feedbacks')
+      .select('id, score, comment, created_at, coupon_code, coupon_redeemed')
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(20);
@@ -66,8 +66,8 @@ export default function PosEmbed() {
     const code = couponCode.trim().toUpperCase();
 
     const { data: fb } = await supabase
-      .from('Feedback')
-      .select('id, coupon_code, coupon_redeemed, coupon_redeemed_at, score, coupon_config_id')
+      .from('feedbacks')
+      .select('id, coupon_code, coupon_redeemed, coupon_redeemed_at, score, qr_id, applied_discount_pct')
       .eq('coupon_code', code)
       .eq('tenant_id', data.tenantId)
       .maybeSingle();
@@ -76,13 +76,23 @@ export default function PosEmbed() {
     if (fb.coupon_redeemed) { setCouponResult({ status: 'already', fb }); return; }
 
     let offer = null;
-    if (fb.coupon_config_id) {
-      const { data: cfg } = await supabase
-        .from('coupon_configs')
-        .select('offer_description, offer_value')
-        .eq('id', fb.coupon_config_id)
+    if (fb.qr_id) {
+      const { data: qr } = await supabase
+        .from('qr_codes')
+        .select('coupon_config_id')
+        .eq('id', fb.qr_id)
         .maybeSingle();
-      offer = cfg;
+      if (qr?.coupon_config_id) {
+        const { data: cfg } = await supabase
+          .from('coupon_configs')
+          .select('offer_description, offer_value')
+          .eq('id', qr.coupon_config_id)
+          .maybeSingle();
+        offer = cfg;
+      }
+    }
+    if (!offer && fb.applied_discount_pct) {
+      offer = { offer_description: `${fb.applied_discount_pct}% de descuento`, offer_value: fb.applied_discount_pct };
     }
     setCouponResult({ status: 'found', fb, offer });
   }
@@ -91,11 +101,10 @@ export default function PosEmbed() {
     if (!couponResult?.fb) return;
     setRedeeming(true);
     await supabase
-      .from('Feedback')
+      .from('feedbacks')
       .update({
         coupon_redeemed:    true,
         coupon_redeemed_at: new Date().toISOString(),
-        coupon_redeemed_by: 'pos-embed',
         recovery_status:    'resolved',
       })
       .eq('id', couponResult.fb.id);
@@ -180,8 +189,8 @@ export default function PosEmbed() {
                   {formatDistanceToNow(new Date(fb.created_at), { locale: es, addSuffix: true })}
                 </span>
               </div>
-              {fb.comentario && (
-                <div style={{ fontSize: '0.8rem', color: T.ink, lineHeight: 1.4 }}>{fb.comentario}</div>
+              {fb.comment && (
+                <div style={{ fontSize: '0.8rem', color: T.ink, lineHeight: 1.4 }}>{fb.comment}</div>
               )}
               {fb.coupon_code && (
                 <div style={{ marginTop: 6, fontSize: '0.7rem', color: fb.coupon_redeemed ? T.muted : T.teal, fontWeight: 600 }}>

@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-// Called by POS when cashier scans/types a coupon code.
-// Returns validity + discount info. Does NOT mark as redeemed — use pos-coupon-redeem for that.
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -27,7 +25,6 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Resolve store
     const { data: store } = await sb
       .from("Tiendas_Catalogo")
       .select("id, tenant_id")
@@ -37,10 +34,9 @@ serve(async (req) => {
 
     if (!store) return json({ valid: false, reason: "api_key inválida" }, 401);
 
-    // Look up the feedback that owns this coupon
     const { data: fb } = await sb
-      .from("Feedback")
-      .select("id, coupon_code, coupon_redeemed, coupon_redeemed_at, score, coupon_config_id, location_id")
+      .from("feedbacks")
+      .select("id, coupon_code, coupon_redeemed, coupon_redeemed_at, score, qr_id, applied_discount_pct")
       .eq("coupon_code", coupon_code.trim().toUpperCase())
       .eq("tenant_id", store.tenant_id)
       .maybeSingle();
@@ -49,21 +45,31 @@ serve(async (req) => {
 
     if (fb.coupon_redeemed) {
       return json({
-        valid:            false,
-        reason:           "already_redeemed",
-        redeemed_at:      fb.coupon_redeemed_at,
+        valid:       false,
+        reason:      "already_redeemed",
+        redeemed_at: fb.coupon_redeemed_at,
       });
     }
 
-    // Fetch coupon config for offer details
-    let offer: Record<string, unknown> = { offer_description: "Descuento especial", offer_value: null };
-    if (fb.coupon_config_id) {
-      const { data: cfg } = await sb
-        .from("coupon_configs")
-        .select("name, offer_description, offer_value, validity_days")
-        .eq("id", fb.coupon_config_id)
+    // Resolve offer description via qr_codes → coupon_configs
+    let offer: Record<string, unknown> = {
+      offer_description: "Descuento especial",
+      offer_value:       fb.applied_discount_pct ?? null,
+    };
+    if (fb.qr_id) {
+      const { data: qr } = await sb
+        .from("qr_codes")
+        .select("coupon_config_id")
+        .eq("id", fb.qr_id)
         .maybeSingle();
-      if (cfg) offer = cfg;
+      if (qr?.coupon_config_id) {
+        const { data: cfg } = await sb
+          .from("coupon_configs")
+          .select("name, offer_description, offer_value")
+          .eq("id", qr.coupon_config_id)
+          .maybeSingle();
+        if (cfg) offer = cfg;
+      }
     }
 
     return json({

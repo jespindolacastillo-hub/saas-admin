@@ -2,8 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/cors.ts";
 
-// Called by POS after applying the discount to close the loop.
-// Marks the coupon as redeemed and records the real ticket amount.
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -18,9 +16,9 @@ serve(async (req) => {
     const {
       api_key,
       coupon_code,
-      order_amount,    // total del ticket ANTES del descuento
-      discount_amount, // monto descontado
-      ticket_id,       // optional: POS ticket/order ID for attribution
+      order_amount,
+      discount_amount,
+      ticket_id,
     } = await req.json();
 
     if (!api_key || !coupon_code) {
@@ -42,25 +40,23 @@ serve(async (req) => {
 
     if (!store) return json({ success: false, reason: "api_key inválida" }, 401);
 
-    // Re-validate before redeeming (idempotency guard)
     const { data: fb } = await sb
-      .from("Feedback")
+      .from("feedbacks")
       .select("id, coupon_redeemed, tenant_id")
       .eq("coupon_code", coupon_code.trim().toUpperCase())
       .eq("tenant_id", store.tenant_id)
       .maybeSingle();
 
-    if (!fb)              return json({ success: false, reason: "Código no encontrado" });
+    if (!fb)               return json({ success: false, reason: "Código no encontrado" });
     if (fb.coupon_redeemed) return json({ success: false, reason: "already_redeemed" });
 
     const now = new Date().toISOString();
 
     const { error: updateErr } = await sb
-      .from("Feedback")
+      .from("feedbacks")
       .update({
         coupon_redeemed:    true,
         coupon_redeemed_at: now,
-        coupon_redeemed_by: "pos",
         redeemed_amount:    order_amount   ? parseFloat(order_amount)   : null,
         redeemed_ticket_id: ticket_id      ?? null,
         recovery_status:    "resolved",

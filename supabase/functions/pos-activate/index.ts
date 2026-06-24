@@ -126,7 +126,7 @@ serve(async (req) => {
       .insert({
         tenant_id:        tenant.id,
         location_id:      location.id,
-        type:             "ticket",
+        type:             "channel",
         label:            store_name,
         coupon_config_id: couponConfigId,
         active:           true,

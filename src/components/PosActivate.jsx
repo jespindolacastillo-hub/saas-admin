@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
-import { Star, CheckCircle, ShieldCheck, TrendingUp, Copy, Download, ArrowRight, ChevronLeft } from 'lucide-react';
+import { CheckCircle, Copy, Download, ArrowRight, ChevronLeft } from 'lucide-react';
 
 const T = {
   coral: '#FF5C3A', teal: '#00C9A7', ink: '#0D0D12',
@@ -16,42 +16,65 @@ const DISCOUNTS = [
   { value: 0,  label: 'Personalizar',     description: '' },
 ];
 
-// Activation landing + 3-step wizard for POS-referred stores.
 // Entry: /activate?pos=miteindita&store_name=...&phone=...&store_id=...&redirect_uri=...
+// Flow: Landing → Google SSO → Store info → Incentive → Done + QR
 export default function PosActivate() {
-  const params       = new URLSearchParams(window.location.search);
-  const pos          = params.get('pos')          ?? 'pos';
-  const redirectUri  = params.get('redirect_uri') ?? null;
+  const params      = new URLSearchParams(window.location.search);
+  const pos         = params.get('pos')          ?? 'pos';
+  const redirectUri = params.get('redirect_uri') ?? null;
 
-  const [step, setStep]     = useState(0); // 0=landing 1=info 2=incentive 3=done
+  const [session, setSession] = useState(null);
+  const [step, setStep]       = useState(0); // 0=landing 1=info 2=incentive 3=done
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState('');
-  const [copied, setCopied] = useState(false);
-  const [result, setResult] = useState(null);
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError]     = useState('');
+  const [copied, setCopied]   = useState(false);
+  const [result, setResult]   = useState(null);
 
-  // Form state
   const [form, setForm] = useState({
     store_name:        params.get('store_name') ?? '',
     owner_name:        '',
     phone:             params.get('phone')       ?? '',
-    email:             '',
-    password:          '',
     google_review_url: '',
   });
-  const [discount, setDiscount]         = useState(15);
-  const [customDescription, setCustom] = useState('');
+  const [discount, setDiscount]   = useState(15);
+  const [customDesc, setCustom]   = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  // ── Step 1 validation ───────────────────────────────────────────────────────
-  const step1Valid = form.store_name.trim() && form.phone.trim() && form.email.trim() && form.password.length >= 6;
+  // Check for existing Google session (e.g. after OAuth redirect back)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (s) {
+        setSession(s);
+        // Auto-advance past landing if user just came back from Google OAuth
+        setStep(prev => prev === 0 ? 1 : prev);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
+      if (s && !session) {
+        setSession(s);
+        setStep(prev => prev === 0 ? 1 : prev);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
-  // ── Activation call ─────────────────────────────────────────────────────────
+  async function signInWithGoogle() {
+    setSigningIn(true);
+    setError('');
+    // Redirect back to the same URL so params are preserved after OAuth
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href },
+    });
+  }
+
   async function activate() {
     setLoading(true);
     setError('');
-    const chosen   = DISCOUNTS.find(d => d.value === discount);
-    const descr    = discount === 0 ? customDescription : chosen?.description ?? '';
+    const chosen = DISCOUNTS.find(d => d.value === discount);
+    const descr  = discount === 0 ? customDesc : chosen?.description ?? '';
 
     const { data, error: fnErr } = await supabase.functions.invoke('pos-activate', {
       body: {
@@ -60,8 +83,6 @@ export default function PosActivate() {
         store_name:           form.store_name.trim(),
         owner_name:           form.owner_name.trim() || form.store_name.trim(),
         phone:                form.phone.trim(),
-        email:                form.email.trim().toLowerCase(),
-        password:             form.password,
         google_review_url:    form.google_review_url.trim() || null,
         discount_pct:         discount || null,
         discount_description: descr || null,
@@ -74,12 +95,9 @@ export default function PosActivate() {
     setResult(data);
     setStep(3);
 
-    // Notify POS via postMessage (if inside iframe)
     if (window.parent !== window) {
       window.parent.postMessage({ type: 'retelio:activated', ...data }, '*');
     }
-
-    // Redirect back to POS if redirect_uri provided
     if (redirectUri) {
       const url = new URL(redirectUri);
       url.searchParams.set('embed_token', data.embed_token);
@@ -89,13 +107,8 @@ export default function PosActivate() {
     }
   }
 
-  function copyLink() {
-    navigator.clipboard.writeText(result.feedback_url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+  const step1Valid = form.store_name.trim() && form.phone.trim();
 
-  // ── Shared layout wrapper ───────────────────────────────────────────────────
   const Wrap = ({ children, back }) => (
     <div style={{ fontFamily: 'system-ui, sans-serif', background: T.bg, minHeight: '100vh', maxWidth: 440, margin: '0 auto' }}>
       {back && (
@@ -104,7 +117,7 @@ export default function PosActivate() {
           <ChevronLeft size={15} /> Atrás
         </button>
       )}
-      <div style={{ padding: back ? '0 16px 40px' : '0 16px 40px' }}>{children}</div>
+      <div style={{ padding: '0 16px 40px' }}>{children}</div>
     </div>
   );
 
@@ -124,13 +137,13 @@ export default function PosActivate() {
         background: disabled ? T.border : secondary ? T.card : T.coral,
         color: disabled ? T.muted : secondary ? T.coral : '#fff',
         fontWeight: 800, fontSize: '1rem',
-        border: secondary ? `2px solid ${T.coral}` : 'none',
+        ...(secondary ? { border: `2px solid ${T.coral}` } : {}),
       }}>
       {children}
     </button>
   );
 
-  // ── STEP 0: Landing ─────────────────────────────────────────────────────────
+  // ── STEP 0: Landing + Google Sign-In ────────────────────────────────────────
   if (step === 0) return (
     <Wrap>
       <div style={{ textAlign: 'center', padding: '48px 0 32px' }}>
@@ -154,8 +167,33 @@ export default function PosActivate() {
         </div>
       ))}
 
+      {error && (
+        <div style={{ background: '#FEF2F2', border: `1px solid ${T.red}`, borderRadius: 8, padding: '10px 12px', color: T.red, fontSize: '0.83rem', marginBottom: 14 }}>
+          {error}
+        </div>
+      )}
+
       <div style={{ marginTop: 36 }}>
-        <Btn onClick={() => setStep(1)}>Activar mi tienda gratis <ArrowRight size={16} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 4 }} /></Btn>
+        <button onClick={signInWithGoogle} disabled={signingIn}
+          style={{
+            width: '100%', padding: '13px 0', borderRadius: 10, border: `1.5px solid ${T.border}`,
+            background: T.card, cursor: signingIn ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            fontWeight: 800, fontSize: '1rem', color: T.ink,
+          }}>
+          {signingIn ? 'Redirigiendo...' : (
+            <>
+              <svg width="20" height="20" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.95 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                <path fill="none" d="M0 0h48v48H0z"/>
+              </svg>
+              Continuar con Google
+            </>
+          )}
+        </button>
         <p style={{ textAlign: 'center', fontSize: '0.72rem', color: T.muted, marginTop: 10 }}>
           Sin tarjeta de crédito · Listo en 2 minutos
         </p>
@@ -166,6 +204,14 @@ export default function PosActivate() {
   // ── STEP 1: Store info ──────────────────────────────────────────────────────
   if (step === 1) return (
     <Wrap back>
+      {session?.user?.email && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0 0', marginBottom: 20 }}>
+          {session.user.user_metadata?.avatar_url && (
+            <img src={session.user.user_metadata.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%' }} />
+          )}
+          <span style={{ fontSize: '0.8rem', color: T.muted }}>{session.user.email}</span>
+        </div>
+      )}
       <div style={{ marginBottom: 24 }}>
         <div style={{ fontSize: '0.72rem', color: T.muted, marginBottom: 4 }}>Paso 1 de 2</div>
         <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: T.ink, margin: 0 }}>Tu tienda</h2>
@@ -174,8 +220,6 @@ export default function PosActivate() {
       <Input label="Nombre de la tienda *" value={form.store_name} onChange={v => set('store_name', v)} placeholder="Tienda Don Pedro" />
       <Input label="Tu nombre" value={form.owner_name} onChange={v => set('owner_name', v)} placeholder="Pedro García" />
       <Input label="WhatsApp / Celular *" value={form.phone} onChange={v => set('phone', v)} placeholder="573001234567" hint="Con código de país, sin espacios ni +" />
-      <Input label="Correo electrónico *" value={form.email} onChange={v => set('email', v)} type="email" placeholder="pedro@ejemplo.com" />
-      <Input label="Contraseña *" value={form.password} onChange={v => set('password', v)} type="password" placeholder="Mínimo 6 caracteres" />
       <Input label="Link de Google Reviews" value={form.google_review_url} onChange={v => set('google_review_url', v)} placeholder="https://g.page/r/..." hint="Opcional — los clientes felices irán aquí" />
 
       <div style={{ marginTop: 8 }}>
@@ -214,7 +258,7 @@ export default function PosActivate() {
           <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: T.ink, marginBottom: 5 }}>
             Describe el beneficio
           </label>
-          <input value={customDescription} onChange={e => setCustom(e.target.value)}
+          <input value={customDesc} onChange={e => setCustom(e.target.value)}
             placeholder="Ej: Café gratis en tu próxima visita"
             style={{ width: '100%', padding: '11px 12px', borderRadius: 8, border: `1.5px solid ${T.border}`, fontSize: '0.9rem', boxSizing: 'border-box' }} />
         </div>
@@ -226,7 +270,7 @@ export default function PosActivate() {
         </div>
       )}
 
-      <Btn onClick={activate} disabled={loading || (discount === 0 && !customDescription.trim())}>
+      <Btn onClick={activate} disabled={loading || (discount === 0 && !customDesc.trim())}>
         {loading ? 'Activando...' : '¡Activar mi tienda!'}
       </Btn>
     </Wrap>
@@ -238,9 +282,7 @@ export default function PosActivate() {
       <div style={{ textAlign: 'center', paddingTop: 32, marginBottom: 24 }}>
         <CheckCircle size={48} color={T.green} style={{ marginBottom: 12 }} />
         <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: T.ink, margin: '0 0 6px' }}>¡Todo listo!</h2>
-        <p style={{ fontSize: '0.85rem', color: T.muted }}>
-          Imprime este QR y ponlo en tu caja
-        </p>
+        <p style={{ fontSize: '0.85rem', color: T.muted }}>Imprime este QR y ponlo en tu caja</p>
       </div>
 
       <div style={{ background: T.card, borderRadius: 14, padding: 20, textAlign: 'center', marginBottom: 16, border: `1px solid ${T.border}` }}>
@@ -251,7 +293,7 @@ export default function PosActivate() {
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
-        <button onClick={copyLink}
+        <button onClick={() => { navigator.clipboard.writeText(result.feedback_url); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
           style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: `1.5px solid ${T.border}`, background: T.card, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.82rem', color: T.ink, fontWeight: 600 }}>
           <Copy size={14} /> {copied ? '¡Copiado!' : 'Copiar link'}
         </button>

@@ -19,34 +19,36 @@ serve(async (req) => {
       store_name,
       owner_name,
       phone,
-      email,
-      password,
       google_review_url,
       discount_pct,
       discount_description,
     } = await req.json();
 
-    if (!pos || !store_name || !email || !password || !phone) {
-      return json({ error: "Faltan campos requeridos: pos, store_name, email, password, phone" }, 400);
+    if (!pos || !store_name || !phone) {
+      return json({ error: "Faltan campos requeridos: pos, store_name, phone" }, 400);
     }
 
     const supabaseUrl  = Deno.env.get("SUPABASE_URL")!;
     const serviceKey   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey      = Deno.env.get("SUPABASE_ANON_KEY")!;
     const feedbackBase = Deno.env.get("FEEDBACK_BASE_URL") ?? "https://admin.retelio.app/f";
     const affiliateId  = Deno.env.get("MITEINDITA_AFFILIATE_ID");
+
+    // 1. Verify the authenticated user from the JWT sent by supabase.functions.invoke
+    const token = req.headers.get("Authorization")?.replace("Bearer ", "") ?? "";
+    const sbUser = createClient(supabaseUrl, anonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: userErr } = await sbUser.auth.getUser();
+    if (userErr || !user) return json({ error: "Sesión de Google no encontrada. Vuelve a iniciar sesión." }, 401);
+
+    const userId = user.id;
+    const email  = user.email!;
 
     const sb = createClient(supabaseUrl, serviceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-
-    // 1. Create auth user
-    const { data: authData, error: authErr } = await sb.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-    if (authErr) return json({ error: authErr.message }, 400);
-    const userId = authData.user!.id;
 
     // 2. Create tenant
     const { data: tenant, error: tenantErr } = await sb
@@ -66,13 +68,10 @@ serve(async (req) => {
       })
       .select("id, embed_token")
       .single();
-    if (tenantErr) {
-      await sb.auth.admin.deleteUser(userId);
-      return json({ error: tenantErr.message }, 500);
-    }
+    if (tenantErr) return json({ error: tenantErr.message }, 500);
 
-    // 3. Create Usuarios row (upsert on email to handle re-activation)
-    const { error: userErr } = await sb.from("Usuarios").upsert({
+    // 3. Create Usuarios row (upsert on email — user already exists via Google SSO)
+    const { error: usuariosErr } = await sb.from("Usuarios").upsert({
       id:        userId,
       email,
       nombre:    owner_name ?? store_name,
@@ -81,10 +80,9 @@ serve(async (req) => {
       tenant_id: tenant.id,
       activo:    true,
     }, { onConflict: "email" });
-    if (userErr) {
-      await sb.auth.admin.deleteUser(userId);
+    if (usuariosErr) {
       await sb.from("tenants").delete().eq("id", tenant.id);
-      return json({ error: userErr.message }, 500);
+      return json({ error: usuariosErr.message }, 500);
     }
 
     // 4. Create location in the new feedback system

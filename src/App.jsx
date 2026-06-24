@@ -2967,12 +2967,16 @@ function AdminPanel({ tenant, userRole, userLocationIds, tenantLoading, tenantRe
 export default function App() {
   const { tenant, userRole, userLocationIds, loading: tenantLoading, refresh: tenantRefresh } = useTenant();
 
+  // POS public routes are resolved here before any auth layer or React Router
+  // wildcard ambiguity — these must render without a session
+  const p = window.location.pathname;
+  if (p === '/activate' || p.startsWith('/activate/')) return <PosActivate />;
+  if (p === '/embed'    || p.startsWith('/embed/'))    return <PosEmbed />;
+
   return (
     <Routes>
       <Route path="/f/:qrId" element={<FeedbackPublic />} />
       <Route path="/feedback" element={<Feedback />} />
-      <Route path="/embed" element={<PosEmbed />} />
-      <Route path="/activate" element={<PosActivate />} />
       <Route path="/quiero-ser-distribuidor" element={<DistributorApplication />} />
       <Route path="/partners/:codigo" element={<PartnerLanding />} />
       <Route path="/*" element={<AdminPanel tenant={tenant} userRole={userRole} userLocationIds={userLocationIds} tenantLoading={tenantLoading} tenantRefresh={tenantRefresh} />} />
